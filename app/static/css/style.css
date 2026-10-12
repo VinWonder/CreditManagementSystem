@@ -29,6 +29,55 @@ body {
 .hero-copy { color: rgba(255, 255, 255, 0.72); max-width: 38rem; }
 .hero-actions { display: flex; gap: 0.65rem; position: relative; z-index: 1; }
 .hero-actions .btn { white-space: nowrap; }
+.dashboard-welcome-modal .modal-dialog { max-width: 61rem; padding: 1rem; }
+.dashboard-welcome-card { background: #173c35; border: 1px solid rgba(216, 239, 159, 0.35); border-radius: 1.15rem; box-shadow: 0 2rem 6rem rgba(4, 22, 19, 0.36); color: #fff; isolation: isolate; overflow: hidden; position: relative; }
+.welcome-modal-orbit { border: 1px solid rgba(216, 239, 159, 0.14); border-radius: 50%; height: 26rem; pointer-events: none; position: absolute; right: 9%; top: -16rem; width: 26rem; z-index: -1; }
+.welcome-modal-orbit-two { height: 35rem; right: 1%; top: -20rem; width: 35rem; }
+.welcome-modal-top { align-items: center; display: flex; justify-content: space-between; padding: 1.25rem 1.5rem 0; position: relative; z-index: 1; }
+.welcome-modal-brand { align-items: center; color: #fff; display: inline-flex; font-size: 0.86rem; font-weight: 750; gap: 0.58rem; text-decoration: none; }
+.welcome-modal-brand:hover { color: #fff; }
+.welcome-modal-brand strong { color: #d8ef9f; }
+.welcome-modal-mark { align-items: center; background: #d8ef9f; border-radius: 0.58rem; color: #173c35; display: inline-flex; font-size: 1.05rem; height: 2rem; justify-content: center; width: 2rem; }
+.welcome-modal-close { opacity: 0.75; padding: 0.55rem; }
+.welcome-modal-close:hover { opacity: 1; }
+.welcome-modal-body { align-items: center; display: grid; gap: clamp(1.5rem, 4vw, 3.6rem); grid-template-columns: minmax(0, 1.2fr) minmax(15rem, 0.72fr); padding: 2rem clamp(1.5rem, 4vw, 3.6rem) 2.4rem; position: relative; z-index: 1; }
+.welcome-modal-copy { animation: welcome-rise 560ms 80ms both; min-width: 0; }
+.welcome-modal-kicker { align-items: center; color: #d8ef9f; display: flex; font-size: 0.66rem; font-weight: 800; gap: 0.5rem; letter-spacing: 0.13em; margin: 0 0 1rem; text-transform: uppercase; }
+.welcome-modal-kicker > span { background: #d8ef9f; border-radius: 50%; box-shadow: 0 0 0 0.25rem rgba(216, 239, 159, 0.13); height: 0.45rem; width: 0.45rem; }
+.welcome-modal-copy h1 { color: #fff; font-size: clamp(2.55rem, 6vw, 4.3rem); font-weight: 760; letter-spacing: -0.055em; line-height: 0.99; margin: 0; }
+.welcome-modal-promise { align-items: baseline; color: rgba(255, 255, 255, 0.76); display: flex; flex-wrap: wrap; font-size: clamp(1.08rem, 2vw, 1.38rem); gap: 0.36rem; line-height: 1.55; margin: 1.05rem 0 0; }
+.welcome-word-window { color: #d8ef9f; display: inline-block; font-weight: 750; height: 1.55em; overflow: hidden; vertical-align: bottom; }
+.welcome-word-track { animation: welcome-word-cycle 10s steps(3, end) infinite; display: flex; flex-direction: column; }
+.welcome-word-track > span { display: block; height: 1.55em; white-space: nowrap; }
+.welcome-modal-detail { color: rgba(255, 255, 255, 0.64); font-size: 0.82rem; line-height: 1.65; margin: 0.7rem 0 1.5rem; max-width: 27rem; }
+.welcome-modal-actions { display: flex; flex-wrap: wrap; gap: 0.65rem; }
+.welcome-modal-actions .btn { align-items: center; border-radius: 0.65rem; display: inline-flex; font-size: 0.77rem; font-weight: 750; gap: 0.45rem; justify-content: center; min-height: 2.8rem; padding: 0.65rem 0.9rem; transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease; }
+.welcome-action-primary { background: #d8ef9f; border: 1px solid #d8ef9f; color: #173c35; }
+.welcome-action-primary:hover { background: #e5f7b9; border-color: #e5f7b9; color: #173c35; transform: translateY(-2px); }
+.welcome-action-secondary { background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.3); color: #fff; }
+.welcome-action-secondary:hover { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.65); color: #fff; transform: translateY(-2px); }
+.welcome-modal-continue { background: none; border: 0; color: rgba(255, 255, 255, 0.62); display: inline-flex; font-size: 0.72rem; gap: 0.4rem; margin-top: 1.05rem; padding: 0.2rem 0; }
+.welcome-modal-continue i { color: #d8ef9f; transition: transform 160ms ease; }
+.welcome-modal-continue:hover { color: #fff; }
+.welcome-modal-continue:hover i { transform: translateX(3px); }
+.welcome-modal-side { animation: welcome-rise 650ms 160ms both; background: #f7f4eb; border: 1px solid rgba(255, 255, 255, 0.65); border-radius: 0.85rem; color: #183b36; min-height: 17rem; overflow: hidden; padding: 1.2rem; position: relative; }
+.welcome-side-top { align-items: center; display: flex; justify-content: space-between; }
+.welcome-side-icon { align-items: center; background: #e6edda; border-radius: 0.58rem; color: #315b40; display: inline-flex; font-size: 1.05rem; height: 2.35rem; justify-content: center; width: 2.35rem; }
+.welcome-side-status { align-items: center; background: #e6f1df; border-radius: 2rem; color: #315b40; display: inline-flex; font-size: 0.62rem; font-weight: 750; gap: 0.35rem; padding: 0.38rem 0.58rem; }
+.welcome-side-status i { color: #448c63; font-size: 0.42rem; }
+.welcome-side-label { color: #6a7d70; font-family: Georgia, serif; font-size: 0.91rem; font-style: italic; margin: 1rem 0 0.8rem; }
+.welcome-side-stat { align-items: center; border-top: 1px solid #e2e7db; display: flex; justify-content: space-between; padding: 0.78rem 0; position: relative; z-index: 1; }
+.welcome-side-stat > span { align-items: center; color: #718077; display: inline-flex; font-size: 0.7rem; gap: 0.45rem; }
+.welcome-side-stat > span i { color: #43684c; font-size: 0.85rem; }
+.welcome-side-stat strong { color: #183b36; font-size: 0.91rem; font-weight: 800; }
+.welcome-side-note { align-items: center; background: #e9efdf; border-radius: 0.55rem; color: #476248; display: flex; font-size: 0.64rem; font-weight: 650; gap: 0.45rem; margin-top: 0.25rem; padding: 0.65rem; position: relative; z-index: 1; }
+.welcome-side-note i { color: #64854c; font-size: 0.85rem; }
+.welcome-side-decoration { bottom: -2rem; color: rgba(71, 98, 72, 0.055); font-size: 8rem; position: absolute; right: -0.8rem; transform: rotate(-12deg); }
+.welcome-modal-footer { align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.13); color: rgba(255, 255, 255, 0.58); display: flex; font-size: 0.62rem; justify-content: space-between; letter-spacing: 0.02em; padding: 0.85rem clamp(1.5rem, 4vw, 3.6rem); position: relative; z-index: 1; }
+.welcome-modal-footer > span:first-child { align-items: center; display: inline-flex; gap: 0.4rem; }
+.welcome-modal-footer i, .welcome-modal-footer b { color: #d8ef9f; }
+.welcome-modal-footer > span:last-child { font-size: 0.55rem; font-weight: 750; letter-spacing: 0.09em; }
+@keyframes welcome-word-cycle { to { transform: translateY(-75%); } }
 .dashboard-kpis { margin-bottom: 1rem; }
 .kpi-card { background: var(--surface); border: 1px solid var(--line); border-radius: 0.9rem; min-height: 9.4rem; overflow: hidden; padding: 1.15rem 1.25rem; position: relative; }
 .kpi-card::after { background: currentColor; border-radius: 50%; content: ""; height: 6rem; opacity: 0.06; position: absolute; right: -2.2rem; top: -2.2rem; width: 6rem; }
@@ -111,6 +160,13 @@ body {
   .hero-actions { flex-wrap: wrap; margin-top: 1.25rem; }
   .hero-actions .btn { flex: 1; }
   .chart-legend { grid-template-columns: 1fr; }
+  .dashboard-welcome-modal .modal-dialog { margin: 0.6rem; padding: 0; }
+  .welcome-modal-body { gap: 1.35rem; grid-template-columns: 1fr; padding: 1.7rem 1.25rem 1.5rem; }
+  .welcome-modal-copy h1 { font-size: clamp(2.6rem, 12vw, 3.5rem); }
+  .welcome-modal-side { min-height: auto; }
+  .welcome-modal-top { padding: 1rem 1.2rem 0; }
+  .welcome-modal-footer { align-items: flex-start; flex-direction: column; gap: 0.45rem; padding: 0.8rem 1.25rem; }
+  .welcome-modal-actions .btn { flex: 1 1 9rem; }
 }
 
 /* Authentication screens */
@@ -292,6 +348,10 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) {
   .welcome-page *, .welcome-page *::before, .welcome-page *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
   html:has(.welcome-page) { scroll-behavior: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-modal-copy, .welcome-modal-side, .welcome-word-track { animation: none; }
+  .welcome-word-track > span:not(:first-child) { display: none; }
 }
 
 /* Login and registration layouts */
