@@ -90,7 +90,18 @@ body {
 .kpi-coral.kpi-clear .kpi-top i { align-items: center; background: #e0f2e6; border: 1px solid rgba(52, 131, 93, 0.08); border-radius: 50%; color: #34835d; display: inline-flex; font-size: 1.05rem; height: 2.65rem; justify-content: center; width: 2.65rem; }
 .kpi-coral.kpi-clear .kpi-value { color: #246546; font-size: 2rem; letter-spacing: -0.04em; margin-top: 0.75rem; }
 .kpi-coral.kpi-clear .kpi-note { color: #5d806d; }
-.kpi-mint { color: #2b8a72; }
+.kpi-mint { transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
+.kpi-mint:hover { transform: translateY(-3px); }
+.kpi-mint.kpi-status-healthy { background: linear-gradient(145deg, #fff 0%, #edf8f3 100%); border-color: #d5ece2; box-shadow: inset 0 3px 0 #55a98a, 0 0.55rem 1.5rem rgba(45, 126, 91, 0.08); color: #328362; }
+.kpi-mint.kpi-status-healthy:hover { border-color: #b9dfcd; box-shadow: inset 0 3px 0 #459b7b, 0 0.85rem 1.8rem rgba(45, 126, 91, 0.14); }
+.kpi-mint.kpi-status-healthy .kpi-top i { align-items: center; background: #def1e7; border: 1px solid rgba(50, 131, 98, 0.1); border-radius: 50%; color: #328362; display: inline-flex; font-size: 1.15rem; height: 2.65rem; justify-content: center; width: 2.65rem; }
+.kpi-mint.kpi-status-healthy .kpi-value { color: #24684e; font-size: 1.8rem; letter-spacing: -0.035em; margin-top: 0.75rem; }
+.kpi-mint.kpi-status-healthy .kpi-note { color: #5b806e; }
+.kpi-mint.kpi-status-watch { background: linear-gradient(145deg, #fff 0%, #fff8e8 100%); border-color: #f0e2bd; box-shadow: inset 0 3px 0 #d4a33c, 0 0.55rem 1.5rem rgba(165, 119, 36, 0.08); color: #a77825; }
+.kpi-mint.kpi-status-watch:hover { border-color: #e7d29f; box-shadow: inset 0 3px 0 #bd8c2d, 0 0.85rem 1.8rem rgba(165, 119, 36, 0.14); }
+.kpi-mint.kpi-status-watch .kpi-top i { align-items: center; background: #f8edce; border: 1px solid rgba(167, 120, 37, 0.1); border-radius: 0.85rem; color: #a77825; display: inline-flex; font-size: 1.15rem; height: 2.65rem; justify-content: center; width: 2.65rem; }
+.kpi-mint.kpi-status-watch .kpi-value { color: #88601e; font-size: 1.8rem; letter-spacing: -0.035em; margin-top: 0.75rem; }
+.kpi-mint.kpi-status-watch .kpi-note { color: #8d7449; }
 .kpi-top { align-items: center; color: var(--muted); display: flex; font-size: 0.76rem; font-weight: 700; justify-content: space-between; text-transform: uppercase; }
 .kpi-top i { color: currentColor; font-size: 1.25rem; }
 .kpi-value { color: var(--ink); font-size: 1.65rem; font-weight: 800; line-height: 1.25; margin-top: 1rem; }
