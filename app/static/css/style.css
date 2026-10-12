@@ -382,8 +382,8 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .app-nav-links .nav-link.active { background: #d8ef9f; border-color: rgba(216, 239, 159, 0.75); color: #173c35; font-weight: 750; }
 .app-nav-links .nav-link.active i { color: #315b40; }
 .app-nav-account { align-items: center; border-left: 1px solid rgba(255, 255, 255, 0.15); display: flex; flex: 0 0 auto; gap: 0.8rem; padding-left: 1rem; }
-.app-account-chip { align-items: center; display: flex; gap: 0.55rem; max-width: 13rem; min-width: 0; }
-.app-account-avatar { align-items: center; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 50%; color: #d8ef9f; display: inline-flex; flex: 0 0 auto; font-size: 0.9rem; height: 2.25rem; justify-content: center; overflow: hidden; width: 2.25rem; }
+.app-account-chip { align-items: center; display: flex; gap: 0.7rem; max-width: 15rem; min-width: 0; }
+.app-account-avatar { align-items: center; background: rgba(255, 255, 255, 0.12); border: 2px solid rgba(216, 239, 159, 0.8); border-radius: 50%; box-shadow: 0 0 0 3px rgba(216, 239, 159, 0.12); color: #d8ef9f; display: inline-flex; flex: 0 0 auto; font-size: 1.2rem; height: 3.1rem; justify-content: center; overflow: hidden; width: 3.1rem; }
 .app-account-avatar .nav-shop-logo { border: 0; border-radius: 50%; height: 100%; object-fit: cover; width: 100%; }
 .app-account-details { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
 .app-account-label { color: rgba(255, 255, 255, 0.55); font-size: 0.59rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
