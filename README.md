@@ -152,7 +152,17 @@ reset codes are supported.
    ```
    The driver should be `postgresql+psycopg`, and the database name should be
    the PostgreSQL database configured in `.env`.
-6. Start the app and create a retailer account. PostgreSQL starts empty; your
+6. To inspect a stored password hash in pgAdmin, connect to `duka_credit`, open
+   **Query Tool**, and run:
+   ```sql
+   SELECT retailer_id, business_name, password_hash
+   FROM public.retailers;
+   ```
+   Each row is a retailer account. The `password_hash` value is not the
+   original password and cannot be reversed to reveal it. Treat hashes as
+   sensitive and do not share or publish query results. No rows means there
+   are no retailer accounts in this database yet.
+7. Start the app and create a retailer account. PostgreSQL starts empty; your
    existing SQLite database remains unchanged. Back it up before planning any
    data transfer.
 
