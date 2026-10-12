@@ -356,6 +356,65 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .features-bottom > a:hover i { transform: translateX(3px); }
 .features-shell .welcome-footer { margin-top: auto; padding-top: 0.25rem; }
 
+/* Signed-in application navigation */
+.app-navbar {
+  background: rgba(23, 60, 53, 0.97);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0.45rem 1.5rem rgba(20, 45, 39, 0.14);
+  min-height: 4.7rem;
+  padding: 0.55rem 0;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+.app-navbar-inner { gap: 1.15rem; padding-left: clamp(1rem, 2.5vw, 2.5rem); padding-right: clamp(1rem, 2.5vw, 2.5rem); }
+.app-brand { align-items: center; color: #fff; display: inline-flex; flex: 0 0 auto; gap: 0.7rem; margin: 0; padding: 0.2rem 0; }
+.app-brand:hover, .app-brand:focus { color: #fff; }
+.app-brand-mark { align-items: center; background: #d8ef9f; border-radius: 0.75rem; color: #173c35; display: inline-flex; font-size: 1.25rem; height: 2.55rem; justify-content: center; transition: transform 180ms ease; width: 2.55rem; }
+.app-brand:hover .app-brand-mark { transform: rotate(-5deg); }
+.app-brand-name { font-size: 1.16rem; font-weight: 650; letter-spacing: -0.035em; }
+.app-brand-name strong { color: #d8ef9f; font-weight: 800; }
+.app-offline-badge { align-items: center; background: #fff0d6; border: 1px solid rgba(255, 201, 105, 0.4); border-radius: 2rem; color: #764800; display: inline-flex; flex: 0 0 auto; font-size: 0.7rem; font-weight: 750; gap: 0.35rem; padding: 0.42rem 0.7rem; }
+.app-nav-collapse { align-items: center; gap: 1rem; }
+.app-nav-links { align-items: center; gap: 0.18rem; margin: 0 auto; }
+.app-nav-links .nav-link { align-items: center; border: 1px solid transparent; border-radius: 0.65rem; color: rgba(255, 255, 255, 0.74); display: inline-flex; font-size: 0.76rem; font-weight: 600; gap: 0.48rem; min-height: 2.6rem; padding: 0.55rem 0.72rem; transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease; white-space: nowrap; }
+.app-nav-links .nav-link i { color: rgba(216, 239, 159, 0.88); font-size: 0.95rem; }
+.app-nav-links .nav-link:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.app-nav-links .nav-link.active { background: #d8ef9f; border-color: rgba(216, 239, 159, 0.75); color: #173c35; font-weight: 750; }
+.app-nav-links .nav-link.active i { color: #315b40; }
+.app-nav-account { align-items: center; border-left: 1px solid rgba(255, 255, 255, 0.15); display: flex; flex: 0 0 auto; gap: 0.8rem; padding-left: 1rem; }
+.app-account-chip { align-items: center; display: flex; gap: 0.55rem; max-width: 13rem; min-width: 0; }
+.app-account-avatar { align-items: center; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 50%; color: #d8ef9f; display: inline-flex; flex: 0 0 auto; font-size: 0.9rem; height: 2.25rem; justify-content: center; overflow: hidden; width: 2.25rem; }
+.app-account-avatar .nav-shop-logo { border: 0; border-radius: 50%; height: 100%; object-fit: cover; width: 100%; }
+.app-account-details { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.app-account-label { color: rgba(255, 255, 255, 0.55); font-size: 0.59rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.app-account-name { color: #fff; font-size: 0.74rem; font-weight: 650; margin-top: 0.18rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-logout-link { align-items: center; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 0.62rem; color: rgba(255, 255, 255, 0.8); display: inline-flex; font-size: 0.73rem; font-weight: 650; gap: 0.42rem; min-height: 2.4rem; padding: 0.45rem 0.7rem; text-decoration: none; transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease; white-space: nowrap; }
+.app-logout-link i { color: #d8ef9f; font-size: 0.95rem; }
+.app-logout-link:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.4); color: #fff; }
+.app-navbar a:focus-visible, .app-nav-toggle:focus-visible { outline: 2px solid #d8ef9f; outline-offset: 3px; }
+.app-nav-toggle { border-color: rgba(255, 255, 255, 0.28); padding: 0.4rem 0.55rem; }
+.app-nav-toggle .navbar-toggler-icon { filter: brightness(0) invert(1); height: 1.25rem; width: 1.25rem; }
+
+@media (max-width: 1199.98px) {
+  .app-navbar-inner { gap: 0.75rem; }
+  .app-nav-collapse { background: #1b433b; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 0.9rem; box-shadow: 0 1rem 2rem rgba(10, 30, 26, 0.22); margin-top: 0.65rem; padding: 0.75rem; }
+  .app-nav-links { align-items: stretch; width: 100%; }
+  .app-nav-links .nav-link { min-height: 2.75rem; padding-inline: 0.8rem; }
+  .app-nav-account { border-left: 0; border-top: 1px solid rgba(255, 255, 255, 0.14); justify-content: space-between; margin-top: 0.55rem; padding: 0.8rem 0.25rem 0.1rem; width: 100%; }
+  .app-account-chip { max-width: calc(100% - 7rem); }
+}
+@media (max-width: 480px) {
+  .app-navbar-inner { padding-left: 0.85rem; padding-right: 0.85rem; }
+  .app-brand { gap: 0.5rem; }
+  .app-brand-mark { border-radius: 0.62rem; height: 2.25rem; width: 2.25rem; }
+  .app-brand-name { font-size: 1.03rem; }
+  .app-offline-badge { font-size: 0; gap: 0; padding: 0.5rem; }
+  .app-offline-badge i { font-size: 0.85rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-navbar *, .app-navbar *::before, .app-navbar *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+}
+
 @media (max-width: 900px) {
   .auth-layout, .auth-layout-register { gap: 2rem; grid-template-columns: minmax(13rem, 0.75fr) minmax(22rem, 1.25fr); }
   .auth-layout-register .auth-shell-wide { min-width: 0; }
