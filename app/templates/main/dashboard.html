@@ -1,88 +1,108 @@
 {% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
-<div class="modal fade dashboard-welcome-modal" id="dashboardWelcome" tabindex="-1"
-  aria-labelledby="dashboardWelcomeTitle" aria-describedby="dashboardWelcomeDescription">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content dashboard-welcome-card">
-      <div class="welcome-modal-orbit welcome-modal-orbit-one" aria-hidden="true"></div>
-      <div class="welcome-modal-orbit welcome-modal-orbit-two" aria-hidden="true"></div>
-      <div class="welcome-modal-top">
-        <a class="welcome-modal-brand" href="{{ url_for('main.dashboard') }}" aria-label="Duka Credit">
-          <span class="welcome-modal-mark"><i class="bi bi-shop-window" aria-hidden="true"></i></span>
-          <span>Duka <strong>Credit</strong></span>
-        </a>
-        <button type="button" class="btn-close btn-close-white welcome-modal-close"
-          data-bs-dismiss="modal" aria-label="Close welcome message"></button>
-      </div>
-      <div class="welcome-modal-body">
-        <div class="welcome-modal-copy">
-          <p class="welcome-modal-kicker"><span></span>Your business, moving forward</p>
-          <h1 id="dashboardWelcomeTitle">Welcome back,<br>{{ current_user.owner_name.split(' ')[0] }}.</h1>
-          <p class="welcome-modal-promise" id="dashboardWelcomeDescription">
-            Made for
-            <span class="welcome-word-window" aria-hidden="true">
-              <span class="welcome-word-track">
-                <span>clear books</span>
-                <span>steady collections</span>
-                <span>stronger shops</span>
-                <span>clear books</span>
-              </span>
-            </span>
-          </p>
-          <span class="visually-hidden">Clear books, steady collections, and stronger shops.</span>
-          <p class="welcome-modal-detail">Every sale, payment, and customer balance—together in one clear view.</p>
-          <div class="welcome-modal-actions">
-            <a class="btn welcome-action-primary" href="{{ url_for('transactions.new_transaction') }}">
-              <i class="bi bi-plus-lg" aria-hidden="true"></i> Record a credit sale
-            </a>
-            <a class="btn welcome-action-secondary" href="{{ url_for('payments.new_payment') }}">
-              <i class="bi bi-arrow-down-left" aria-hidden="true"></i> Log a payment
-            </a>
+<section class="dashboard-welcome" aria-label="Welcome and business highlights">
+  <div id="dashboardWelcomeCarousel" class="welcome-carousel" role="region"
+    aria-roledescription="carousel" aria-label="Shop welcome and highlights" aria-live="off">
+    <div class="welcome-carousel-track">
+      <article class="welcome-slide welcome-slide-morning is-active"
+        role="group" aria-roledescription="slide" aria-label="1 of 3: Welcome" aria-hidden="false">
+        <div class="welcome-slide-content">
+          <div class="welcome-slide-copy">
+            <div class="dashboard-brandline">
+              {% if current_user.logo_filename %}
+              <img class="dashboard-shop-logo" src="{{ url_for('static', filename='uploads/logos/' ~ current_user.logo_filename) }}" alt="{{ current_user.business_name }} logo">
+              {% else %}
+              <span class="dashboard-shop-logo dashboard-shop-placeholder"><i class="bi bi-shop" aria-hidden="true"></i></span>
+              {% endif %}
+              <p class="eyebrow mb-0"><i class="bi bi-sunrise" aria-hidden="true"></i> A fresh look at your business</p>
+            </div>
+            <h1 id="welcomeGreeting" data-owner-name="{{ current_user.owner_name.split(' ')[0] }}">Welcome back, {{ current_user.owner_name.split(' ')[0] }}.</h1>
+            <p class="hero-copy mb-0">Your credit book, collections, and customers—ready when you are.</p>
+            <div class="hero-actions">
+              <a class="btn welcome-slide-primary" href="{{ url_for('transactions.new_transaction') }}"><i class="bi bi-plus-lg" aria-hidden="true"></i> New credit sale</a>
+              <a class="btn welcome-slide-secondary" href="{{ url_for('payments.new_payment') }}"><i class="bi bi-wallet2" aria-hidden="true"></i> Record payment</a>
+            </div>
           </div>
-          <button class="welcome-modal-continue" type="button" data-bs-dismiss="modal">
-            Take me to my dashboard <i class="bi bi-arrow-right" aria-hidden="true"></i>
-          </button>
+          <div class="welcome-slide-art welcome-art-ledger" aria-hidden="true">
+            <span class="welcome-art-orbit"></span>
+            <span class="welcome-art-stamp"><i class="bi bi-shop-window"></i></span>
+            <span class="welcome-art-card"><i class="bi bi-journal-check"></i><b>Every shilling, accounted for.</b></span>
+          </div>
         </div>
+      </article>
+      <article class="welcome-slide welcome-slide-growth"
+        role="group" aria-roledescription="slide" aria-label="2 of 3: Business growth" aria-hidden="true">
+        <div class="welcome-slide-content">
+          <div class="welcome-slide-copy">
+            <div class="dashboard-brandline">
+              {% if current_user.logo_filename %}
+              <img class="dashboard-shop-logo" src="{{ url_for('static', filename='uploads/logos/' ~ current_user.logo_filename) }}" alt="{{ current_user.business_name }} logo">
+              {% else %}
+              <span class="dashboard-shop-logo dashboard-shop-placeholder"><i class="bi bi-shop" aria-hidden="true"></i></span>
+              {% endif %}
+              <p class="eyebrow mb-0"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Built for the way you grow</p>
+            </div>
+            <h2>Small steps.<br>Stronger business.</h2>
+            <p class="hero-copy mb-0">Record each sale, track each payment, and let your progress add up.</p>
+            <div class="hero-actions">
+              <a class="btn welcome-slide-primary" href="{{ url_for('customers.list_customers') }}"><i class="bi bi-people" aria-hidden="true"></i> Meet your customers</a>
+              <a class="btn welcome-slide-secondary" href="{{ url_for('transactions.list_transactions') }}"><i class="bi bi-journal-text" aria-hidden="true"></i> See your credit book</a>
+            </div>
+          </div>
+          <div class="welcome-slide-art welcome-art-growth" aria-hidden="true">
+            <span class="welcome-art-orbit"></span>
+            <span class="welcome-art-sun"><i class="bi bi-sun-fill"></i></span>
+            <span class="welcome-art-card"><i class="bi bi-arrow-up-right"></i><b>Today is another chance to grow.</b></span>
+          </div>
+        </div>
+      </article>
+      <article class="welcome-slide welcome-slide-focus"
+        role="group" aria-roledescription="slide" aria-label="3 of 3: Business focus" aria-hidden="true">
+        <div class="welcome-slide-content">
+          <div class="welcome-slide-copy">
+            <div class="dashboard-brandline">
+              {% if current_user.logo_filename %}
+              <img class="dashboard-shop-logo" src="{{ url_for('static', filename='uploads/logos/' ~ current_user.logo_filename) }}" alt="{{ current_user.business_name }} logo">
+              {% else %}
+              <span class="dashboard-shop-logo dashboard-shop-placeholder"><i class="bi bi-shop" aria-hidden="true"></i></span>
+              {% endif %}
+              <p class="eyebrow mb-0"><i class="bi bi-compass" aria-hidden="true"></i> Clarity for your next move</p>
+            </div>
+            <h2>Know your numbers.<br>Choose your next move.</h2>
+            <p class="hero-copy mb-0">See what is owed, follow up with confidence, and keep your shop moving.</p>
+            <div class="hero-actions">
+              <a class="btn welcome-slide-primary" href="{{ url_for('ledger.receivables_report') }}"><i class="bi bi-bar-chart-line" aria-hidden="true"></i> View receivables</a>
+              <a class="btn welcome-slide-secondary" href="{{ url_for('reminders.list_rules') }}"><i class="bi bi-bell" aria-hidden="true"></i> Review reminders</a>
+            </div>
+          </div>
+          <div class="welcome-slide-art welcome-art-focus" aria-hidden="true">
+            <span class="welcome-art-orbit"></span>
+            <span class="welcome-art-focus-icon"><i class="bi bi-bullseye"></i></span>
+            <span class="welcome-art-card"><i class="bi bi-check2-circle"></i><b>Your next move, made clearer.</b></span>
+          </div>
+        </div>
+      </article>
+    </div>
 
-        <aside class="welcome-modal-side" aria-label="Your shop at a glance">
-          <div class="welcome-side-top">
-            <span class="welcome-side-icon"><i class="bi bi-shop" aria-hidden="true"></i></span>
-            <span class="welcome-side-status"><i class="bi bi-circle-fill" aria-hidden="true"></i> Your shop</span>
-          </div>
-          <p class="welcome-side-label">A little more clarity, every day.</p>
-          <div class="welcome-side-stat">
-            <span><i class="bi bi-people" aria-hidden="true"></i> Customers</span>
-            <strong>{{ total_customers }}</strong>
-          </div>
-          <div class="welcome-side-stat">
-            <span><i class="bi bi-wallet2" aria-hidden="true"></i> To collect</span>
-            <strong>{{ total_outstanding | kes }}</strong>
-          </div>
-          <div class="welcome-side-note">
-            <i class="bi bi-stars" aria-hidden="true"></i>
-            <span>Good records build stronger business.</span>
-          </div>
-          <span class="welcome-side-decoration" aria-hidden="true"><i class="bi bi-graph-up-arrow"></i></span>
-        </aside>
+    <div class="welcome-carousel-controls">
+      <div class="welcome-carousel-indicators" aria-label="Choose a welcome slide">
+        <button type="button" data-welcome-slide="0" class="active" aria-current="true" aria-label="Welcome"></button>
+        <button type="button" data-welcome-slide="1" aria-label="Business growth"></button>
+        <button type="button" data-welcome-slide="2" aria-label="Business focus"></button>
       </div>
-      <div class="welcome-modal-footer">
-        <span><i class="bi bi-shield-check" aria-hidden="true"></i> Your shop, your numbers, your next move.</span>
-        <span>DUKA CREDIT <b>·</b> {{ current_user.business_name }}</span>
+      <div class="welcome-carousel-buttons">
+        <button class="welcome-carousel-toggle" type="button" aria-label="Pause carousel" title="Pause carousel">
+          <i class="bi bi-pause-fill" aria-hidden="true"></i>
+        </button>
+        <button class="welcome-carousel-arrow" type="button" data-welcome-action="previous" aria-label="Previous slide">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i>
+        </button>
+        <button class="welcome-carousel-arrow" type="button" data-welcome-action="next" aria-label="Next slide">
+          <i class="bi bi-arrow-right" aria-hidden="true"></i>
+        </button>
       </div>
     </div>
-  </div>
-</div>
-
-<section class="dashboard-hero">
-  <div>
-    <div class="dashboard-brandline">{% if current_user.logo_filename %}<img class="dashboard-shop-logo" src="{{ url_for('static', filename='uploads/logos/' ~ current_user.logo_filename) }}" alt="{{ current_user.business_name }} logo">{% else %}<span class="dashboard-shop-logo dashboard-shop-placeholder"><i class="bi bi-shop"></i></span>{% endif %}<p class="eyebrow mb-2"><i class="bi bi-grid-1x2-fill"></i> Business overview</p></div>
-    <h1>Your shop, in focus.</h1>
-    <p class="hero-copy mb-0">A clear view of your credit book, collections, and customers who need attention.</p>
-  </div>
-  <div class="hero-actions">
-    <a class="btn btn-light" href="{{ url_for('transactions.new_transaction') }}"><i class="bi bi-plus-lg"></i> New credit sale</a>
-    <a class="btn btn-outline-light" href="{{ url_for('payments.new_payment') }}"><i class="bi bi-wallet2"></i> Record payment</a>
   </div>
 </section>
 
@@ -138,9 +158,112 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
-  const welcomeModalElement = document.getElementById('dashboardWelcome');
-  if (welcomeModalElement) {
-    bootstrap.Modal.getOrCreateInstance(welcomeModalElement).show();
+  const greetingElement = document.getElementById('welcomeGreeting');
+  if (greetingElement) {
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+    greetingElement.textContent = `${greeting}, ${greetingElement.dataset.ownerName}.`;
+  }
+
+  const welcomeCarouselElement = document.getElementById('dashboardWelcomeCarousel');
+  const welcomeCarouselToggle = document.querySelector('.welcome-carousel-toggle');
+  if (welcomeCarouselElement && welcomeCarouselToggle) {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const slides = Array.from(welcomeCarouselElement.querySelectorAll('.welcome-slide'));
+    const indicators = Array.from(welcomeCarouselElement.querySelectorAll('[data-welcome-slide]'));
+    let isPaused = reducedMotion;
+    let isHovered = false;
+    let hasFocus = false;
+    let activeIndex = 0;
+    let intervalId;
+
+    function showSlide(index) {
+      activeIndex = (index + slides.length) % slides.length;
+      slides.forEach((slide, slideIndex) => {
+        const isActive = slideIndex === activeIndex;
+        slide.classList.toggle('is-active', isActive);
+        slide.setAttribute('aria-hidden', String(!isActive));
+        indicators[slideIndex].classList.toggle('active', isActive);
+        if (isActive) {
+          indicators[slideIndex].setAttribute('aria-current', 'true');
+        } else {
+          indicators[slideIndex].removeAttribute('aria-current');
+        }
+      });
+    }
+
+    function stopCarousel() {
+      window.clearInterval(intervalId);
+      intervalId = undefined;
+    }
+
+    function startCarousel() {
+      stopCarousel();
+      if (!isPaused && !isHovered && !hasFocus && !document.hidden && slides.length > 1) {
+        intervalId = window.setInterval(() => showSlide(activeIndex + 1), 7000);
+      }
+    }
+
+    function updateToggle() {
+      const label = isPaused ? 'Start carousel' : 'Pause carousel';
+      welcomeCarouselToggle.setAttribute('aria-label', label);
+      welcomeCarouselToggle.title = label;
+      welcomeCarouselToggle.innerHTML = isPaused
+        ? '<i class="bi bi-play-fill" aria-hidden="true"></i>'
+        : '<i class="bi bi-pause-fill" aria-hidden="true"></i>';
+      welcomeCarouselElement.setAttribute('aria-live', isPaused ? 'polite' : 'off');
+    }
+
+    indicators.forEach((indicator, index) => {
+      indicator.addEventListener('click', () => {
+        showSlide(index);
+        startCarousel();
+      });
+    });
+
+    welcomeCarouselElement.querySelectorAll('[data-welcome-action]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const direction = button.dataset.welcomeAction === 'next' ? 1 : -1;
+        showSlide(activeIndex + direction);
+        startCarousel();
+      });
+    });
+
+    welcomeCarouselToggle.addEventListener('click', () => {
+      isPaused = !isPaused;
+      updateToggle();
+      startCarousel();
+    });
+
+    welcomeCarouselElement.addEventListener('mouseenter', () => {
+      isHovered = true;
+      stopCarousel();
+    });
+    welcomeCarouselElement.addEventListener('mouseleave', () => {
+      isHovered = false;
+      startCarousel();
+    });
+    welcomeCarouselElement.addEventListener('focusin', () => {
+      hasFocus = true;
+      stopCarousel();
+    });
+    welcomeCarouselElement.addEventListener('focusout', (event) => {
+      hasFocus = welcomeCarouselElement.contains(event.relatedTarget);
+      if (!hasFocus) {
+        startCarousel();
+      }
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        stopCarousel();
+      } else {
+        startCarousel();
+      }
+    });
+
+    showSlide(0);
+    updateToggle();
+    startCarousel();
   }
 
   const ctx = document.getElementById('ageingChart');
