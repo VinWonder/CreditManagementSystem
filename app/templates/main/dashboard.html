@@ -97,7 +97,7 @@
 
 <div class="row g-3 dashboard-kpis">
   <div class="col-sm-6 col-xl-3"><div class="kpi-card kpi-blue"><div class="kpi-top"><span>Customer base</span><i class="bi bi-people-fill" aria-hidden="true"></i></div><div class="kpi-value">{{ total_customers }}</div><div class="kpi-note">Registered customers</div></div></div>
-  <div class="col-sm-6 col-xl-3"><div class="kpi-card kpi-ink"><div class="kpi-top"><span>Outstanding book</span><i class="bi bi-cash-stack"></i></div><div class="kpi-value">{{ total_outstanding | kes }}</div><div class="kpi-note">Total receivables</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="kpi-card kpi-ink"><div class="kpi-top"><span>Outstanding book</span><i class="bi bi-cash-stack" aria-hidden="true"></i></div><div class="kpi-value">{{ total_outstanding | kes }}</div><div class="kpi-note">Total receivables</div></div></div>
   <div class="col-sm-6 col-xl-3"><div class="kpi-card kpi-coral"><div class="kpi-top"><span>Needs attention</span><i class="bi bi-exclamation-circle"></i></div><div class="kpi-value">{{ overdue_customers }}</div><div class="kpi-note">Overdue accounts</div></div></div>
   <div class="col-sm-6 col-xl-3"><div class="kpi-card kpi-mint"><div class="kpi-top"><span>Portfolio status</span><i class="bi bi-shield-check"></i></div><div class="kpi-value">{% if overdue_customers %}Monitor{% else %}Healthy{% endif %}</div><div class="kpi-note">Based on overdue accounts</div></div></div>
 </div>
