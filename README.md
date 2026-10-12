@@ -150,7 +150,22 @@ if you want breakpoints.
    .\venv\Scripts\python.exe -m pip install -r requirements.txt
    .\venv\Scripts\python.exe -m flask --app run db upgrade
    ```
-5. Start the app and create a retailer account. PostgreSQL starts empty; your
+5. Verify the app's active database connection without printing the URL (it
+   contains credentials):
+   ```powershell
+   .\venv\Scripts\python.exe -m flask --app run shell
+   ```
+   In the Python shell, run:
+   ```python
+   from app.extensions import db
+   from sqlalchemy import text
+
+   print(db.engine.url.drivername)
+   print(db.session.execute(text("SELECT current_database()")).scalar())
+   ```
+   The driver should be `postgresql+psycopg`, and the database name should be
+   the PostgreSQL database configured in `.env`.
+6. Start the app and create a retailer account. PostgreSQL starts empty; your
    existing SQLite database remains unchanged. Back it up before planning any
    data transfer.
 
