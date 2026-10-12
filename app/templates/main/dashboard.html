@@ -92,9 +92,6 @@
         <button type="button" data-welcome-slide="2" aria-label="Business focus"></button>
       </div>
       <div class="welcome-carousel-buttons">
-        <button class="welcome-carousel-toggle" type="button" aria-label="Pause carousel" title="Pause carousel">
-          <i class="bi bi-pause-fill" aria-hidden="true"></i>
-        </button>
         <button class="welcome-carousel-arrow" type="button" data-welcome-action="previous" aria-label="Previous slide">
           <i class="bi bi-arrow-left" aria-hidden="true"></i>
         </button>
@@ -158,24 +155,23 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
+  (function () {
   const greetingElement = document.getElementById('welcomeGreeting');
   if (greetingElement) {
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
     greetingElement.textContent = `${greeting}, ${greetingElement.dataset.ownerName}.`;
   }
-
   const welcomeCarouselElement = document.getElementById('dashboardWelcomeCarousel');
-  const welcomeCarouselToggle = document.querySelector('.welcome-carousel-toggle');
-  if (welcomeCarouselElement && welcomeCarouselToggle) {
+  if (welcomeCarouselElement) {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const slides = Array.from(welcomeCarouselElement.querySelectorAll('.welcome-slide'));
     const indicators = Array.from(welcomeCarouselElement.querySelectorAll('[data-welcome-slide]'));
-    let isPaused = reducedMotion;
     let isHovered = false;
     let hasFocus = false;
     let activeIndex = 0;
     let intervalId;
+    welcomeCarouselElement.setAttribute('aria-live', reducedMotion ? 'polite' : 'off');
 
     function showSlide(index) {
       activeIndex = (index + slides.length) % slides.length;
@@ -199,19 +195,9 @@
 
     function startCarousel() {
       stopCarousel();
-      if (!isPaused && !isHovered && !hasFocus && !document.hidden && slides.length > 1) {
+      if (!reducedMotion && !isHovered && !hasFocus && !document.hidden && slides.length > 1) {
         intervalId = window.setInterval(() => showSlide(activeIndex + 1), 7000);
       }
-    }
-
-    function updateToggle() {
-      const label = isPaused ? 'Start carousel' : 'Pause carousel';
-      welcomeCarouselToggle.setAttribute('aria-label', label);
-      welcomeCarouselToggle.title = label;
-      welcomeCarouselToggle.innerHTML = isPaused
-        ? '<i class="bi bi-play-fill" aria-hidden="true"></i>'
-        : '<i class="bi bi-pause-fill" aria-hidden="true"></i>';
-      welcomeCarouselElement.setAttribute('aria-live', isPaused ? 'polite' : 'off');
     }
 
     indicators.forEach((indicator, index) => {
@@ -227,12 +213,6 @@
         showSlide(activeIndex + direction);
         startCarousel();
       });
-    });
-
-    welcomeCarouselToggle.addEventListener('click', () => {
-      isPaused = !isPaused;
-      updateToggle();
-      startCarousel();
     });
 
     welcomeCarouselElement.addEventListener('mouseenter', () => {
@@ -260,9 +240,7 @@
         startCarousel();
       }
     });
-
     showSlide(0);
-    updateToggle();
     startCarousel();
   }
 
@@ -273,5 +251,6 @@
   const ageingColors = ['#2c7a7b', '#d5a021', '#df7b49', '#d9534f', '#872f3b'];
   new Chart(ctx, { type: 'doughnut', data: { labels: ageingLabels, datasets: [{ data: ageingValues, backgroundColor: ageingColors, borderWidth: 0, hoverOffset: 7 }] }, options: { cutout: '70%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => ` ${item.label}: KES ${Number(item.raw).toLocaleString()}` } } }, responsive: true, maintainAspectRatio: false } });
   document.getElementById('ageingLegend').innerHTML = ageingLabels.map((label, index) => `<span><i style="background:${ageingColors[index]}"></i>${label}<strong>KES ${Number(ageingValues[index]).toLocaleString()}</strong></span>`).join('');
+  })();
 </script>
 {% endblock %}
