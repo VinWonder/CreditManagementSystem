@@ -91,14 +91,6 @@
         <button type="button" data-welcome-slide="1" aria-label="Business growth"></button>
         <button type="button" data-welcome-slide="2" aria-label="Business focus"></button>
       </div>
-      <div class="welcome-carousel-buttons">
-        <button class="welcome-carousel-arrow" type="button" data-welcome-action="previous" aria-label="Previous slide">
-          <i class="bi bi-arrow-left" aria-hidden="true"></i>
-        </button>
-        <button class="welcome-carousel-arrow" type="button" data-welcome-action="next" aria-label="Next slide">
-          <i class="bi bi-arrow-right" aria-hidden="true"></i>
-        </button>
-      </div>
     </div>
   </div>
 </section>
@@ -203,14 +195,6 @@
     indicators.forEach((indicator, index) => {
       indicator.addEventListener('click', () => {
         showSlide(index);
-        startCarousel();
-      });
-    });
-
-    welcomeCarouselElement.querySelectorAll('[data-welcome-action]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const direction = button.dataset.welcomeAction === 'next' ? 1 : -1;
-        showSlide(activeIndex + direction);
         startCarousel();
       });
     });
