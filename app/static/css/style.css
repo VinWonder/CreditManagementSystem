@@ -68,7 +68,11 @@ body {
 .dashboard-kpis { margin-bottom: 1rem; }
 .kpi-card { background: var(--surface); border: 1px solid var(--line); border-radius: 0.9rem; min-height: 9.4rem; overflow: hidden; padding: 1.15rem 1.25rem; position: relative; }
 .kpi-card::after { background: currentColor; border-radius: 50%; content: ""; height: 6rem; opacity: 0.06; position: absolute; right: -2.2rem; top: -2.2rem; width: 6rem; }
-.kpi-blue { color: #2c7a7b; }
+.kpi-blue { background: linear-gradient(135deg, #fff 0%, #eff9f5 100%); border-color: #d8eee7; box-shadow: 0 0.55rem 1.5rem rgba(37, 112, 86, 0.08); color: #24745e; transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
+.kpi-blue:hover { border-color: #b8ded1; box-shadow: 0 0.85rem 1.8rem rgba(37, 112, 86, 0.13); transform: translateY(-3px); }
+.kpi-blue .kpi-top i { align-items: center; background: #dff2e9; border: 1px solid rgba(36, 116, 94, 0.08); border-radius: 0.85rem; color: #24745e; display: inline-flex; font-size: 1.15rem; height: 2.65rem; justify-content: center; width: 2.65rem; }
+.kpi-blue .kpi-value { color: #174d3d; font-size: clamp(1.85rem, 2.2vw, 2.2rem); letter-spacing: -0.045em; margin-top: 0.75rem; }
+.kpi-blue .kpi-note { color: #54796d; }
 .kpi-ink { color: #173042; }
 .kpi-coral { color: #d9534f; }
 .kpi-mint { color: #2b8a72; }
