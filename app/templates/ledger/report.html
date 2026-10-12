@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Receivables Report{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4><i class="bi bi-graph-up-arrow"></i> Receivables & Ageing Report</h4>
+  <div class="btn-group">
+    <a href="?sort=days_overdue" class="btn btn-sm btn-outline-secondary {{ 'active' if sort=='days_overdue' }}">Sort by Overdue</a>
+    <a href="?sort=balance" class="btn btn-sm btn-outline-secondary {{ 'active' if sort=='balance' }}">Sort by Balance</a>
+  </div>
+</div>
+
+<div class="card p-3 mb-3">
+  <strong>Total Outstanding:</strong> {{ total_outstanding | kes }}
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr><th>Customer</th><th>Phone</th><th>Balance</th><th>Days Overdue</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+      {% for l in ledgers %}
+        <tr>
+          <td><a href="{{ url_for('customers.view_customer', customer_id=l.customer_id) }}">{{ l.customer.full_name }}</a></td>
+          <td>{{ l.customer.phone_number }}</td>
+          <td>{{ l.outstanding_balance | kes }}</td>
+          <td>{{ l.days_overdue }}</td>
+          <td>
+            {% if l.days_overdue > 30 %}
+              <span class="badge badge-overdue">Critical</span>
+            {% elif l.days_overdue > 7 %}
+              <span class="badge text-bg-warning">Watch</span>
+            {% else %}
+              <span class="badge badge-safe">Recent</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-4">No outstanding balances 🎉</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

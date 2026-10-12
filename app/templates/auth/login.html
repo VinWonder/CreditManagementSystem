@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block page_head %}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/css/intlTelInput.css">{% endblock %}
+{% block content %}
+<div class="auth-layout">
+  <aside class="auth-aside">
+    <a class="auth-brand" href="{{ url_for('main.index') }}"><span class="auth-brand-mark"><i class="bi bi-shop-window"></i></span><span>Duka <strong>Credit</strong></span></a>
+    <div class="auth-story">
+      <p class="auth-kicker">YOUR SHOP, IN GOOD ORDER</p>
+      <h2>Good to see you<br><em>again.</em></h2>
+      <p>Your customer book, payments, and follow-ups are right where you left them.</p>
+      <div class="auth-story-note"><i class="bi bi-shield-check"></i><span><strong>Your records stay yours</strong><small>Sign in securely to your shop account.</small></span></div>
+    </div>
+    <a class="auth-back-link" href="{{ url_for('main.index') }}"><i class="bi bi-arrow-left"></i> Back to Duka Credit</a>
+  </aside>
+  <div class="auth-shell">
+    <div class="auth-card">
+      <div class="auth-heading"><p class="auth-kicker">RETAILER PORTAL</p><h1>Welcome back</h1><p>Sign in to keep your shop's credit book moving.</p></div>
+      <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="auth-field">
+          {{ form.phone_number.label(class="form-label") }}
+          {{ form.phone_number(class="form-control", placeholder="+254 712 345 678", autocomplete="tel", autofocus=true) }}
+          {% for e in form.phone_number.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="auth-field">
+          <div class="field-label-row">{{ form.password.label(class="form-label mb-0") }}<a href="{{ url_for('auth.forgot_password') }}">Forgot password?</a></div>
+          <div class="password-input">{{ form.password(class="form-control", autocomplete="current-password") }}<button type="button" class="password-toggle" data-toggle-password aria-label="Show password"><i class="bi bi-eye"></i></button></div>
+          {% for e in form.password.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+        </div>
+        {{ form.submit(class="btn auth-submit w-100") }}
+      </form>
+      <p class="auth-switch">New to Duka Credit? <a href="{{ url_for('auth.register') }}">Create a retailer account</a></p>
+      <p class="auth-security"><i class="bi bi-shield-lock"></i> Your account data is protected with encrypted sessions.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/js/intlTelInput.min.js"></script><script src="{{ url_for('static', filename='js/auth.js') }}"></script>{% endblock %}

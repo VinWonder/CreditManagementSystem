@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Verify sign-in{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block content %}
+<div class="auth-shell">
+  <div class="auth-brand"><span class="auth-brand-mark"><i class="bi bi-shop"></i></span><span>Duka Credit</span></div>
+  <div class="auth-card">
+    <div class="auth-heading"><p class="auth-kicker">Two-step sign-in</p><h1>Check your phone</h1><p>We sent a one-time sign-in code by SMS to <strong>{{ phone_number }}</strong>. Enter it to continue.</p></div>
+    <form method="POST" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="auth-field">{{ form.code.label(class="form-label") }}{{ form.code(class="form-control verification-code", inputmode="numeric", autocomplete="one-time-code", maxlength="6", placeholder="000000", autofocus=true) }}{% for error in form.code.errors %}<div class="field-error">{{ error }}</div>{% endfor %}</div>
+      {{ form.submit(class="btn auth-submit w-100") }}
+    </form>
+    <form method="POST" action="{{ url_for('auth.resend_login_code') }}" class="text-center mt-3">
+      {{ resend_form.hidden_tag() }}
+      <button type="submit" class="btn btn-link auth-resend">Send another code</button>
+    </form>
+    <p class="auth-switch"><a href="{{ url_for('auth.login') }}"><i class="bi bi-arrow-left"></i> Cancel and sign in again</a></p>
+    <p class="auth-security"><i class="bi bi-shield-lock"></i> Never share this code with anyone.</p>
+  </div>
+</div>
+{% endblock %}

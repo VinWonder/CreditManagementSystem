@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card p-4">
+      <h4 class="mb-3">{{ title }}</h4>
+      <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          {{ form.full_name.label(class="form-label") }}
+          {{ form.full_name(class="form-control") }}
+          {% for e in form.full_name.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
+          {{ form.phone_number.label(class="form-label") }}
+          {{ form.phone_number(class="form-control", placeholder="+254712345678") }}
+          {% for e in form.phone_number.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
+          {{ form.preferred_channel.label(class="form-label") }}
+          {{ form.preferred_channel(class="form-select") }}
+        </div>
+        {{ form.submit(class="btn btn-primary") }}
+        <a href="{{ url_for('customers.list_customers') }}" class="btn btn-link">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

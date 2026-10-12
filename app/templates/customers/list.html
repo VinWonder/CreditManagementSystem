@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Customers{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4><i class="bi bi-people"></i> Customers</h4>
+  <a href="{{ url_for('customers.new_customer') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Customer</a>
+</div>
+
+<form class="mb-3" method="GET">
+  <div class="input-group">
+    <input type="text" name="q" class="form-control" placeholder="Search by name or phone..." value="{{ query }}">
+    <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr><th>Name</th><th>Phone</th><th>Channel</th><th>Balance</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for c in customers %}
+        <tr>
+          <td><a href="{{ url_for('customers.view_customer', customer_id=c.customer_id) }}">{{ c.full_name }}</a></td>
+          <td>{{ c.phone_number }}</td>
+          <td><span class="badge text-bg-secondary">{{ c.preferred_channel }}</span></td>
+          <td>
+            {% if c.ledger %}
+              {% if c.ledger.outstanding_balance > 0 %}
+                <span class="badge badge-overdue">{{ c.ledger.outstanding_balance | kes }}</span>
+              {% else %}
+                <span class="badge badge-safe">Cleared</span>
+              {% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{{ url_for('customers.edit_customer', customer_id=c.customer_id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+            <form action="{{ url_for('customers.delete_customer', customer_id=c.customer_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this customer?');">
+              <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-4">No customers found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

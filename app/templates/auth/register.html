@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block page_head %}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/css/intlTelInput.css">{% endblock %}
+{% block content %}
+<div class="auth-layout auth-layout-register">
+  <aside class="auth-aside">
+    <a class="auth-brand" href="{{ url_for('main.index') }}"><span class="auth-brand-mark"><i class="bi bi-shop-window"></i></span><span>Duka <strong>Credit</strong></span></a>
+    <div class="auth-story">
+      <p class="auth-kicker">A FRESH PAGE FOR YOUR SHOP</p>
+      <h2>Make room for<br><em>better business.</em></h2>
+      <p>Set up once, then bring your customer credit book into one clear view.</p>
+      <div class="auth-benefits">
+        <span><i class="bi bi-check2"></i> Track customer balances</span>
+        <span><i class="bi bi-check2"></i> Record sales and payments</span>
+        <span><i class="bi bi-check2"></i> Follow up on your terms</span>
+      </div>
+    </div>
+    <a class="auth-back-link" href="{{ url_for('main.index') }}"><i class="bi bi-arrow-left"></i> Back to Duka Credit</a>
+  </aside>
+  <div class="auth-shell auth-shell-wide">
+    <div class="auth-card">
+      <div class="auth-heading"><p class="auth-kicker">SET UP YOUR SHOP</p><h1>Create your account</h1><p>Build a secure, organised credit book for your business.</p></div>
+      <form method="POST" enctype="multipart/form-data" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="auth-form-grid">
+          <div class="auth-field">{{ form.business_name.label(class="form-label") }}{{ form.business_name(class="form-control", autocomplete="organization", autofocus=true) }}{% for e in form.business_name.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
+          <div class="auth-field">{{ form.owner_name.label(class="form-label") }}{{ form.owner_name(class="form-control", autocomplete="name") }}{% for e in form.owner_name.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
+        </div>
+        <div class="auth-form-grid">
+          <div class="auth-field">{{ form.phone_number.label(class="form-label") }}{{ form.phone_number(class="form-control", placeholder="712 345 678", autocomplete="tel", inputmode="tel") }}<div class="field-help">Select a country and enter the phone number used for sign-in.</div>{% for e in form.phone_number.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
+          <div class="auth-field">{{ form.email.label(class="form-label") }}{{ form.email(class="form-control", placeholder="owner@yourshop.com", autocomplete="email") }}<div class="field-help">Used for business contact and account notices.</div>{% for e in form.email.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
+        </div>
+        <div class="auth-field">{{ form.logo.label(class="form-label") }}{{ form.logo(class="form-control", accept=".jpg,.jpeg,.png,.webp") }}<div class="field-help">Optional. JPG, PNG, or WEBP up to 3 MB.</div>{% for e in form.logo.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
+        <div class="auth-form-grid">
+          <div class="auth-field"><label class="form-label" for="password">Password</label><div class="password-input">{{ form.password(class="form-control", autocomplete="new-password", data_password_strength="true") }}<button type="button" class="password-toggle" data-toggle-password aria-label="Show password"><i class="bi bi-eye"></i></button></div><div class="password-meter"><span></span></div><div class="field-help">At least 8 characters with a letter and a number.</div>{% for e in form.password.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
+          <div class="auth-field"><label class="form-label" for="confirm_password">Confirm Password</label>{{ form.confirm_password(class="form-control", autocomplete="new-password") }}{% for e in form.confirm_password.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
+        </div>
+        {{ form.submit(class="btn auth-submit w-100") }}
+      </form>
+      <p class="auth-switch">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/js/intlTelInput.min.js"></script><script src="{{ url_for('static', filename='js/auth.js') }}"></script>{% endblock %}

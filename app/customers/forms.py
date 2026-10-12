@@ -1,0 +1,20 @@
+from flask_wtf import FlaskForm
+from wtforms import StringField, SelectField, SubmitField
+from wtforms.validators import DataRequired, Length, Regexp
+
+
+class CustomerForm(FlaskForm):
+    full_name = StringField("Customer Full Name", validators=[DataRequired(), Length(max=100)])
+    phone_number = StringField(
+        "Phone Number",
+        validators=[
+            DataRequired(),
+            Regexp(r"^\+?\d{9,15}$", message="Enter a valid phone number, e.g. +254712345678"),
+        ],
+    )
+    preferred_channel = SelectField(
+        "Preferred Reminder Channel",
+        choices=[("sms", "SMS"), ("whatsapp", "WhatsApp")],
+        default="sms",
+    )
+    submit = SubmitField("Save Customer")

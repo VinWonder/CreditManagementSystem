@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<section class="dashboard-hero">
+  <div>
+    <div class="dashboard-brandline">{% if current_user.logo_filename %}<img class="dashboard-shop-logo" src="{{ url_for('static', filename='uploads/logos/' ~ current_user.logo_filename) }}" alt="{{ current_user.business_name }} logo">{% else %}<span class="dashboard-shop-logo dashboard-shop-placeholder"><i class="bi bi-shop"></i></span>{% endif %}<p class="eyebrow mb-2"><i class="bi bi-grid-1x2-fill"></i> Business overview</p></div>
+    <h1>Good morning, {{ current_user.owner_name.split(' ')[0] }}</h1>
+    <p class="hero-copy mb-0">A clear view of your credit book, collections, and customers who need attention.</p>
+  </div>
+  <div class="hero-actions">
+    <a class="btn btn-light" href="{{ url_for('transactions.new_transaction') }}"><i class="bi bi-plus-lg"></i> New credit sale</a>
+    <a class="btn btn-outline-light" href="{{ url_for('payments.new_payment') }}"><i class="bi bi-wallet2"></i> Record payment</a>
+  </div>
+</section>
+
+<div class="row g-3 dashboard-kpis">
+  <div class="col-sm-6 col-xl-3"><div class="kpi-card kpi-blue"><div class="kpi-top"><span>Customer base</span><i class="bi bi-people"></i></div><div class="kpi-value">{{ total_customers }}</div><div class="kpi-note">Registered customers</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="kpi-card kpi-ink"><div class="kpi-top"><span>Outstanding book</span><i class="bi bi-cash-stack"></i></div><div class="kpi-value">{{ total_outstanding | kes }}</div><div class="kpi-note">Total receivables</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="kpi-card kpi-coral"><div class="kpi-top"><span>Needs attention</span><i class="bi bi-exclamation-circle"></i></div><div class="kpi-value">{{ overdue_customers }}</div><div class="kpi-note">Overdue accounts</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="kpi-card kpi-mint"><div class="kpi-top"><span>Portfolio status</span><i class="bi bi-shield-check"></i></div><div class="kpi-value">{% if overdue_customers %}Monitor{% else %}Healthy{% endif %}</div><div class="kpi-note">Based on overdue accounts</div></div></div>
+</div>
+
+<div class="row g-3 dashboard-grid">
+  <div class="col-xl-7">
+    <div class="dashboard-panel chart-panel h-100">
+      <div class="panel-heading"><div><p class="eyebrow mb-1">Receivables analysis</p><h2>Where your money is tied up</h2></div><span class="panel-badge"><i class="bi bi-bar-chart-line"></i> KES</span></div>
+      <div class="chart-wrap"><canvas id="ageingChart"></canvas></div>
+      <div id="ageingData" data-buckets='{{ buckets | tojson }}' hidden></div>
+      <div class="chart-legend" id="ageingLegend"></div>
+    </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="dashboard-panel insight-panel h-100">
+      <div class="panel-heading"><div><p class="eyebrow mb-1">Daily focus</p><h2>Collection pulse</h2></div><i class="bi bi-lightning-charge-fill panel-icon"></i></div>
+      <div class="pulse-score {% if overdue_customers %}pulse-watch{% else %}pulse-good{% endif %}"><span class="pulse-ring"><i class="bi {% if overdue_customers %}bi-arrow-up-right{% else %}bi-check-lg{% endif %}"></i></span><div><strong>{% if overdue_customers %}{{ overdue_customers }} account{{ 's' if overdue_customers != 1 else '' }} to review{% else %}No overdue accounts{% endif %}</strong><span>{% if overdue_customers %}Prioritise follow-ups today{% else %}Your receivables are on track{% endif %}</span></div></div>
+      <div class="insight-list">
+        <a href="{{ url_for('ledger.receivables_report') }}"><span><i class="bi bi-graph-up-arrow"></i> Open receivables report</span><i class="bi bi-arrow-up-right"></i></a>
+        <a href="{{ url_for('customers.list_customers') }}"><span><i class="bi bi-person-lines-fill"></i> Review customer accounts</span><i class="bi bi-arrow-up-right"></i></a>
+        <a href="{{ url_for('reminders.list_rules') }}"><span><i class="bi bi-bell"></i> Manage reminder rules</span><i class="bi bi-arrow-up-right"></i></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 dashboard-grid">
+  <div class="col-xl-7">
+    <div class="dashboard-panel table-panel">
+      <div class="panel-heading"><div><p class="eyebrow mb-1">Latest activity</p><h2>Recent credit sales</h2></div><a class="panel-link" href="{{ url_for('transactions.list_transactions') }}">View all <i class="bi bi-arrow-right"></i></a></div>
+      <div class="table-responsive"><table class="table activity-table align-middle mb-0"><thead><tr><th>Date</th><th>Item</th><th class="text-end">Amount</th></tr></thead><tbody>
+        {% for t in recent_transactions %}<tr><td><span class="date-dot"></span>{{ t.transaction_date.strftime('%d %b %Y') }}</td><td class="fw-semibold">{{ t.item_description }}</td><td class="text-end amount-cell">{{ t.amount | kes }}</td></tr>{% else %}<tr><td colspan="3" class="empty-state">No transactions yet.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="dashboard-panel table-panel h-100">
+      <div class="panel-heading"><div><p class="eyebrow mb-1">Cash collected</p><h2>Recent payments</h2></div><a class="panel-link" href="{{ url_for('payments.list_payments') }}">View all <i class="bi bi-arrow-right"></i></a></div>
+      <div class="table-responsive"><table class="table activity-table align-middle mb-0"><thead><tr><th>Date</th><th class="text-end">Amount</th></tr></thead><tbody>
+        {% for p in recent_payments %}<tr><td><span class="date-dot payment-dot"></span>{{ p.payment_date.strftime('%d %b %Y') }}</td><td class="text-end amount-cell payment-amount">{{ p.amount_paid | kes }}</td></tr>{% else %}<tr><td colspan="2" class="empty-state">No payments yet.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  const ctx = document.getElementById('ageingChart');
+  const ageingData = JSON.parse(document.getElementById('ageingData').dataset.buckets);
+  const ageingLabels = Object.keys(ageingData);
+  const ageingValues = Object.values(ageingData);
+  const ageingColors = ['#2c7a7b', '#d5a021', '#df7b49', '#d9534f', '#872f3b'];
+  new Chart(ctx, { type: 'doughnut', data: { labels: ageingLabels, datasets: [{ data: ageingValues, backgroundColor: ageingColors, borderWidth: 0, hoverOffset: 7 }] }, options: { cutout: '70%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => ` ${item.label}: KES ${Number(item.raw).toLocaleString()}` } } }, responsive: true, maintainAspectRatio: false } });
+  document.getElementById('ageingLegend').innerHTML = ageingLabels.map((label, index) => `<span><i style="background:${ageingColors[index]}"></i>${label}<strong>KES ${Number(ageingValues[index]).toLocaleString()}</strong></span>`).join('');
+</script>
+{% endblock %}
