@@ -161,16 +161,43 @@ body {
 .insight-action-copy strong { font-size: 0.74rem; font-weight: 750; }
 .insight-action-copy small { color: var(--muted); font-size: 0.64rem; margin-top: 0.12rem; }
 .insight-action-arrow { color: #82959a; font-size: 0.8rem; margin-left: auto; }
-.panel-link { color: var(--brand-dark); font-size: 0.78rem; font-weight: 700; text-decoration: none; }
-.activity-table { color: var(--ink); font-size: 0.8rem; }
-.activity-table thead th { border-bottom: 1px solid var(--line); color: var(--muted); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
-.activity-table td, .activity-table th { border-color: var(--line); padding: 0.8rem 0.25rem; }
-.activity-table td:first-child, .activity-table th:first-child { padding-left: 0; }
-.activity-table td:last-child, .activity-table th:last-child { padding-right: 0; }
-.date-dot { background: var(--brand); border-radius: 50%; display: inline-block; height: 0.45rem; margin-right: 0.45rem; width: 0.45rem; }
-.payment-dot { background: var(--safe); }
-.amount-cell { color: var(--ink); font-weight: 750; }
-.payment-amount { color: var(--safe); }
+.activity-panel-heading { align-items: center; margin-bottom: 1rem; }
+.activity-panel-heading .eyebrow { margin-bottom: 0.3rem !important; }
+.activity-panel-caption { color: var(--muted); display: block; font-size: 0.7rem; margin-top: 0.25rem; }
+.panel-link { align-items: center; color: var(--brand-dark); display: inline-flex; font-size: 0.75rem; font-weight: 750; gap: 0.35rem; text-decoration: none; white-space: nowrap; }
+.panel-link i { transition: transform 160ms ease; }
+.panel-link:hover i { transform: translateX(3px); }
+.panel-link:focus-visible { border-radius: 0.25rem; outline: 2px solid var(--brand); outline-offset: 3px; }
+.activity-count { align-items: center; background: #edf5f2; border-radius: 2rem; color: #496c63; display: inline-flex; font-size: 0.64rem; font-weight: 700; gap: 0.35rem; margin-bottom: 0.35rem; padding: 0.32rem 0.55rem; }
+.activity-count-payments { background: #eff3fb; color: #526b93; }
+.activity-table { color: var(--ink); font-size: 0.78rem; min-width: 28rem; }
+.activity-table thead th { background: #f8faf9; border-bottom: 1px solid var(--line); color: #75878d; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.075em; padding: 0.65rem 0.7rem; text-transform: uppercase; }
+.activity-table thead th:first-child { border-radius: 0.45rem 0 0 0.45rem; }
+.activity-table thead th:last-child { border-radius: 0 0.45rem 0.45rem 0; }
+.activity-table tbody tr { transition: background-color 140ms ease; }
+.activity-table tbody tr:hover { background: #f8fbfa; }
+.activity-table td { border-color: #edf1f0; padding: 0.7rem; vertical-align: middle; }
+.activity-table tbody tr:last-child td { border-bottom: 0; }
+.activity-date { align-items: center; background: #f1f6f4; border: 1px solid #e7efec; border-radius: 0.6rem; color: #647a7e; display: inline-flex; gap: 0.38rem; justify-content: center; min-width: 5.4rem; padding: 0.38rem 0.5rem; white-space: nowrap; }
+.activity-date strong { color: #276b59; font-size: 0.9rem; font-weight: 800; line-height: 1; }
+.activity-date span { font-size: 0.62rem; }
+.activity-description { color: var(--ink); display: block; font-size: 0.76rem; font-weight: 700; line-height: 1.35; max-width: 16rem; overflow-wrap: anywhere; }
+.activity-customer, .activity-customer-name { align-items: center; color: var(--muted); display: flex; font-size: 0.66rem; gap: 0.3rem; margin-top: 0.18rem; }
+.activity-customer i, .activity-customer-name i { color: #7b9690; font-size: 0.68rem; }
+.activity-customer-name { margin-top: 0; }
+.amount-cell { color: var(--ink); font-size: 0.76rem; font-variant-numeric: tabular-nums; font-weight: 800; white-space: nowrap; }
+.payment-amount { color: #27785f; }
+.activity-empty { align-items: center; background: linear-gradient(135deg, #f8fbfa, #f3f8f6); border: 1px dashed #dbe8e3; border-radius: 0.85rem; display: flex; flex-direction: column; margin-top: 0.2rem; min-height: 12rem; justify-content: center; padding: 1.1rem; text-align: center; }
+.activity-empty-payments { background: linear-gradient(135deg, #f8f9fc, #f3f6fb); border-color: #dfe6f1; }
+.activity-empty-icon { align-items: center; background: #e4f1eb; border-radius: 0.85rem; color: #327c63; display: inline-flex; font-size: 1.2rem; height: 2.75rem; justify-content: center; margin-bottom: 0.65rem; width: 2.75rem; }
+.activity-empty-payments .activity-empty-icon { background: #e7edf8; color: #486894; }
+.activity-empty > strong { color: var(--ink); font-size: 0.8rem; }
+.activity-empty > span:not(.activity-empty-icon) { color: var(--muted); font-size: 0.68rem; margin-top: 0.2rem; }
+.activity-empty > a { align-items: center; background: #fff; border: 1px solid #dbe8e3; border-radius: 0.55rem; color: #276b59; display: inline-flex; font-size: 0.67rem; font-weight: 750; gap: 0.4rem; margin-top: 0.8rem; padding: 0.48rem 0.65rem; text-decoration: none; }
+.activity-empty-payments > a { border-color: #dfe6f1; color: #486894; }
+.activity-empty > a:hover { background: #f1f7f4; }
+.activity-empty-payments > a:hover { background: #f1f4fa; }
+.activity-empty > a:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .empty-state { color: var(--muted); padding: 1.5rem 0 !important; text-align: center; }
 
 .stat-card {

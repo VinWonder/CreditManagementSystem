@@ -176,18 +176,74 @@
 <div class="row g-3 dashboard-grid">
   <div class="col-xl-7">
     <div class="dashboard-panel table-panel">
-      <div class="panel-heading"><div><p class="eyebrow mb-1">Latest activity</p><h2>Recent credit sales</h2></div><a class="panel-link" href="{{ url_for('transactions.list_transactions') }}">View all <i class="bi bi-arrow-right"></i></a></div>
-      <div class="table-responsive"><table class="table activity-table align-middle mb-0"><thead><tr><th>Date</th><th>Item</th><th class="text-end">Amount</th></tr></thead><tbody>
-        {% for t in recent_transactions %}<tr><td><span class="date-dot"></span>{{ t.transaction_date.strftime('%d %b %Y') }}</td><td class="fw-semibold">{{ t.item_description }}</td><td class="text-end amount-cell">{{ t.amount | kes }}</td></tr>{% else %}<tr><td colspan="3" class="empty-state">No transactions yet.</td></tr>{% endfor %}
-      </tbody></table></div>
+      <div class="panel-heading activity-panel-heading">
+        <div>
+          <p class="eyebrow mb-1">Latest activity</p>
+          <h2>Recent credit sales</h2>
+          <span class="activity-panel-caption">Your latest customer purchases</span>
+        </div>
+        <a class="panel-link" href="{{ url_for('transactions.list_transactions') }}">View all <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+      </div>
+      {% if recent_transactions %}
+      <div class="activity-count"><i class="bi bi-receipt" aria-hidden="true"></i> Latest {{ recent_transactions|length }} sales</div>
+      <div class="table-responsive">
+        <table class="table activity-table align-middle mb-0">
+          <thead><tr><th scope="col">Date</th><th scope="col">Sale and customer</th><th scope="col" class="text-end">Amount</th></tr></thead>
+          <tbody>
+            {% for t in recent_transactions %}
+            <tr>
+              <td><span class="activity-date"><strong>{{ t.transaction_date.strftime('%d') }}</strong><span>{{ t.transaction_date.strftime('%b %Y') }}</span></span></td>
+              <td><span class="activity-description">{{ t.item_description }}</span><span class="activity-customer"><i class="bi bi-person" aria-hidden="true"></i>{{ t.customer.full_name }}</span></td>
+              <td class="text-end amount-cell">{{ t.amount | kes }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="activity-empty">
+        <span class="activity-empty-icon"><i class="bi bi-bag-plus" aria-hidden="true"></i></span>
+        <strong>No credit sales yet</strong>
+        <span>New customer purchases will appear here.</span>
+        <a href="{{ url_for('transactions.new_transaction') }}">Record your first sale <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+      </div>
+      {% endif %}
     </div>
   </div>
   <div class="col-xl-5">
     <div class="dashboard-panel table-panel h-100">
-      <div class="panel-heading"><div><p class="eyebrow mb-1">Cash collected</p><h2>Recent payments</h2></div><a class="panel-link" href="{{ url_for('payments.list_payments') }}">View all <i class="bi bi-arrow-right"></i></a></div>
-      <div class="table-responsive"><table class="table activity-table align-middle mb-0"><thead><tr><th>Date</th><th class="text-end">Amount</th></tr></thead><tbody>
-        {% for p in recent_payments %}<tr><td><span class="date-dot payment-dot"></span>{{ p.payment_date.strftime('%d %b %Y') }}</td><td class="text-end amount-cell payment-amount">{{ p.amount_paid | kes }}</td></tr>{% else %}<tr><td colspan="2" class="empty-state">No payments yet.</td></tr>{% endfor %}
-      </tbody></table></div>
+      <div class="panel-heading activity-panel-heading">
+        <div>
+          <p class="eyebrow mb-1">Cash collected</p>
+          <h2>Recent payments</h2>
+          <span class="activity-panel-caption">Money received from customers</span>
+        </div>
+        <a class="panel-link" href="{{ url_for('payments.list_payments') }}">View all <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+      </div>
+      {% if recent_payments %}
+      <div class="activity-count activity-count-payments"><i class="bi bi-wallet2" aria-hidden="true"></i> Latest {{ recent_payments|length }} payments</div>
+      <div class="table-responsive">
+        <table class="table activity-table align-middle mb-0">
+          <thead><tr><th scope="col">Date</th><th scope="col">Customer</th><th scope="col" class="text-end">Received</th></tr></thead>
+          <tbody>
+            {% for p in recent_payments %}
+            <tr>
+              <td><span class="activity-date"><strong>{{ p.payment_date.strftime('%d') }}</strong><span>{{ p.payment_date.strftime('%b %Y') }}</span></span></td>
+              <td><span class="activity-customer-name"><i class="bi bi-person-circle" aria-hidden="true"></i>{{ p.customer.full_name }}</span></td>
+              <td class="text-end amount-cell payment-amount">{{ p.amount_paid | kes }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="activity-empty activity-empty-payments">
+        <span class="activity-empty-icon"><i class="bi bi-wallet2" aria-hidden="true"></i></span>
+        <strong>No payments recorded yet</strong>
+        <span>Customer payments will show here once received.</span>
+        <a href="{{ url_for('payments.new_payment') }}">Log your first payment <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>
