@@ -1,57 +1,182 @@
 {% extends "base.html" %}
 {% block title %}Record Credit Sale{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card p-4">
-      <h4 class="mb-3"><i class="bi bi-cart-plus"></i> Record Credit Sale</h4>
-      <p class="text-muted small">
-        Works offline: if you lose connectivity, the sale is cached on this device and
-        automatically pushed to the server the next time you're online.
-      </p>
-      <form method="POST" id="txn-form" novalidate>
-        {{ form.hidden_tag() }}
-        <div class="mb-3">
-          {{ form.customer_id.label(class="form-label") }}
-          {{ form.customer_id(class="form-select") }}
-        </div>
-        <div class="mb-3">
-          {{ form.item_description.label(class="form-label") }}
-          {{ form.item_description(class="form-control", placeholder="e.g. 2kg sugar, 1L cooking oil") }}
-        </div>
-        <div class="mb-3">
-          {{ form.amount.label(class="form-label") }}
-          {{ form.amount(class="form-control", placeholder="0.00") }}
-        </div>
-        <button type="submit" class="btn btn-primary" id="txn-submit-btn">Record Credit Sale</button>
-        <a href="{{ url_for('transactions.list_transactions') }}" class="btn btn-link">Cancel</a>
-      </form>
-      <div id="offline-note" class="alert alert-warning mt-3 d-none">
-        <i class="bi bi-cloud-slash"></i> You're offline. This sale has been saved on your device
-        and will sync automatically once you're back online.
-      </div>
+<section class="transaction-page" aria-labelledby="transaction-page-title">
+  <header class="transaction-page-header">
+    <div>
+      <p class="eyebrow mb-1">Credit book</p>
+      <h1 id="transaction-page-title">Record a credit sale</h1>
+      <p>Keep every customer purchase and balance accurate, even when your connection drops.</p>
     </div>
+    <a class="transaction-back-link" href="{{ url_for('transactions.list_transactions') }}">
+      <i class="bi bi-arrow-left" aria-hidden="true"></i> All sales
+    </a>
+  </header>
+
+  <div class="transaction-layout">
+    <article class="transaction-form-card">
+      <div class="transaction-card-heading">
+        <span class="transaction-heading-icon"><i class="bi bi-cart-plus" aria-hidden="true"></i></span>
+        <div>
+          <p class="transaction-heading-kicker">New entry</p>
+          <h2>Sale details</h2>
+          <p>Add the customer, goods, and amount to charge to their credit.</p>
+        </div>
+      </div>
+
+      {% if not customers_available %}
+      <div class="transaction-no-customers" role="status">
+        <span class="transaction-no-customers-icon"><i class="bi bi-person-plus" aria-hidden="true"></i></span>
+        <h3>Add a customer first</h3>
+        <p>A credit sale must belong to a customer. Add their contact details, then come back to record this sale.</p>
+        <a href="{{ url_for('customers.new_customer') }}" class="transaction-submit-button">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i> Add customer
+        </a>
+      </div>
+      {% else %}
+      <form method="POST" id="txn-form" class="transaction-form">
+        {{ form.hidden_tag() }}
+        <div class="transaction-field">
+          {{ form.customer_id.label(class="form-label") }}
+          <span class="transaction-input-wrap">
+            <i class="bi bi-person" aria-hidden="true"></i>
+            {{ form.customer_id(class="form-select", required=true, **{"aria-describedby": "txn-customer-help" ~ (" txn-customer-errors" if form.customer_id.errors else ""), "aria-invalid": "true" if form.customer_id.errors else "false"}) }}
+          </span>
+          <small class="transaction-field-help" id="txn-customer-help">Choose the customer who is receiving these goods on credit.</small>
+          {% if form.customer_id.errors %}
+          <div class="transaction-field-errors" id="txn-customer-errors" role="alert">
+            {% for error in form.customer_id.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="transaction-field">
+          {{ form.item_description.label(class="form-label") }}
+          <span class="transaction-input-wrap">
+            <i class="bi bi-basket2" aria-hidden="true"></i>
+            {{ form.item_description(class="form-control", placeholder="e.g. 2kg sugar, 1L cooking oil", maxlength="150", required=true, **{"aria-describedby": "txn-item-help" ~ (" txn-item-errors" if form.item_description.errors else ""), "aria-invalid": "true" if form.item_description.errors else "false"}) }}
+          </span>
+          <small class="transaction-field-help" id="txn-item-help">Be specific so you can recognize this sale later. Up to 150 characters.</small>
+          {% if form.item_description.errors %}
+          <div class="transaction-field-errors" id="txn-item-errors" role="alert">
+            {% for error in form.item_description.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="transaction-field">
+          {{ form.amount.label(class="form-label") }}
+          <span class="transaction-input-wrap transaction-amount-wrap">
+            <span class="transaction-currency" aria-hidden="true">KES</span>
+            {{ form.amount(class="form-control", placeholder="0.00", inputmode="decimal", min="0.01", max="99999999.99", step="0.01", required=true, **{"aria-describedby": "txn-amount-help" ~ (" txn-amount-errors" if form.amount.errors else ""), "aria-invalid": "true" if form.amount.errors else "false"}) }}
+          </span>
+          <small class="transaction-field-help" id="txn-amount-help">Enter the total amount the customer will owe. Minimum KES 0.01.</small>
+          {% if form.amount.errors %}
+          <div class="transaction-field-errors" id="txn-amount-errors" role="alert">
+            {% for error in form.amount.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <div id="offline-note" class="transaction-offline-note d-none" role="status" aria-live="polite"></div>
+        <div id="offline-error" class="transaction-offline-error d-none" role="alert"></div>
+        <div class="transaction-form-actions">
+          <button type="submit" class="transaction-submit-button" id="txn-submit-btn">
+            <i class="bi bi-check2-circle" aria-hidden="true"></i><span>Record credit sale</span>
+          </button>
+          <a href="{{ url_for('transactions.list_transactions') }}" class="transaction-cancel-link">Cancel</a>
+        </div>
+      </form>
+      {% endif %}
+    </article>
+
+    <aside class="transaction-side-card" aria-label="Credit sale information">
+      <div class="transaction-side-status">
+        <span class="transaction-side-status-icon"><i class="bi bi-cloud-check" aria-hidden="true"></i></span>
+        <div>
+          <span class="transaction-side-label">Connection status</span>
+          <strong id="sale-connectivity" role="status">Checking connection…</strong>
+        </div>
+      </div>
+      <div class="transaction-side-divider"></div>
+      <h2>What happens next?</h2>
+      <ul class="transaction-steps">
+        <li><span><i class="bi bi-person-check" aria-hidden="true"></i></span><div><strong>Customer account</strong><p>The sale is added to the selected customer's ledger.</p></div></li>
+        <li><span><i class="bi bi-calculator" aria-hidden="true"></i></span><div><strong>Balance updates</strong><p>The amount increases what the customer owes.</p></div></li>
+        <li><span><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i></span><div><strong>Offline-safe</strong><p>If you are offline, this device stores the sale and syncs it when you reconnect.</p></div></li>
+      </ul>
+      <p class="transaction-side-reminder"><i class="bi bi-shield-check" aria-hidden="true"></i> Check the customer and amount before saving.</p>
+    </aside>
   </div>
-</div>
+</section>
 {% endblock %}
 
 {% block scripts %}
 <script>
-document.getElementById('txn-form').addEventListener('submit', async function (e) {
-  if (navigator.onLine) return; // let the normal POST happen
+(() => {
+  const form = document.getElementById("txn-form");
+  const connectivity = document.getElementById("sale-connectivity");
+  if (connectivity) {
+    const updateConnectivity = () => {
+      connectivity.textContent = navigator.onLine ? "Online · ready to save" : "Offline · saved on this device";
+      connectivity.classList.toggle("is-offline", !navigator.onLine);
+    };
+    updateConnectivity();
+    window.addEventListener("online", updateConnectivity);
+    window.addEventListener("offline", updateConnectivity);
+  }
+  if (!form) return;
 
-  e.preventDefault();
-  const form = e.target;
-  const customerSelect = form.querySelector('#customer_id');
-  const record = {
-    customer_id: parseInt(customerSelect.value, 10),
-    item_description: form.querySelector('#item_description').value,
-    amount: parseFloat(form.querySelector('#amount').value),
-  };
+  const submitButton = document.getElementById("txn-submit-btn");
+  const buttonLabel = submitButton.querySelector("span");
+  const offlineNote = document.getElementById("offline-note");
+  const offlineError = document.getElementById("offline-error");
 
-  await DukaOfflineDB.addPendingTransaction(record);
-  document.getElementById('offline-note').classList.remove('d-none');
-  form.reset();
-});
+  form.addEventListener("submit", async (event) => {
+    if (form.dataset.submitting === "true") {
+      event.preventDefault();
+      return;
+    }
+    form.dataset.submitting = "true";
+    if (navigator.onLine) {
+      submitButton.disabled = true;
+      buttonLabel.textContent = "Saving sale…";
+      return;
+    }
+
+    event.preventDefault();
+    offlineError.classList.add("d-none");
+    offlineNote.classList.add("d-none");
+    submitButton.disabled = true;
+    buttonLabel.textContent = "Saving on this device…";
+
+    try {
+      const customerId = Number(form.elements.customer_id.value);
+      const amount = Number(form.elements.amount.value);
+      if (!Number.isInteger(customerId) || customerId < 1 || !Number.isFinite(amount) || amount < 0.01) {
+        throw new Error("Choose a customer and enter an amount of at least KES 0.01.");
+      }
+      const itemDescription = form.elements.item_description.value.trim();
+      if (!itemDescription || itemDescription.length > 150) {
+        throw new Error("Enter an item description of 150 characters or fewer.");
+      }
+      await DukaOfflineDB.addPendingTransaction({
+        customer_id: customerId,
+        item_description: itemDescription,
+        amount: amount.toFixed(2),
+      });
+      offlineNote.innerHTML = '<i class="bi bi-cloud-slash" aria-hidden="true"></i><span>Sale saved on this device. It will sync automatically when you are back online.</span>';
+      offlineNote.classList.remove("d-none");
+      form.reset();
+    } catch (error) {
+      offlineError.textContent = error.message || "This sale could not be saved on this device. Please try again.";
+      offlineError.classList.remove("d-none");
+    } finally {
+      form.dataset.submitting = "false";
+      submitButton.disabled = false;
+      buttonLabel.textContent = "Record credit sale";
+    }
+  });
+})();
 </script>
 {% endblock %}
