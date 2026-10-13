@@ -1,46 +1,134 @@
 {% extends "base.html" %}
 {% block title %}Receivables Report{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4><i class="bi bi-graph-up-arrow"></i> {% if overdue_only %}Overdue Accounts{% else %}Receivables & Ageing Report{% endif %}</h4>
-  <div class="btn-group">
-    <a href="{{ url_for('ledger.receivables_report', sort='days_overdue', overdue='1' if overdue_only else None) }}" class="btn btn-sm btn-outline-secondary {{ 'active' if sort=='days_overdue' }}">Sort by Overdue</a>
-    <a href="{{ url_for('ledger.receivables_report', sort='balance', overdue='1' if overdue_only else None) }}" class="btn btn-sm btn-outline-secondary {{ 'active' if sort=='balance' }}">Sort by Balance</a>
+<section class="receivables-page" aria-labelledby="receivables-title">
+  <header class="receivables-header">
+    <div>
+      <p class="eyebrow mb-1">Credit performance</p>
+      <h1 id="receivables-title"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> {{ 'Overdue accounts' if overdue_only else 'Receivables & ageing' }}</h1>
+      <p>See what customers owe, identify overdue accounts, and decide who to follow up with.</p>
+    </div>
+    <div class="receivables-header-actions">
+      <div class="receivables-view-toggle" role="group" aria-label="Filter receivables">
+        <a href="{{ url_for('ledger.receivables_report', sort=sort) }}" class="{{ 'is-active' if not overdue_only else '' }}" {% if not overdue_only %}aria-current="page"{% endif %}>
+          <i class="bi bi-people" aria-hidden="true"></i> All balances
+        </a>
+        <a href="{{ url_for('ledger.receivables_report', sort=sort, overdue='1') }}" class="{{ 'is-active' if overdue_only else '' }}" {% if overdue_only %}aria-current="page"{% endif %}>
+          <i class="bi bi-clock-history" aria-hidden="true"></i> Overdue only{% if overdue_count %}<span>{{ overdue_count }}</span>{% endif %}
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="receivables-summary" aria-label="Receivables summary">
+    <article class="receivables-metric receivables-metric-total">
+      <span class="receivables-metric-icon"><i class="bi bi-wallet2" aria-hidden="true"></i></span>
+      <div>
+        <span class="receivables-metric-label">{{ 'Total overdue' if overdue_only else 'Total outstanding' }}</span>
+        <strong>{{ total_outstanding | kes }}</strong>
+        <small>{{ 'Across overdue accounts' if overdue_only else 'Across all customers who owe' }}</small>
+      </div>
+    </article>
+    <article class="receivables-metric receivables-metric-overdue">
+      <span class="receivables-metric-icon"><i class="bi bi-hourglass-split" aria-hidden="true"></i></span>
+      <div>
+        <span class="receivables-metric-label">Overdue balance</span>
+        <strong>{{ total_overdue | kes }}</strong>
+        <small>{{ overdue_count }} {{ 'account' if overdue_count == 1 else 'accounts' }} past due</small>
+      </div>
+    </article>
+    <article class="receivables-metric">
+      <span class="receivables-metric-icon"><i class="bi bi-person-lines-fill" aria-hidden="true"></i></span>
+      <div>
+        <span class="receivables-metric-label">{{ 'Overdue accounts' if overdue_only else 'Accounts owing' }}</span>
+        <strong>{{ ledgers|length if overdue_only else account_count }}</strong>
+        <small>{{ 'Need follow-up' if overdue_only else 'With a balance above zero' }}</small>
+      </div>
+    </article>
   </div>
-</div>
 
-<div class="card p-3 mb-3">
-  <strong>{% if overdue_only %}Total Overdue{% else %}Total Outstanding{% endif %}:</strong> {{ total_outstanding | kes }}
-</div>
+  <div class="receivables-table-card">
+    <div class="receivables-table-heading">
+      <div>
+        <h2>{{ 'Customers past due' if overdue_only else 'Customer balances' }}</h2>
+        <p>{% if overdue_only %}Accounts with an overdue balance, ordered by {{ 'amount owed' if sort == 'balance' else 'days overdue' }}.{% else %}Open balances ordered by {{ 'amount owed' if sort == 'balance' else 'days overdue' }}.{% endif %}</p>
+      </div>
+      <div class="receivables-sort-controls" role="group" aria-label="Sort customer accounts">
+        <span>Sort:</span>
+        <a href="{{ url_for('ledger.receivables_report', sort='days_overdue', overdue='1' if overdue_only else None) }}" class="{{ 'is-active' if sort == 'days_overdue' else '' }}" {% if sort == 'days_overdue' %}aria-current="true"{% endif %}>
+          <i class="bi bi-clock" aria-hidden="true"></i> Oldest overdue
+        </a>
+        <a href="{{ url_for('ledger.receivables_report', sort='balance', overdue='1' if overdue_only else None) }}" class="{{ 'is-active' if sort == 'balance' else '' }}" {% if sort == 'balance' %}aria-current="true"{% endif %}>
+          <i class="bi bi-cash-stack" aria-hidden="true"></i> Highest balance
+        </a>
+      </div>
+    </div>
 
-<div class="card">
-  <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
-      <thead class="table-light">
-        <tr><th>Customer</th><th>Phone</th><th>Balance</th><th>Days Overdue</th><th>Status</th></tr>
-      </thead>
-      <tbody>
-      {% for l in ledgers %}
-        <tr>
-          <td><a href="{{ url_for('customers.view_customer', customer_id=l.customer_id) }}">{{ l.customer.full_name }}</a></td>
-          <td>{{ l.customer.phone_number }}</td>
-          <td>{{ l.outstanding_balance | kes }}</td>
-          <td>{{ l.days_overdue }}</td>
-          <td>
-            {% if l.days_overdue > 30 %}
-              <span class="badge badge-overdue">Critical</span>
-            {% elif l.days_overdue > 7 %}
-              <span class="badge text-bg-warning">Watch</span>
-            {% else %}
-              <span class="badge badge-safe">Recent</span>
-            {% endif %}
-          </td>
-        </tr>
+    {% if ledgers %}
+    <div class="table-responsive">
+      <table class="table receivables-table align-middle mb-0">
+        <thead>
+          <tr>
+            <th scope="col">Customer</th>
+            <th scope="col">Contact</th>
+            <th scope="col" class="text-end">Balance due</th>
+            <th scope="col">Age</th>
+            <th scope="col">Account status</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for ledger in ledgers %}
+          <tr>
+            <td>
+              <a class="receivables-customer" href="{{ url_for('customers.view_customer', customer_id=ledger.customer_id) }}">
+                <span class="receivables-avatar" aria-hidden="true">{{ ledger.customer.full_name.split()[0][0]|upper }}{{ ledger.customer.full_name.split()[-1][0]|upper if ledger.customer.full_name.split()|length > 1 else '' }}</span>
+                <span><strong>{{ ledger.customer.full_name }}</strong><small>View customer account</small></span>
+                <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+              </a>
+            </td>
+            <td><a class="receivables-phone" href="tel:{{ ledger.customer.phone_number }}"><i class="bi bi-telephone" aria-hidden="true"></i>{{ ledger.customer.phone_number }}</a></td>
+            <td class="text-end"><strong class="receivables-balance">{{ ledger.outstanding_balance | kes }}</strong></td>
+            <td>
+              {% if ledger.days_overdue > 0 %}
+              <span class="receivables-age">{{ ledger.days_overdue }} {{ 'day' if ledger.days_overdue == 1 else 'days' }}</span>
+              {% else %}
+              <span class="receivables-age receivables-age-current">Not overdue</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if ledger.days_overdue > 30 %}
+              <span class="receivables-status receivables-status-critical"><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i> Needs attention</span>
+              {% elif ledger.days_overdue > 7 %}
+              <span class="receivables-status receivables-status-watch"><i class="bi bi-clock-history" aria-hidden="true"></i> Follow up</span>
+              {% elif ledger.days_overdue > 0 %}
+              <span class="receivables-status receivables-status-recent"><i class="bi bi-hourglass" aria-hidden="true"></i> Recently overdue</span>
+              {% else %}
+              <span class="receivables-status receivables-status-current"><i class="bi bi-check-circle" aria-hidden="true"></i> Current</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="receivables-empty">
+      <span class="receivables-empty-icon"><i class="bi {{ 'bi-check2-circle' if overdue_only else 'bi-wallet2' }}" aria-hidden="true"></i></span>
+      <h3>{{ 'No overdue accounts' if overdue_only else 'No outstanding balances' }}</h3>
+      <p>
+        {% if overdue_only %}
+        Great news—none of your customer balances are past due. You can review all open balances if needed.
+        {% else %}
+        There are no customer balances to collect right now. New credit sales will appear here.
+        {% endif %}
+      </p>
+      {% if overdue_only %}
+      <a href="{{ url_for('ledger.receivables_report', sort=sort) }}" class="receivables-empty-action">View all balances <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
       {% else %}
-        <tr><td colspan="5" class="text-center text-muted py-4">{% if overdue_only %}No overdue accounts 🎉{% else %}No outstanding balances 🎉{% endif %}</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
+      <a href="{{ url_for('transactions.new_transaction') }}" class="receivables-empty-action"><i class="bi bi-plus-lg" aria-hidden="true"></i> Record a credit sale</a>
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
-</div>
+</section>
 {% endblock %}
