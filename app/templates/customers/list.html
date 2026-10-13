@@ -56,8 +56,10 @@
               {% if c.ledger %}
                 {% if c.ledger.outstanding_balance > 0 %}
                 <span class="customer-balance customer-balance-due">{{ c.ledger.outstanding_balance | kes }}</span>
-                {% else %}
+                {% elif c.customer_id in customers_with_purchases %}
                 <span class="customer-balance customer-balance-clear"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Paid up</span>
+                {% else %}
+                <span class="customer-balance-unknown">No purchases yet</span>
                 {% endif %}
               {% else %}
                 <span class="customer-balance-unknown">No ledger</span>

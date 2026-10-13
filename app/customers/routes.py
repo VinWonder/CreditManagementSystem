@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 
 from app.extensions import db
-from app.models import Customer, Ledger
+from app.models import CreditTransaction, Customer, Ledger
 from app.customers.forms import CustomerForm
 
 customers_bp = Blueprint("customers", __name__, url_prefix="/customers")
@@ -16,6 +16,20 @@ def _owned_customer_or_404(customer_id):
     return customer
 
 
+def _customer_ids_with_credit_sales(customers):
+    customer_ids = [customer.customer_id for customer in customers]
+    if not customer_ids:
+        return set()
+
+    rows = (
+        db.session.query(CreditTransaction.customer_id)
+        .filter(CreditTransaction.customer_id.in_(customer_ids))
+        .distinct()
+        .all()
+    )
+    return {customer_id for customer_id, in rows}
+
+
 @customers_bp.route("/")
 @login_required
 def list_customers():
@@ -26,7 +40,13 @@ def list_customers():
             (Customer.full_name.ilike(f"%{query}%")) | (Customer.phone_number.ilike(f"%{query}%"))
         )
     customers = base.order_by(Customer.full_name.asc()).all()
-    return render_template("customers/list.html", customers=customers, query=query)
+    customers_with_purchases = _customer_ids_with_credit_sales(customers)
+    return render_template(
+        "customers/list.html",
+        customers=customers,
+        customers_with_purchases=customers_with_purchases,
+        query=query,
+    )
 
 
 @customers_bp.route("/new", methods=["GET", "POST"])
