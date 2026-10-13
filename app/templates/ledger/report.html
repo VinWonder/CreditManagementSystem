@@ -2,15 +2,15 @@
 {% block title %}Receivables Report{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h4><i class="bi bi-graph-up-arrow"></i> Receivables & Ageing Report</h4>
+  <h4><i class="bi bi-graph-up-arrow"></i> {% if overdue_only %}Overdue Accounts{% else %}Receivables & Ageing Report{% endif %}</h4>
   <div class="btn-group">
-    <a href="?sort=days_overdue" class="btn btn-sm btn-outline-secondary {{ 'active' if sort=='days_overdue' }}">Sort by Overdue</a>
-    <a href="?sort=balance" class="btn btn-sm btn-outline-secondary {{ 'active' if sort=='balance' }}">Sort by Balance</a>
+    <a href="{{ url_for('ledger.receivables_report', sort='days_overdue', overdue='1' if overdue_only else None) }}" class="btn btn-sm btn-outline-secondary {{ 'active' if sort=='days_overdue' }}">Sort by Overdue</a>
+    <a href="{{ url_for('ledger.receivables_report', sort='balance', overdue='1' if overdue_only else None) }}" class="btn btn-sm btn-outline-secondary {{ 'active' if sort=='balance' }}">Sort by Balance</a>
   </div>
 </div>
 
 <div class="card p-3 mb-3">
-  <strong>Total Outstanding:</strong> {{ total_outstanding | kes }}
+  <strong>{% if overdue_only %}Total Overdue{% else %}Total Outstanding{% endif %}:</strong> {{ total_outstanding | kes }}
 </div>
 
 <div class="card">
@@ -37,7 +37,7 @@
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="5" class="text-center text-muted py-4">No outstanding balances 🎉</td></tr>
+        <tr><td colspan="5" class="text-center text-muted py-4">{% if overdue_only %}No overdue accounts 🎉{% else %}No outstanding balances 🎉{% endif %}</td></tr>
       {% endfor %}
       </tbody>
     </table>
