@@ -15,6 +15,15 @@ body {
   color: var(--ink);
 }
 
+.app-footer { background: linear-gradient(110deg, #fff 0%, #f6faf8 100%); border-top: 1px solid #e1ebe7; color: var(--muted); margin-top: 2rem; position: relative; }
+.app-footer::before { background: linear-gradient(90deg, #2c7a7b 0%, #8ebd87 55%, #d8ef9f 100%); content: ""; height: 3px; left: 0; position: absolute; right: 0; top: -1px; }
+.app-footer-inner { align-items: center; display: flex; flex-wrap: wrap; gap: 0.7rem 1.25rem; justify-content: space-between; min-height: 5.2rem; padding-bottom: 0.75rem; padding-top: 0.75rem; }
+.app-footer-brand { align-items: center; color: #315b50; display: inline-flex; font-size: 0.74rem; gap: 0.45rem; letter-spacing: -0.01em; }
+.app-footer-brand i { align-items: center; background: #e6f1ec; border-radius: 0.45rem; color: #347b65; display: inline-flex; font-size: 0.9rem; height: 1.8rem; justify-content: center; width: 1.8rem; }
+.app-footer-brand strong { font-weight: 800; }
+.app-footer-note { color: #54766c; font-size: 0.68rem; }
+.app-footer-copyright { color: #77878b; font-size: 0.67rem; }
+
 .card {
   border: none;
   border-radius: 0.75rem;
@@ -530,6 +539,8 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
   .app-brand-name { font-size: 1.03rem; }
   .app-offline-badge { font-size: 0; gap: 0; padding: 0.5rem; }
   .app-offline-badge i { font-size: 0.85rem; }
+  .app-footer-inner { justify-content: center; min-height: 5.5rem; text-align: center; }
+  .app-footer-note { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .app-navbar *, .app-navbar *::before, .app-navbar *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
