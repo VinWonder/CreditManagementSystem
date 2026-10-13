@@ -1,51 +1,93 @@
 {% extends "base.html" %}
 {% block title %}Customers{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4><i class="bi bi-people"></i> Customers</h4>
-  <a href="{{ url_for('customers.new_customer') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Customer</a>
-</div>
+<section class="customer-directory" aria-labelledby="customer-directory-title">
+  <header class="customer-directory-header">
+    <div>
+      <p class="eyebrow mb-1">Your customer book</p>
+      <h1 id="customer-directory-title"><i class="bi bi-people-fill" aria-hidden="true"></i> Customers</h1>
+      <p class="customer-directory-subtitle">Keep customer contact details and credit balances close at hand.</p>
+    </div>
+    <a href="{{ url_for('customers.new_customer') }}" class="btn customer-add-button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Customer</a>
+  </header>
 
-<form class="mb-3" method="GET">
-  <div class="input-group">
-    <input type="text" name="q" class="form-control" placeholder="Search by name or phone..." value="{{ query }}">
-    <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
+  <div class="customer-directory-toolbar">
+    <form class="customer-search" method="GET" role="search">
+      <label class="visually-hidden" for="customer-search-input">Search customers by name or phone</label>
+      <i class="bi bi-search customer-search-icon" aria-hidden="true"></i>
+      <input id="customer-search-input" type="search" name="q" placeholder="Search by name or phone..." value="{{ query }}">
+      {% if query %}
+      <a class="customer-search-clear" href="{{ url_for('customers.list_customers') }}" aria-label="Clear customer search"><i class="bi bi-x-lg" aria-hidden="true"></i></a>
+      {% endif %}
+      <button type="submit">Search</button>
+    </form>
+    <span class="customer-result-count"><i class="bi bi-person-check" aria-hidden="true"></i>{{ customers|length }} {{ 'customer' if customers|length == 1 else 'customers' }}{% if query %} found{% else %} on file{% endif %}</span>
   </div>
-</form>
 
-<div class="card">
-  <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
-      <thead class="table-light">
-        <tr><th>Name</th><th>Phone</th><th>Channel</th><th>Balance</th><th></th></tr>
-      </thead>
-      <tbody>
-      {% for c in customers %}
-        <tr>
-          <td><a href="{{ url_for('customers.view_customer', customer_id=c.customer_id) }}">{{ c.full_name }}</a></td>
-          <td>{{ c.phone_number }}</td>
-          <td><span class="badge text-bg-secondary">{{ c.preferred_channel }}</span></td>
-          <td>
-            {% if c.ledger %}
-              {% if c.ledger.outstanding_balance > 0 %}
-                <span class="badge badge-overdue">{{ c.ledger.outstanding_balance | kes }}</span>
+  <div class="customer-directory-card">
+    {% if customers %}
+    <div class="table-responsive">
+      <table class="table customer-directory-table align-middle mb-0">
+        <thead>
+          <tr><th scope="col">Customer</th><th scope="col">Preferred channel</th><th scope="col">Outstanding balance</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+        </thead>
+        <tbody>
+        {% for c in customers %}
+          <tr>
+            <td>
+              <div class="customer-identity">
+                <span class="customer-avatar" aria-hidden="true">{{ c.full_name.split()[0][0]|upper }}{{ c.full_name.split()[-1][0]|upper if c.full_name.split()|length > 1 else '' }}</span>
+                <span class="customer-identity-copy">
+                  <a class="customer-name" href="{{ url_for('customers.view_customer', customer_id=c.customer_id) }}">{{ c.full_name }}</a>
+                  <span class="customer-contact">
+                    <a href="tel:{{ c.phone_number }}"><i class="bi bi-telephone" aria-hidden="true"></i>{{ c.phone_number }}</a>
+                    <span class="customer-record-id">ID {{ c.customer_id }}</span>
+                  </span>
+                </span>
+              </div>
+            </td>
+            <td>
+              <span class="customer-channel">
+                <i class="bi {{ 'bi-chat-dots-fill' if c.preferred_channel == 'whatsapp' else 'bi-chat-left-text-fill' }}" aria-hidden="true"></i>
+                {{ c.preferred_channel|capitalize }}
+              </span>
+            </td>
+            <td>
+              {% if c.ledger %}
+                {% if c.ledger.outstanding_balance > 0 %}
+                <span class="customer-balance customer-balance-due">{{ c.ledger.outstanding_balance | kes }}</span>
+                {% else %}
+                <span class="customer-balance customer-balance-clear"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Paid up</span>
+                {% endif %}
               {% else %}
-                <span class="badge badge-safe">Cleared</span>
+                <span class="customer-balance-unknown">No ledger</span>
               {% endif %}
-            {% else %}—{% endif %}
-          </td>
-          <td class="text-end">
-            <a href="{{ url_for('customers.edit_customer', customer_id=c.customer_id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
-            <form action="{{ url_for('customers.delete_customer', customer_id=c.customer_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this customer?');">
-              <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-            </form>
-          </td>
-        </tr>
+            </td>
+            <td class="text-end">
+              <div class="customer-row-actions">
+                <a href="{{ url_for('customers.edit_customer', customer_id=c.customer_id) }}" class="customer-action customer-action-edit" aria-label="Edit {{ c.full_name }}" title="Edit customer"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                <form action="{{ url_for('customers.delete_customer', customer_id=c.customer_id) }}" method="POST" onsubmit="return confirm('Delete this customer?');">
+                  <button type="submit" class="customer-action customer-action-delete" aria-label="Delete {{ c.full_name }}" title="Delete customer"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="customer-empty-state">
+      <span class="customer-empty-icon"><i class="bi {{ 'bi-search' if query else 'bi-people' }}" aria-hidden="true"></i></span>
+      <h2>{% if query %}No customers match that search{% else %}Your customer list is ready{% endif %}</h2>
+      <p>{% if query %}Try another name or phone number, or clear your search to see all customers.{% else %}Add your first customer to start keeping their contact details and credit in one place.{% endif %}</p>
+      {% if query %}
+      <a class="customer-empty-action" href="{{ url_for('customers.list_customers') }}">Show all customers</a>
       {% else %}
-        <tr><td colspan="5" class="text-center text-muted py-4">No customers found.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
+      <a class="customer-empty-action" href="{{ url_for('customers.new_customer') }}"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add your first customer</a>
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
-</div>
+</section>
 {% endblock %}
