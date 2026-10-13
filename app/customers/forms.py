@@ -14,7 +14,7 @@ class CustomerForm(FlaskForm):
     )
     preferred_channel = SelectField(
         "Preferred Reminder Channel",
-        choices=[("sms", "SMS"), ("whatsapp", "WhatsApp")],
+        choices=[("sms", "SMS"), ("whatsapp", "WhatsApp"), ("both", "SMS + WhatsApp")],
         default="sms",
     )
     submit = SubmitField("Save Customer")

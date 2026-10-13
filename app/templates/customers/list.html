@@ -48,8 +48,8 @@
             </td>
             <td>
               <span class="customer-channel">
-                <i class="bi {{ 'bi-chat-dots-fill' if c.preferred_channel == 'whatsapp' else 'bi-chat-left-text-fill' }}" aria-hidden="true"></i>
-                {{ c.preferred_channel|capitalize }}
+                <i class="bi {{ 'bi-chat-dots-fill' if c.preferred_channel == 'whatsapp' else 'bi-chat-square-dots-fill' if c.preferred_channel == 'both' else 'bi-chat-left-text-fill' }}" aria-hidden="true"></i>
+                {{ 'SMS + WhatsApp' if c.preferred_channel == 'both' else c.preferred_channel|capitalize }}
               </span>
             </td>
             <td>

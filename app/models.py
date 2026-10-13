@@ -128,7 +128,7 @@ class Customer(db.Model):
     retailer_id = db.Column(db.Integer, db.ForeignKey("retailers.retailer_id"), nullable=False)
     full_name = db.Column(db.String(100), nullable=False)
     phone_number = db.Column(db.String(20), nullable=False, index=True)
-    preferred_channel = db.Column(db.String(10), default="sms")  # sms | whatsapp
+    preferred_channel = db.Column(db.String(10), default="sms")  # sms | whatsapp | both
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     transactions = db.relationship(

@@ -103,7 +103,7 @@ IndexedDB and synced when the connection comes back.
 | Feature | Where to find it |
 |---|---|
 | Retailer accounts and password hashing | `app/auth` and `Retailer` in `app/models.py` |
-| Customer records | `app/customers` |
+| Customer records and SMS/WhatsApp reminder preferences | `app/customers` |
 | Credit sales and payments | `app/transactions` and `app/payments` |
 | Balance updates and receivables report | `Ledger.recalculate()` and `app/ledger` |
 | Reminder rules and delivery | `app/reminders` |

@@ -136,22 +136,31 @@ def send_whatsapp(phone_number, message):
 
 
 def dispatch_reminder(customer, rule, message):
-    """Send a reminder through the customer's preferred/rule channel and log it."""
+    """Send and log reminders on the rule's channel(s) or customer's preference."""
     channel = rule.channel if rule.channel != "both" else customer.preferred_channel
+    channels = ("sms", "whatsapp") if channel == "both" else (channel,)
+    results = []
 
-    if channel == "whatsapp":
-        success, info = send_whatsapp(customer.phone_number, message)
-    else:
-        success, info = send_sms(customer.phone_number, message)
+    for channel in channels:
+        if channel == "whatsapp":
+            success, info = send_whatsapp(customer.phone_number, message)
+        else:
+            success, info = send_sms(customer.phone_number, message)
 
-    log = MessageDispatchLog(
-        customer_id=customer.customer_id,
-        rule_id=rule.rule_id,
-        channel=channel,
-        message_content=message,
-        status="sent" if success else "failed",
-        sent_at=datetime.utcnow(),
-    )
-    db.session.add(log)
+        results.append((success, info))
+        db.session.add(
+            MessageDispatchLog(
+                customer_id=customer.customer_id,
+                rule_id=rule.rule_id,
+                channel=channel,
+                message_content=message,
+                status="sent" if success else "failed",
+                sent_at=datetime.utcnow(),
+            )
+        )
+
     db.session.commit()
-    return success, info
+    return (
+        all(result[0] for result in results),
+        "; ".join(result[1] for result in results),
+    )
