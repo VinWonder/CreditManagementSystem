@@ -1,46 +1,86 @@
 {% extends "base.html" %}
 {% block title %}Reminder Rules{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4><i class="bi bi-bell"></i> Automated Reminder Rules</h4>
-  <div>
-    <a href="{{ url_for('reminders.dispatch_log') }}" class="btn btn-outline-secondary me-2"><i class="bi bi-clock-history"></i> Dispatch Log</a>
-    <a href="{{ url_for('reminders.new_rule') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Rule</a>
-  </div>
-</div>
+<section class="reminder-rules-page" aria-labelledby="reminder-rules-title">
+  <header class="reminder-rules-header">
+    <div>
+      <p class="eyebrow mb-1">Collection tools</p>
+      <h1 id="reminder-rules-title"><i class="bi bi-bell" aria-hidden="true"></i> Automated reminder rules</h1>
+      <p>Choose when customers should be reminded and how their message is delivered.</p>
+    </div>
+    <div class="reminder-rules-actions">
+      <a href="{{ url_for('reminders.dispatch_log') }}" class="reminder-secondary-button"><i class="bi bi-clock-history" aria-hidden="true"></i> Dispatch log</a>
+      <a href="{{ url_for('reminders.new_rule') }}" class="reminder-primary-button"><i class="bi bi-plus-lg" aria-hidden="true"></i> New rule</a>
+    </div>
+  </header>
 
-<div class="card p-3 mb-3">
-  <p class="mb-2 text-muted small">
-    Rules run automatically once a day. You can also trigger an immediate ageing scan below.
-  </p>
-  <form method="POST" action="{{ url_for('reminders.run_now') }}">
-    <button class="btn btn-warning"><i class="bi bi-play-fill"></i> Run Ageing Analysis Now</button>
-  </form>
-</div>
-
-<div class="card">
-  <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
-      <thead class="table-light"><tr><th>Trigger</th><th>Channel</th><th>Message</th><th>Status</th><th></th></tr></thead>
-      <tbody>
-      {% for r in rules %}
-        <tr>
-          <td>{{ r.trigger_days_overdue }} days overdue</td>
-          <td><span class="badge text-bg-secondary">{{ r.channel }}</span></td>
-          <td class="small text-truncate" style="max-width: 320px;">{{ r.message_template }}</td>
-          <td>{% if r.active %}<span class="badge badge-safe">Active</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</td>
-          <td class="text-end">
-            <a href="{{ url_for('reminders.edit_rule', rule_id=r.rule_id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
-            <form action="{{ url_for('reminders.delete_rule', rule_id=r.rule_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this rule?');">
-              <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-            </form>
-          </td>
-        </tr>
-      {% else %}
-        <tr><td colspan="5" class="text-center text-muted py-4">No reminder rules configured yet.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
+  <div class="reminder-summary">
+    <article class="reminder-summary-card reminder-summary-active">
+      <span class="reminder-summary-icon"><i class="bi bi-lightning-charge" aria-hidden="true"></i></span>
+      <div><span>Active rules</span><strong>{{ active_count }}</strong><small>Ready for the daily scan</small></div>
+    </article>
+    <article class="reminder-summary-card">
+      <span class="reminder-summary-icon"><i class="bi bi-pause-circle" aria-hidden="true"></i></span>
+      <div><span>Paused rules</span><strong>{{ inactive_count }}</strong><small>Saved but not sending</small></div>
+    </article>
+    <article class="reminder-summary-card">
+      <span class="reminder-summary-icon"><i class="bi bi-calendar-check" aria-hidden="true"></i></span>
+      <div><span>Next automatic scan</span><strong>{{ daily_schedule }}</strong><small>Daily · server time</small></div>
+    </article>
   </div>
-</div>
+
+  <section class="reminder-run-panel" aria-labelledby="reminder-run-title">
+    <span class="reminder-run-icon"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></span>
+    <div class="reminder-run-copy">
+      <h2 id="reminder-run-title">Run an ageing scan</h2>
+      <p>Check outstanding accounts against your active rules. Matching customers may receive a real SMS or WhatsApp message.</p>
+    </div>
+    <form method="POST" action="{{ url_for('reminders.run_now') }}" class="reminder-run-form" onsubmit="return confirm('Run the scan now? Matching customers may receive reminder messages.');">
+      {{ action_form.hidden_tag() }}
+      <button class="reminder-run-button" type="submit" {% if not active_count %}disabled title="Create or activate a rule first"{% endif %}>
+        <i class="bi bi-play-fill" aria-hidden="true"></i><span>Run scan now</span>
+      </button>
+    </form>
+  </section>
+
+  <section class="reminder-rules-card" aria-labelledby="reminder-table-title">
+    <div class="reminder-rules-card-heading">
+      <div><h2 id="reminder-table-title">Your rules</h2><p>Active rules are checked during each scan.</p></div>
+      <span class="reminder-rules-count">{{ rules|length }} {{ 'rule' if rules|length == 1 else 'rules' }}</span>
+    </div>
+    {% if rules %}
+    <div class="table-responsive">
+      <table class="table reminder-rules-table align-middle mb-0">
+        <thead><tr><th scope="col">Reminder trigger</th><th scope="col">Channel</th><th scope="col">Message preview</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+        <tbody>
+        {% for rule in rules %}
+          <tr>
+            <td><span class="reminder-trigger"><i class="bi bi-hourglass-split" aria-hidden="true"></i> {{ rule.trigger_days_overdue }} {{ 'day' if rule.trigger_days_overdue == 1 else 'days' }} overdue</span></td>
+            <td><span class="reminder-channel"><i class="bi {{ 'bi-chat-square-dots-fill' if rule.channel == 'both' else 'bi-chat-dots-fill' if rule.channel == 'whatsapp' else 'bi-chat-left-text-fill' }}" aria-hidden="true"></i>{{ {'sms': 'SMS', 'whatsapp': 'WhatsApp', 'both': 'SMS + WhatsApp'}.get(rule.channel, rule.channel|capitalize) }}</span></td>
+            <td><span class="reminder-message-preview" title="{{ rule.message_template }}">{{ rule.message_template }}</span></td>
+            <td>{% if rule.active %}<span class="reminder-rule-status is-active"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Active</span>{% else %}<span class="reminder-rule-status is-paused"><i class="bi bi-pause-circle-fill" aria-hidden="true"></i> Paused</span>{% endif %}</td>
+            <td class="text-end">
+              <div class="reminder-row-actions">
+                <a href="{{ url_for('reminders.edit_rule', rule_id=rule.rule_id) }}" class="reminder-row-action" aria-label="Edit rule for {{ rule.trigger_days_overdue }} days overdue" title="Edit rule"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                <form action="{{ url_for('reminders.delete_rule', rule_id=rule.rule_id) }}" method="POST" onsubmit="return confirm('Delete this reminder rule?');">
+                  {{ action_form.hidden_tag() }}
+                  <button type="submit" class="reminder-row-action is-delete" aria-label="Delete rule for {{ rule.trigger_days_overdue }} days overdue" title="Delete rule"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="reminder-rules-empty">
+      <span class="reminder-empty-icon"><i class="bi bi-bell-slash" aria-hidden="true"></i></span>
+      <h3>No reminder rules yet</h3>
+      <p>Create a rule to choose when overdue customers are reminded and which channel to use. You can pause or edit a rule at any time.</p>
+      <a href="{{ url_for('reminders.new_rule') }}" class="reminder-primary-button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Create your first rule</a>
+    </div>
+    {% endif %}
+  </section>
+</section>
 {% endblock %}

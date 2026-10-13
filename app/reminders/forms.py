@@ -3,6 +3,10 @@ from wtforms import IntegerField, TextAreaField, SelectField, BooleanField, Subm
 from wtforms.validators import DataRequired, NumberRange, Length
 
 
+class ReminderActionForm(FlaskForm):
+    """CSRF protection for reminder actions that do not have input fields."""
+
+
 class ReminderRuleForm(FlaskForm):
     trigger_days_overdue = IntegerField(
         "Send when overdue by (days)", validators=[DataRequired(), NumberRange(min=1, max=365)]

@@ -1,9 +1,9 @@
-from flask import Blueprint, render_template, redirect, url_for, flash
+from flask import Blueprint, current_app, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.models import ReminderRule, MessageDispatchLog, Customer
-from app.reminders.forms import ReminderRuleForm
+from app.reminders.forms import ReminderActionForm, ReminderRuleForm
 from app.reminders.engine import run_ageing_analysis_and_dispatch
 
 reminders_bp = Blueprint("reminders", __name__, url_prefix="/reminders")
@@ -15,7 +15,17 @@ def list_rules():
     rules = ReminderRule.query.filter_by(retailer_id=current_user.retailer_id).order_by(
         ReminderRule.trigger_days_overdue
     ).all()
-    return render_template("reminders/rules.html", rules=rules)
+    return render_template(
+        "reminders/rules.html",
+        rules=rules,
+        active_count=sum(rule.active for rule in rules),
+        inactive_count=sum(not rule.active for rule in rules),
+        action_form=ReminderActionForm(),
+        daily_schedule=(
+            f"{current_app.config.get('REMINDER_SCAN_HOUR', 8):02d}:"
+            f"{current_app.config.get('REMINDER_SCAN_MINUTE', 0):02d}"
+        ),
+    )
 
 
 @reminders_bp.route("/rules/new", methods=["GET", "POST"])
@@ -61,16 +71,36 @@ def edit_rule(rule_id):
 @login_required
 def delete_rule(rule_id):
     rule = ReminderRule.query.get_or_404(rule_id)
-    if rule.retailer_id == current_user.retailer_id:
-        db.session.delete(rule)
-        db.session.commit()
-        flash("Reminder rule deleted.", "info")
+    if rule.retailer_id != current_user.retailer_id:
+        flash("Access denied.", "danger")
+        return redirect(url_for("reminders.list_rules"))
+
+    form = ReminderActionForm()
+    if not form.validate_on_submit():
+        flash("The delete request could not be verified. Please try again.", "danger")
+        return redirect(url_for("reminders.list_rules"))
+
+    db.session.delete(rule)
+    db.session.commit()
+    flash("Reminder rule deleted.", "info")
     return redirect(url_for("reminders.list_rules"))
 
 
 @reminders_bp.route("/run-now", methods=["POST"])
 @login_required
 def run_now():
+    form = ReminderActionForm()
+    if not form.validate_on_submit():
+        flash("The scan request could not be verified. Please try again.", "danger")
+        return redirect(url_for("reminders.list_rules"))
+
+    active_rules = ReminderRule.query.filter_by(
+        retailer_id=current_user.retailer_id, active=True
+    ).count()
+    if not active_rules:
+        flash("There are no active reminder rules to run. Activate or create a rule first.", "warning")
+        return redirect(url_for("reminders.list_rules"))
+
     summary = run_ageing_analysis_and_dispatch(retailer_id=current_user.retailer_id)
     flash(
         f"Ageing analysis complete: {summary['scanned']} accounts scanned, "
