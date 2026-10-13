@@ -105,20 +105,69 @@
 <div class="row g-3 dashboard-grid">
   <div class="col-xl-7">
     <div class="dashboard-panel chart-panel h-100">
-      <div class="panel-heading"><div><p class="eyebrow mb-1">Receivables analysis</p><h2>Where your money is tied up</h2></div><span class="panel-badge"><i class="bi bi-bar-chart-line"></i> KES</span></div>
-      <div class="chart-wrap"><canvas id="ageingChart"></canvas></div>
-      <div id="ageingData" data-buckets='{{ buckets | tojson }}' hidden></div>
-      <div class="chart-legend" id="ageingLegend"></div>
+      <div class="panel-heading">
+        <div><p class="eyebrow mb-1">Receivables analysis</p><h2>Where your money is tied up</h2></div>
+        <span class="panel-badge"><i class="bi bi-bar-chart-line" aria-hidden="true"></i> Ageing</span>
+      </div>
+      <div class="ageing-summary">
+        <div class="ageing-total">
+          <span>Total outstanding</span>
+          <strong>{{ total_outstanding | kes }}</strong>
+        </div>
+        <div class="ageing-overdue">
+          <span class="ageing-overdue-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
+          <span><strong>{{ overdue_customers }}</strong><small>overdue accounts</small></span>
+        </div>
+      </div>
+      <div class="ageing-breakdown" aria-label="Outstanding balance by age">
+        {% for age_band, amount in buckets.items() %}
+        <div class="ageing-row" data-age-band="{{ age_band }}" data-ageing-value="{{ amount }}">
+          <div class="ageing-row-heading">
+            <span><i class="ageing-dot ageing-tone-{{ loop.index }}" aria-hidden="true"></i>{{ age_band }} days</span>
+            <span class="ageing-row-amount">{{ amount | kes }}</span>
+          </div>
+          <div class="ageing-track" role="progressbar" aria-label="{{ age_band }} days share of outstanding balance"
+            aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span class="ageing-fill ageing-tone-{{ loop.index }}"></span>
+          </div>
+          <span class="ageing-share">0%</span>
+        </div>
+        {% endfor %}
+      </div>
+      <p class="ageing-insight" id="ageingInsight" role="status">
+        {% if total_outstanding %}Balances are grouped by how long they have been outstanding.{% else %}No outstanding balances to analyse right now.{% endif %}
+      </p>
     </div>
   </div>
   <div class="col-xl-5">
     <div class="dashboard-panel insight-panel h-100">
-      <div class="panel-heading"><div><p class="eyebrow mb-1">Daily focus</p><h2>Collection pulse</h2></div><i class="bi bi-lightning-charge-fill panel-icon"></i></div>
-      <div class="pulse-score {% if overdue_customers %}pulse-watch{% else %}pulse-good{% endif %}"><span class="pulse-ring"><i class="bi {% if overdue_customers %}bi-arrow-up-right{% else %}bi-check-lg{% endif %}"></i></span><div><strong>{% if overdue_customers %}{{ overdue_customers }} account{{ 's' if overdue_customers != 1 else '' }} to review{% else %}No overdue accounts{% endif %}</strong><span>{% if overdue_customers %}Prioritise follow-ups today{% else %}Your receivables are on track{% endif %}</span></div></div>
+      <div class="panel-heading">
+        <div><p class="eyebrow mb-1">Daily focus</p><h2>Collection pulse</h2></div>
+        <span class="pulse-status-tag {% if overdue_customers %}pulse-tag-watch{% else %}pulse-tag-good{% endif %}">
+          <i class="bi {% if overdue_customers %}bi-exclamation-circle-fill{% else %}bi-check-circle-fill{% endif %}" aria-hidden="true"></i>
+          {% if overdue_customers %}Follow up{% else %}On track{% endif %}
+        </span>
+      </div>
+      <div class="pulse-score {% if overdue_customers %}pulse-watch{% else %}pulse-good{% endif %}">
+        <span class="pulse-ring"><i class="bi {% if overdue_customers %}bi-arrow-up-right{% else %}bi-check-lg{% endif %}" aria-hidden="true"></i></span>
+        <div><strong>{% if overdue_customers %}{{ overdue_customers }} account{{ 's' if overdue_customers != 1 else '' }} to review{% else %}No overdue accounts{% endif %}</strong><span>{% if overdue_customers %}Prioritise follow-ups today{% else %}Your receivables are on track{% endif %}</span></div>
+      </div>
       <div class="insight-list">
-        <a href="{{ url_for('ledger.receivables_report') }}"><span><i class="bi bi-graph-up-arrow"></i> Open receivables report</span><i class="bi bi-arrow-up-right"></i></a>
-        <a href="{{ url_for('customers.list_customers') }}"><span><i class="bi bi-person-lines-fill"></i> Review customer accounts</span><i class="bi bi-arrow-up-right"></i></a>
-        <a href="{{ url_for('reminders.list_rules') }}"><span><i class="bi bi-bell"></i> Manage reminder rules</span><i class="bi bi-arrow-up-right"></i></a>
+        <a href="{{ url_for('ledger.receivables_report') }}">
+          <span class="insight-action-icon"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></span>
+          <span class="insight-action-copy"><strong>Receivables report</strong><small>Review balances and ageing</small></span>
+          <i class="bi bi-arrow-up-right insight-action-arrow" aria-hidden="true"></i>
+        </a>
+        <a href="{{ url_for('customers.list_customers') }}">
+          <span class="insight-action-icon"><i class="bi bi-person-lines-fill" aria-hidden="true"></i></span>
+          <span class="insight-action-copy"><strong>Customer accounts</strong><small>View your customer list</small></span>
+          <i class="bi bi-arrow-up-right insight-action-arrow" aria-hidden="true"></i>
+        </a>
+        <a href="{{ url_for('reminders.list_rules') }}">
+          <span class="insight-action-icon"><i class="bi bi-bell" aria-hidden="true"></i></span>
+          <span class="insight-action-copy"><strong>Reminder rules</strong><small>Manage collection reminders</small></span>
+          <i class="bi bi-arrow-up-right insight-action-arrow" aria-hidden="true"></i>
+        </a>
       </div>
     </div>
   </div>
@@ -145,7 +194,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
   (function () {
   const greetingElement = document.getElementById('welcomeGreeting');
@@ -228,13 +276,26 @@
     startCarousel();
   }
 
-  const ctx = document.getElementById('ageingChart');
-  const ageingData = JSON.parse(document.getElementById('ageingData').dataset.buckets);
-  const ageingLabels = Object.keys(ageingData);
-  const ageingValues = Object.values(ageingData);
-  const ageingColors = ['#2c7a7b', '#d5a021', '#df7b49', '#d9534f', '#872f3b'];
-  new Chart(ctx, { type: 'doughnut', data: { labels: ageingLabels, datasets: [{ data: ageingValues, backgroundColor: ageingColors, borderWidth: 0, hoverOffset: 7 }] }, options: { cutout: '70%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => ` ${item.label}: KES ${Number(item.raw).toLocaleString()}` } } }, responsive: true, maintainAspectRatio: false } });
-  document.getElementById('ageingLegend').innerHTML = ageingLabels.map((label, index) => `<span><i style="background:${ageingColors[index]}"></i>${label}<strong>KES ${Number(ageingValues[index]).toLocaleString()}</strong></span>`).join('');
+  const ageingRows = Array.from(document.querySelectorAll('.ageing-row'));
+  const ageingValues = ageingRows.map((row) => Number(row.dataset.ageingValue));
+  const ageingTotal = ageingValues.reduce((total, value) => total + value, 0);
+  const largestAgeingRow = ageingRows.reduce(
+    (largest, row) => Number(row.dataset.ageingValue) > Number(largest.dataset.ageingValue) ? row : largest,
+    ageingRows[0]
+  );
+  ageingRows.forEach((row) => {
+    const value = Number(row.dataset.ageingValue);
+    const share = ageingTotal > 0 ? value / ageingTotal * 100 : 0;
+    row.querySelector('.ageing-fill').style.width = `${share}%`;
+    row.querySelector('.ageing-track').setAttribute('aria-valuenow', String(Math.round(share)));
+    row.querySelector('.ageing-share').textContent = `${Math.round(share)}%`;
+  });
+  if (ageingTotal > 0 && largestAgeingRow) {
+    const largestBand = largestAgeingRow.dataset.ageBand;
+    const largestShare = Math.round(Number(largestAgeingRow.dataset.ageingValue) / ageingTotal * 100);
+    document.getElementById('ageingInsight').textContent =
+      `${largestBand} days is the largest balance band at ${largestShare}% of outstanding receivables.`;
+  }
   })();
 </script>
 {% endblock %}
