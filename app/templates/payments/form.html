@@ -1,24 +1,147 @@
 {% extends "base.html" %}
 {% block title %}Log Payment{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card p-4">
-      <h4 class="mb-3"><i class="bi bi-cash-coin"></i> Log Payment</h4>
-      <form method="POST" novalidate>
-        {{ form.hidden_tag() }}
-        <div class="mb-3">
-          {{ form.customer_id.label(class="form-label") }}
-          {{ form.customer_id(class="form-select") }}
-        </div>
-        <div class="mb-3">
-          {{ form.amount_paid.label(class="form-label") }}
-          {{ form.amount_paid(class="form-control", placeholder="0.00") }}
-        </div>
-        {{ form.submit(class="btn btn-primary") }}
-        <a href="{{ url_for('payments.list_payments') }}" class="btn btn-link">Cancel</a>
-      </form>
+<section class="payment-page" aria-labelledby="payment-page-title">
+  <header class="payment-page-header">
+    <div>
+      <p class="eyebrow mb-1">Customer accounts</p>
+      <h1 id="payment-page-title">Log a payment</h1>
+      <p>Record what a customer has paid and keep their outstanding balance up to date.</p>
     </div>
+    <a class="payment-back-link" href="{{ url_for('payments.list_payments') }}">
+      <i class="bi bi-arrow-left" aria-hidden="true"></i> Payment history
+    </a>
+  </header>
+
+  <div class="payment-layout">
+    <article class="payment-form-card">
+      <div class="payment-card-heading">
+        <span class="payment-heading-icon"><i class="bi bi-cash-coin" aria-hidden="true"></i></span>
+        <div>
+          <p class="payment-heading-kicker">New entry</p>
+          <h2>Payment details</h2>
+          <p>Choose a customer with an outstanding balance, then enter the amount received.</p>
+        </div>
+      </div>
+
+      {% if not customers_available %}
+      <div class="payment-empty-state" role="status">
+        <span class="payment-empty-icon"><i class="bi {{ 'bi-person-plus' if not has_customers else 'bi-check2-circle' }}" aria-hidden="true"></i></span>
+        <h3>{{ 'Add a customer first' if not has_customers else 'No outstanding payments' }}</h3>
+        <p>
+          {% if not has_customers %}
+          Add a customer before you can record a payment.
+          {% else %}
+          None of your customers currently has an unpaid balance. A payment can only be recorded against an amount they owe.
+          {% endif %}
+        </p>
+        {% if not has_customers %}
+        <a href="{{ url_for('customers.new_customer') }}" class="payment-submit-button">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i> Add customer
+        </a>
+        {% endif %}
+      </div>
+      {% else %}
+      <form method="POST" class="payment-form">
+        {{ form.hidden_tag() }}
+        <div class="payment-field">
+          {{ form.customer_id.label(class="form-label") }}
+          <span class="payment-input-wrap">
+            <i class="bi bi-person" aria-hidden="true"></i>
+            {{ form.customer_id(class="form-select", required=true, **{"aria-describedby": "payment-customer-help" ~ (" payment-customer-errors" if form.customer_id.errors else ""), "aria-invalid": "true" if form.customer_id.errors else "false"}) }}
+          </span>
+          <small class="payment-field-help" id="payment-customer-help">Only customers with a balance due are listed.</small>
+          {% if form.customer_id.errors %}
+          <div class="payment-field-errors" id="payment-customer-errors" role="alert">
+            {% for error in form.customer_id.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <div id="payment-balance-summary" class="payment-balance-summary" aria-live="polite">
+          <span class="payment-balance-icon"><i class="bi bi-wallet2" aria-hidden="true"></i></span>
+          <span><small>Outstanding balance</small><strong id="payment-current-balance">Choose a customer</strong></span>
+        </div>
+
+        <div class="payment-field">
+          {{ form.amount_paid.label(class="form-label") }}
+          <span class="payment-input-wrap payment-amount-wrap">
+            <span class="payment-currency" aria-hidden="true">KES</span>
+            {{ form.amount_paid(class="form-control", placeholder="0.00", inputmode="decimal", min="0.01", max="99999999.99", step="0.01", required=true, **{"aria-describedby": "payment-amount-help" ~ (" payment-amount-errors" if form.amount_paid.errors else ""), "aria-invalid": "true" if form.amount_paid.errors else "false"}) }}
+          </span>
+          <small class="payment-field-help" id="payment-amount-help">Enter the amount received. It cannot exceed the selected customer's balance.</small>
+          {% if form.amount_paid.errors %}
+          <div class="payment-field-errors" id="payment-amount-errors" role="alert">
+            {% for error in form.amount_paid.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <div id="payment-remaining-preview" class="payment-remaining-preview d-none" aria-live="polite"></div>
+        <div class="payment-form-actions">
+          <button type="submit" class="payment-submit-button">
+            <i class="bi bi-check2-circle" aria-hidden="true"></i> Log payment
+          </button>
+          <a href="{{ url_for('payments.list_payments') }}" class="payment-cancel-link">Cancel</a>
+        </div>
+      </form>
+      {% endif %}
+    </article>
+
+    <aside class="payment-side-card" aria-label="Payment information">
+      <span class="payment-side-icon"><i class="bi bi-shield-check" aria-hidden="true"></i></span>
+      <p class="payment-side-kicker">Keep accounts accurate</p>
+      <h2>Before you save</h2>
+      <ul class="payment-checklist">
+        <li><i class="bi bi-check2" aria-hidden="true"></i><span>Confirm the customer who made the payment.</span></li>
+        <li><i class="bi bi-check2" aria-hidden="true"></i><span>Enter the amount actually received.</span></li>
+        <li><i class="bi bi-check2" aria-hidden="true"></i><span>The balance is recalculated from sales and payments.</span></li>
+      </ul>
+      <div class="payment-side-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Payments reduce the balance owed; they do not create a new credit sale.</div>
+    </aside>
   </div>
-</div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% if customers_available %}
+<script>
+(() => {
+  const balances = {{ balances | tojson }};
+  const customer = document.getElementById("customer_id");
+  const amount = document.getElementById("amount_paid");
+  const current = document.getElementById("payment-current-balance");
+  const preview = document.getElementById("payment-remaining-preview");
+  const formatKes = (value) => `KES ${Number(value).toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  function updateBalance() {
+    const balance = balances[customer.value];
+    if (balance === undefined) {
+      current.textContent = "Choose a customer";
+      preview.classList.add("d-none");
+      amount.removeAttribute("max");
+      return;
+    }
+
+    current.textContent = formatKes(balance);
+    amount.max = Number(balance).toFixed(2);
+    const payment = Number(amount.value);
+    if (Number.isFinite(payment) && payment > 0) {
+      const remaining = Number(balance) - payment;
+      preview.textContent = remaining >= 0
+        ? `Balance after payment: ${formatKes(remaining)}`
+        : `Payment is ${formatKes(Math.abs(remaining))} above the balance due.`;
+      preview.classList.toggle("is-over", remaining < 0);
+      preview.classList.remove("d-none");
+    } else {
+      preview.classList.add("d-none");
+    }
+  }
+
+  customer.addEventListener("change", updateBalance);
+  amount.addEventListener("input", updateBalance);
+  updateBalance();
+})();
+</script>
+{% endif %}
 {% endblock %}
