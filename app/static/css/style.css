@@ -66,6 +66,8 @@ body {
 .welcome-carousel-indicators button:focus-visible { outline: 2px solid #e2f0bc; outline-offset: 3px; }
 @keyframes welcome-carousel-enter { from { opacity: 0; transform: translateX(0.65rem); } to { opacity: 1; transform: translateX(0); } }
 .dashboard-kpis { margin-bottom: 1rem; }
+.dashboard-kpi-link { color: inherit; display: block; height: 100%; text-decoration: none; }
+.dashboard-kpi-link:focus-visible { border-radius: 0.9rem; outline: 3px solid var(--brand); outline-offset: 3px; }
 .kpi-card { background: var(--surface); border: 1px solid var(--line); border-radius: 0.9rem; min-height: 9.4rem; overflow: hidden; padding: 1.15rem 1.25rem; position: relative; }
 .kpi-card::after { background: currentColor; border-radius: 50%; content: ""; height: 6rem; opacity: 0.06; position: absolute; right: -2.2rem; top: -2.2rem; width: 6rem; }
 .kpi-blue { background: linear-gradient(135deg, #fff 0%, #eff9f5 100%); border-color: #d8eee7; box-shadow: 0 0.55rem 1.5rem rgba(37, 112, 86, 0.08); color: #24745e; transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
