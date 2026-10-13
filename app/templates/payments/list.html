@@ -1,26 +1,93 @@
 {% extends "base.html" %}
 {% block title %}Payments{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4><i class="bi bi-cash-coin"></i> Payments</h4>
-  <a href="{{ url_for('payments.new_payment') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Log Payment</a>
-</div>
-<div class="card">
-  <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
-      <thead class="table-light"><tr><th>Date</th><th>Customer</th><th>Amount Paid</th></tr></thead>
-      <tbody>
-      {% for p in payments %}
-        <tr>
-          <td class="small">{{ p.payment_date.strftime('%d %b %Y %H:%M') }}</td>
-          <td><a href="{{ url_for('customers.view_customer', customer_id=p.customer_id) }}">{{ p.customer.full_name }}</a></td>
-          <td>{{ p.amount_paid | kes }}</td>
-        </tr>
-      {% else %}
-        <tr><td colspan="3" class="text-center text-muted py-4">No payments logged yet.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
+<section class="payment-history" aria-labelledby="payment-history-title">
+  <header class="payment-history-header">
+    <div>
+      <p class="eyebrow mb-1">Money received</p>
+      <h1 id="payment-history-title"><i class="bi bi-cash-coin" aria-hidden="true"></i> Payments</h1>
+      <p>Track customer repayments and see how much has been collected.</p>
+    </div>
+    <a href="{{ url_for('payments.new_payment') }}" class="payment-history-add">
+      <i class="bi bi-plus-lg" aria-hidden="true"></i> Log payment
+    </a>
+  </header>
+
+  <div class="payment-history-stats" aria-label="Payment summary">
+    <article class="payment-history-stat payment-history-stat-total">
+      <span class="payment-history-stat-icon"><i class="bi bi-wallet2" aria-hidden="true"></i></span>
+      <span class="payment-history-stat-label">Total collected</span>
+      <strong>{{ total_paid | kes }}</strong>
+      <small>Across all recorded payments</small>
+    </article>
+    <article class="payment-history-stat">
+      <span class="payment-history-stat-icon"><i class="bi bi-receipt" aria-hidden="true"></i></span>
+      <span class="payment-history-stat-label">Payments logged</span>
+      <strong>{{ payments|length }}</strong>
+      <small>{{ 'payment' if payments|length == 1 else 'payments' }} recorded</small>
+    </article>
+    <article class="payment-history-stat">
+      <span class="payment-history-stat-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
+      <span class="payment-history-stat-label">Customers paid</span>
+      <strong>{{ customer_count }}</strong>
+      <small>{{ 'customer' if customer_count == 1 else 'customers' }} with a payment</small>
+    </article>
   </div>
-</div>
+
+  <div class="payment-history-card">
+    <div class="payment-history-card-heading">
+      <div>
+        <h2>Payment history</h2>
+        <p>Most recent payments appear first.</p>
+      </div>
+      {% if payments %}
+      <span class="payment-history-count">{{ payments|length }} {{ 'entry' if payments|length == 1 else 'entries' }}</span>
+      {% endif %}
+    </div>
+    {% if payments %}
+    <div class="table-responsive">
+      <table class="table payment-history-table align-middle mb-0">
+        <thead>
+          <tr><th scope="col">Date received</th><th scope="col">Customer</th><th scope="col" class="text-end">Amount paid</th></tr>
+        </thead>
+        <tbody>
+        {% for payment in payments %}
+          <tr>
+            <td>
+              <span class="payment-history-date">
+                <i class="bi bi-calendar3" aria-hidden="true"></i>
+                {{ payment.payment_date.strftime('%d %b %Y') if payment.payment_date else 'Date unavailable' }}
+              </span>
+              {% if payment.payment_date %}
+              <small class="payment-history-time">{{ payment.payment_date.strftime('%H:%M') }}</small>
+              {% endif %}
+            </td>
+            <td>
+              <a class="payment-history-customer" href="{{ url_for('customers.view_customer', customer_id=payment.customer_id) }}">
+                <span class="payment-history-avatar" aria-hidden="true">{{ payment.customer.full_name.split()[0][0]|upper }}{{ payment.customer.full_name.split()[-1][0]|upper if payment.customer.full_name.split()|length > 1 else '' }}</span>
+                <span><strong>{{ payment.customer.full_name }}</strong><small>{{ payment.customer.phone_number }}</small></span>
+                <i class="bi bi-arrow-up-right payment-history-customer-link" aria-hidden="true"></i>
+              </a>
+            </td>
+            <td class="text-end"><span class="payment-history-amount">{{ payment.amount_paid | kes }}</span></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr><th scope="row" colspan="2">Total collected</th><td class="text-end"><strong>{{ total_paid | kes }}</strong></td></tr>
+        </tfoot>
+      </table>
+    </div>
+    {% else %}
+    <div class="payment-history-empty">
+      <span class="payment-history-empty-icon"><i class="bi bi-receipt-cutoff" aria-hidden="true"></i></span>
+      <h3>No payments recorded yet</h3>
+      <p>Once a customer pays toward an outstanding balance, the payment will appear here and their account balance will update.</p>
+      <a href="{{ url_for('payments.new_payment') }}" class="payment-history-empty-action">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i> Log a payment
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</section>
 {% endblock %}

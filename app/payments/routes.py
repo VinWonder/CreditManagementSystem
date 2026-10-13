@@ -48,7 +48,12 @@ def list_payments():
         .order_by(Payment.payment_date.desc())
         .all()
     )
-    return render_template("payments/list.html", payments=payments)
+    return render_template(
+        "payments/list.html",
+        payments=payments,
+        total_paid=sum((payment.amount_paid for payment in payments), Decimal("0")),
+        customer_count=len({payment.customer_id for payment in payments}),
+    )
 
 
 @payments_bp.route("/new", methods=["GET", "POST"])

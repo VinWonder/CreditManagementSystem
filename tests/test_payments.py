@@ -118,6 +118,55 @@ class PaymentFlowTests(unittest.TestCase):
         self.assertIn(b"No outstanding payments", response.data)
         self.assertNotIn(b"id=\"amount_paid\"", response.data)
 
+    def test_payment_history_shows_empty_state_with_action(self):
+        response = self.client.get("/payments/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"No payments recorded yet", response.data)
+        self.assertIn(b"Log a payment", response.data)
+        self.assertIn(b"KES 0.00", response.data)
+
+    def test_payment_history_summary_is_scoped_to_signed_in_retailer(self):
+        db.session.add(
+            Payment(
+                retailer_id=self.retailer_id,
+                customer_id=self.customer_id,
+                amount_paid=25,
+            )
+        )
+        other_retailer = Retailer(
+            business_name="Other Shop",
+            owner_name="Other Owner",
+            phone_number="+254700000003",
+            password_hash="test-hash",
+        )
+        db.session.add(other_retailer)
+        db.session.flush()
+        other_customer = Customer(
+            retailer_id=other_retailer.retailer_id,
+            full_name="Other Customer",
+            phone_number="+254700000004",
+        )
+        db.session.add(other_customer)
+        db.session.flush()
+        db.session.add(
+            Payment(
+                retailer_id=other_retailer.retailer_id,
+                customer_id=other_customer.customer_id,
+                amount_paid=900,
+            )
+        )
+        db.session.commit()
+
+        response = self.client.get("/payments/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"KES 25.00", response.data)
+        self.assertIn(b"Payments logged", response.data)
+        self.assertIn(b"Customers paid", response.data)
+        self.assertNotIn(b"Other Customer", response.data)
+        self.assertNotIn(b"KES 900.00", response.data)
+
 
 if __name__ == "__main__":
     unittest.main()
