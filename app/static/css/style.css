@@ -1058,3 +1058,70 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
   .payment-submit-button { width: 100%; }
   .payment-cancel-link { text-align: center; }
 }
+.reminder-form-page { margin: 0 auto; max-width: 68rem; }
+.reminder-form-back { align-items: center; color: #527268; display: inline-flex; font-size: 0.68rem; font-weight: 750; gap: 0.38rem; margin-bottom: 0.85rem; text-decoration: none; }
+.reminder-form-back:hover { color: #205b4b; }
+.reminder-form-back:focus-visible, .reminder-form-save:focus-visible, .reminder-form-cancel:focus-visible { outline: 3px solid #8dbeb0; outline-offset: 3px; }
+.reminder-form-layout { align-items: start; display: grid; gap: 1rem; grid-template-columns: minmax(0, 1.7fr) minmax(15rem, 0.8fr); }
+.reminder-form-card { background: #fff; border: 1px solid #e1ebe7; border-radius: 1rem; box-shadow: 0 0.65rem 1.8rem rgba(24, 52, 45, 0.06); overflow: hidden; }
+.reminder-form-heading { align-items: flex-start; background: linear-gradient(115deg, #f3f8f5, #fff); border-bottom: 1px solid #e8efec; display: flex; gap: 0.8rem; padding: 1.1rem 1.2rem; }
+.reminder-form-mark { align-items: center; background: #e4f1e9; border: 1px solid #d9eade; border-radius: 0.72rem; color: #347b65; display: inline-flex; flex: 0 0 auto; font-size: 1rem; height: 2.6rem; justify-content: center; width: 2.6rem; }
+.reminder-form-heading h1 { color: #26443f; font-size: clamp(1.18rem, 2.5vw, 1.55rem); font-weight: 800; letter-spacing: -0.04em; margin: 0; }
+.reminder-form-heading p:last-child { color: #71847c; font-size: 0.67rem; line-height: 1.55; margin: 0.28rem 0 0; max-width: 34rem; }
+.reminder-form { display: grid; gap: 1.05rem; padding: 1.15rem 1.2rem 1.2rem; }
+.reminder-form-field { min-width: 0; }
+.reminder-form-field > .form-label, .reminder-message-label-row .form-label { color: #304e45; display: block; font-size: 0.68rem; font-weight: 800; margin-bottom: 0.38rem; }
+.reminder-form-input { align-items: center; background: #fff; border: 1px solid #dce7e2; border-radius: 0.62rem; display: flex; min-height: 2.8rem; }
+.reminder-form-input:focus-within { border-color: #73a894; box-shadow: 0 0 0 0.18rem rgba(64, 132, 105, 0.12); }
+.reminder-form-input > i { color: #6c9484; flex: 0 0 auto; font-size: 0.8rem; margin-left: 0.75rem; }
+.reminder-trigger-input .form-control, .reminder-channel-input .form-select { background-color: transparent; border: 0; box-shadow: none; color: #2c4840; font-size: 0.7rem; min-height: 2.7rem; }
+.reminder-trigger-input .form-control { max-width: 8rem; }
+.reminder-trigger-input > span:last-child { color: #74877f; font-size: 0.64rem; padding: 0 0.7rem; white-space: nowrap; }
+.reminder-channel-input .form-select { padding-left: 0.65rem; }
+.reminder-form-help { color: #798b84; display: block; font-size: 0.59rem; line-height: 1.55; margin-top: 0.36rem; }
+.reminder-form-errors { display: grid; gap: 0.25rem; margin-top: 0.4rem; }
+.reminder-form-errors span { align-items: flex-start; color: #ad493e; display: flex; font-size: 0.62rem; gap: 0.35rem; line-height: 1.45; }
+.reminder-form-errors i { margin-top: 0.08rem; }
+.reminder-message-label-row { align-items: center; display: flex; justify-content: space-between; }
+.reminder-character-count { color: #81918b; font-size: 0.57rem; font-weight: 700; }
+.reminder-character-count.is-near-limit { color: #a35f2d; }
+.reminder-message-textarea { border-color: #dce7e2; border-radius: 0.62rem; color: #304e45; font-size: 0.68rem; line-height: 1.6; min-height: 8.3rem; padding: 0.68rem 0.75rem; resize: vertical; }
+.reminder-message-textarea:focus { border-color: #73a894; box-shadow: 0 0 0 0.18rem rgba(64, 132, 105, 0.12); }
+.reminder-placeholders { align-items: center; display: flex; flex-wrap: wrap; gap: 0.32rem; margin-top: 0.62rem; }
+.reminder-placeholders-label { color: #6e8278; font-size: 0.57rem; font-weight: 750; margin-right: 0.12rem; }
+.reminder-placeholders code { background: #eff6f1; border: 1px solid #e1ede5; border-radius: 0.3rem; color: #33725b; font-size: 0.56rem; padding: 0.2rem 0.35rem; }
+.reminder-live-preview { background: #f7faf8; border: 1px solid #e7efea; border-radius: 0.62rem; margin-top: 0.65rem; padding: 0.58rem 0.68rem; }
+.reminder-preview-heading { color: #57766a; font-size: 0.57rem; font-weight: 800; }
+.reminder-live-preview p { color: #536d63; font-size: 0.62rem; line-height: 1.55; margin: 0.25rem 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.reminder-active-toggle { align-items: center; background: #f7faf8; border: 1px solid #e4ede8; border-radius: 0.7rem; cursor: pointer; display: flex; gap: 0.62rem; padding: 0.68rem 0.75rem; }
+.reminder-active-icon { align-items: center; background: #e7f2eb; border-radius: 0.55rem; color: #377a60; display: inline-flex; flex: 0 0 auto; height: 2rem; justify-content: center; width: 2rem; }
+.reminder-active-copy { display: grid; flex: 1; gap: 0.15rem; }
+.reminder-active-copy strong { color: #304e45; font-size: 0.65rem; }
+.reminder-active-copy small { color: #7a8b84; font-size: 0.56rem; line-height: 1.45; }
+.reminder-active-toggle .form-check-input { cursor: pointer; float: none; margin: 0; }
+.reminder-active-toggle .form-check-input:checked { background-color: #347b65; border-color: #347b65; }
+.reminder-form-actions { align-items: center; border-top: 1px solid #edf2ef; display: flex; gap: 0.55rem; padding-top: 0.9rem; }
+.reminder-form-save { align-items: center; background: linear-gradient(135deg, #2c7a7b, #205b5c); border: 1px solid #205b5c; border-radius: 0.58rem; box-shadow: 0 0.3rem 0.75rem rgba(32, 91, 92, 0.14); color: #fff; cursor: pointer; display: inline-flex; font-size: 0.67rem; font-weight: 800; gap: 0.4rem; justify-content: center; min-height: 2.55rem; padding: 0.6rem 0.9rem; }
+.reminder-form-save:hover { box-shadow: 0 0.5rem 0.9rem rgba(32, 91, 92, 0.2); transform: translateY(-1px); }
+.reminder-form-cancel { color: #647a71; font-size: 0.65rem; font-weight: 750; padding: 0.6rem 0.75rem; text-decoration: none; }
+.reminder-form-cancel:hover { color: #205b4b; }
+.reminder-form-aside { background: linear-gradient(155deg, #eef6f1, #f9fbf9); border: 1px solid #dfece4; border-radius: 0.9rem; padding: 1rem; }
+.reminder-aside-icon { align-items: center; background: #deeee4; border-radius: 0.65rem; color: #347b65; display: inline-flex; font-size: 0.9rem; height: 2.35rem; justify-content: center; width: 2.35rem; }
+.reminder-aside-kicker { color: #52806d; font-size: 0.55rem; font-weight: 850; letter-spacing: 0.08em; margin: 0.8rem 0 0.25rem; text-transform: uppercase; }
+.reminder-form-aside h2 { color: #29483f; font-size: 0.9rem; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
+.reminder-form-aside ul { display: grid; gap: 0.72rem; list-style: none; margin: 0.9rem 0 0; padding: 0; }
+.reminder-form-aside li { align-items: flex-start; color: #637b70; display: flex; font-size: 0.61rem; gap: 0.4rem; line-height: 1.55; }
+.reminder-form-aside li i { color: #3b876a; font-size: 0.74rem; }
+.reminder-aside-note { background: rgba(255, 255, 255, 0.75); border: 1px solid #e1ebe5; border-radius: 0.58rem; color: #75867e; font-size: 0.57rem; line-height: 1.55; margin-top: 1rem; padding: 0.58rem; }
+.reminder-aside-note i { color: #4d8a70; margin-right: 0.22rem; }
+@media (max-width: 767.98px) {
+  .reminder-form-layout { grid-template-columns: minmax(0, 1fr); margin: 0 auto; max-width: 40rem; }
+  .reminder-form-aside { order: -1; }
+  .reminder-form-aside ul { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 576px) {
+  .reminder-form-heading, .reminder-form { padding-left: 0.85rem; padding-right: 0.85rem; }
+  .reminder-form-aside ul { grid-template-columns: minmax(0, 1fr); }
+  .reminder-form-actions { align-items: stretch; flex-direction: column; }
+  .reminder-form-save, .reminder-form-cancel { justify-content: center; text-align: center; width: 100%; }
+}

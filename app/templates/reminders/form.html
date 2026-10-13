@@ -1,35 +1,128 @@
 {% extends "base.html" %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-7">
-    <div class="card p-4">
-      <h4 class="mb-3">{{ title }}</h4>
-      <form method="POST" novalidate>
+<section class="reminder-form-page" aria-labelledby="reminder-form-title">
+  <a class="reminder-form-back" href="{{ url_for('reminders.list_rules') }}">
+    <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to reminder rules
+  </a>
+
+  <div class="reminder-form-layout">
+    <article class="reminder-form-card">
+      <header class="reminder-form-heading">
+        <span class="reminder-form-mark"><i class="bi bi-bell" aria-hidden="true"></i></span>
+        <div>
+          <p class="eyebrow mb-1">Automated collections</p>
+          <h1 id="reminder-form-title">{{ title }}</h1>
+          <p>Set a clear trigger and write a helpful message for customers with an overdue balance.</p>
+        </div>
+      </header>
+
+      <form method="POST" class="reminder-form">
         {{ form.hidden_tag() }}
-        <div class="mb-3">
+        <div class="reminder-form-field">
           {{ form.trigger_days_overdue.label(class="form-label") }}
-          {{ form.trigger_days_overdue(class="form-control") }}
+          <span class="reminder-form-input reminder-trigger-input">
+            <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+            {{ form.trigger_days_overdue(class="form-control", min="1", max="365", step="1", inputmode="numeric", placeholder="e.g. 7", required=true, **{"aria-describedby": "trigger-help" ~ (" trigger-errors" if form.trigger_days_overdue.errors else ""), "aria-invalid": "true" if form.trigger_days_overdue.errors else "false"}) }}
+            <span>days overdue</span>
+          </span>
+          <small class="reminder-form-help" id="trigger-help">The rule is eligible when an unpaid account reaches this many overdue days. Choose 1–365 days.</small>
+          {% if form.trigger_days_overdue.errors %}
+          <div class="reminder-form-errors" id="trigger-errors" role="alert">
+            {% for error in form.trigger_days_overdue.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
+          </div>
+          {% endif %}
         </div>
-        <div class="mb-3">
+
+        <div class="reminder-form-field">
           {{ form.channel.label(class="form-label") }}
-          {{ form.channel(class="form-select") }}
+          <span class="reminder-form-input reminder-channel-input">
+            <i class="bi bi-chat-dots" aria-hidden="true"></i>
+            {{ form.channel(class="form-select", required=true, **{"aria-describedby": "channel-help" ~ (" channel-errors" if form.channel.errors else ""), "aria-invalid": "true" if form.channel.errors else "false"}) }}
+          </span>
+          <small class="reminder-form-help" id="channel-help">Choose how the reminder should be sent. SMS + WhatsApp attempts delivery through both channels.</small>
+          {% if form.channel.errors %}
+          <div class="reminder-form-errors" id="channel-errors" role="alert">
+            {% for error in form.channel.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
+          </div>
+          {% endif %}
         </div>
-        <div class="mb-3">
-          {{ form.message_template.label(class="form-label") }}
-          {{ form.message_template(class="form-control", rows=4) }}
-          <div class="form-text">
-            Placeholders: {customer_name}, {business_name}, {balance}, {days_overdue}
+
+        <div class="reminder-form-field">
+          <div class="reminder-message-label-row">
+            {{ form.message_template.label(class="form-label") }}
+            <span class="reminder-character-count" id="reminder-character-count" aria-live="polite">0 / 500</span>
+          </div>
+          {{ form.message_template(class="form-control reminder-message-textarea", rows=5, maxlength="500", required=true, **{"aria-describedby": "message-help message-placeholders" ~ (" message-errors" if form.message_template.errors else ""), "aria-invalid": "true" if form.message_template.errors else "false"}) }}
+          {% if form.message_template.errors %}
+          <div class="reminder-form-errors" id="message-errors" role="alert">
+            {% for error in form.message_template.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
+          </div>
+          {% endif %}
+          <small class="reminder-form-help" id="message-help">Keep it polite and easy to understand. The placeholders are replaced with each customer's actual details.</small>
+          <div class="reminder-placeholders" id="message-placeholders">
+            <span class="reminder-placeholders-label">Available placeholders</span>
+            <code>{customer_name}</code><code>{business_name}</code><code>{balance}</code><code>{days_overdue}</code>
+          </div>
+          <div class="reminder-live-preview" aria-live="polite">
+            <span class="reminder-preview-heading"><i class="bi bi-eye" aria-hidden="true"></i> Example preview</span>
+            <p id="reminder-message-preview"></p>
           </div>
         </div>
-        <div class="form-check mb-3">
+
+        <label class="reminder-active-toggle" for="{{ form.active.id }}">
+          <span class="reminder-active-icon"><i class="bi bi-lightning-charge" aria-hidden="true"></i></span>
+          <span class="reminder-active-copy"><strong>Activate this rule</strong><small>Active rules can send messages during daily and manual scans.</small></span>
           {{ form.active(class="form-check-input") }}
-          {{ form.active.label(class="form-check-label") }}
+        </label>
+
+        <div class="reminder-form-actions">
+          <button type="submit" class="reminder-form-save">
+            <i class="bi bi-check2-circle" aria-hidden="true"></i>{{ form.submit.label.text }}
+          </button>
+          <a href="{{ url_for('reminders.list_rules') }}" class="reminder-form-cancel">Cancel</a>
         </div>
-        {{ form.submit(class="btn btn-primary") }}
-        <a href="{{ url_for('reminders.list_rules') }}" class="btn btn-link">Cancel</a>
       </form>
-    </div>
+    </article>
+
+    <aside class="reminder-form-aside" aria-label="Reminder rule guidance">
+      <span class="reminder-aside-icon"><i class="bi bi-shield-check" aria-hidden="true"></i></span>
+      <p class="reminder-aside-kicker">Before you save</p>
+      <h2>Make every reminder useful</h2>
+      <ul>
+        <li><i class="bi bi-check2" aria-hidden="true"></i><span>Choose an overdue threshold that gives customers time to repay.</span></li>
+        <li><i class="bi bi-check2" aria-hidden="true"></i><span>Use a friendly tone and check the example preview.</span></li>
+        <li><i class="bi bi-check2" aria-hidden="true"></i><span>Confirm your SMS or WhatsApp delivery setup before activating.</span></li>
+      </ul>
+      <div class="reminder-aside-note"><i class="bi bi-info-circle" aria-hidden="true"></i> The daily scan checks active rules against customers' overdue balances.</div>
+    </aside>
   </div>
-</div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const message = document.getElementById("message_template");
+  const characterCount = document.getElementById("reminder-character-count");
+  const preview = document.getElementById("reminder-message-preview");
+  if (!message || !characterCount || !preview) return;
+
+  const examples = {
+    customer_name: "Amina",
+    business_name: "Your shop",
+    balance: "KES 1,250.00",
+    days_overdue: "7",
+  };
+  function updatePreview() {
+    characterCount.textContent = `${message.value.length} / 500`;
+    preview.textContent = message.value.replace(/\{([^{}]+)\}/g, (placeholder, key) =>
+      Object.prototype.hasOwnProperty.call(examples, key) ? examples[key] : placeholder
+    ) || "Your example reminder will appear here.";
+    characterCount.classList.toggle("is-near-limit", message.value.length >= 450);
+  }
+  message.addEventListener("input", updatePreview);
+  updatePreview();
+})();
+</script>
 {% endblock %}

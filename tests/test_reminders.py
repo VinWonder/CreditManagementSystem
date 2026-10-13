@@ -79,6 +79,70 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertIn(b"Matching customers may receive a real SMS or WhatsApp message", response.data)
         self.assertIn(b"08:00", response.data)
 
+    def test_new_rule_form_shows_placeholder_guidance_and_preview(self):
+        response = self.client.get("/reminders/rules/new")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Available placeholders", response.data)
+        self.assertIn(b"reminder-message-preview", response.data)
+        self.assertIn(b"Activate this rule", response.data)
+
+    def test_new_rule_accepts_supported_placeholders(self):
+        response = self.client.post(
+            "/reminders/rules/new",
+            data={
+                "csrf_token": self._csrf_token(),
+                "trigger_days_overdue": "7",
+                "channel": "both",
+                "message_template": (
+                    "Hello {customer_name} from {business_name}: "
+                    "{balance}, overdue {days_overdue} days."
+                ),
+                "active": "y",
+                "submit": "Save Rule",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        rule = ReminderRule.query.one()
+        self.assertEqual(rule.channel, "both")
+        self.assertTrue(rule.active)
+        self.assertIn("{days_overdue}", rule.message_template)
+
+    def test_new_rule_rejects_unsupported_placeholder(self):
+        response = self.client.post(
+            "/reminders/rules/new",
+            data={
+                "csrf_token": self._csrf_token(),
+                "trigger_days_overdue": "7",
+                "channel": "sms",
+                "message_template": "Hello {customer_nam}.",
+                "active": "y",
+                "submit": "Save Rule",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Unsupported placeholder", response.data)
+        self.assertEqual(ReminderRule.query.count(), 0)
+
+    def test_new_rule_rejects_malformed_placeholder(self):
+        response = self.client.post(
+            "/reminders/rules/new",
+            data={
+                "csrf_token": self._csrf_token(),
+                "trigger_days_overdue": "7",
+                "channel": "sms",
+                "message_template": "Hello {customer_name.",
+                "active": "y",
+                "submit": "Save Rule",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Placeholders must use complete braces", response.data)
+        self.assertEqual(ReminderRule.query.count(), 0)
+
     @patch("app.reminders.routes.run_ageing_analysis_and_dispatch")
     def test_manual_scan_without_active_rules_does_not_run(self, run_scan):
         response = self.client.post(
