@@ -283,6 +283,37 @@ body {
 .customer-empty-action { align-items: center; background: #edf5f1; border: 1px solid #dfebe5; border-radius: 0.6rem; color: #286b58; display: inline-flex; font-size: 0.7rem; font-weight: 750; gap: 0.4rem; margin-top: 0.9rem; padding: 0.55rem 0.75rem; text-decoration: none; }
 .customer-empty-action:hover { background: #e2efe9; color: #205b4b; }
 .customer-empty-action:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.customer-form-layout { margin: 0 auto; max-width: 57rem; }
+.customer-form-back { align-items: center; color: #5d7977; display: inline-flex; font-size: 0.72rem; font-weight: 700; gap: 0.4rem; margin: 0 0 0.8rem 0.2rem; text-decoration: none; }
+.customer-form-back:hover { color: var(--brand-dark); }
+.customer-form-back:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.customer-form-card { background: #fff; border: 1px solid #e1ebe7; border-radius: 1.15rem; box-shadow: 0 1rem 2.8rem rgba(25, 57, 48, 0.09); overflow: hidden; }
+.customer-form-intro { background: radial-gradient(circle at 92% 20%, rgba(216, 239, 159, 0.2), transparent 11rem), linear-gradient(115deg, #f4f9f6, #fbfcfa); border-bottom: 1px solid #e8efec; padding: clamp(1.25rem, 4vw, 2rem) clamp(1.25rem, 5vw, 2.5rem) 1.25rem; }
+.customer-form-mark { align-items: center; background: #e1f0e8; border: 1px solid #d6e9df; border-radius: 0.8rem; color: #2f7960; display: inline-flex; font-size: 1rem; height: 2.55rem; justify-content: center; margin-bottom: 0.85rem; width: 2.55rem; }
+.customer-form-intro .eyebrow { margin-bottom: 0.25rem !important; }
+.customer-form-intro h1 { color: var(--ink); font-size: clamp(1.45rem, 3.8vw, 1.9rem); font-weight: 800; letter-spacing: -0.045em; margin: 0; }
+.customer-form-intro > p:last-child { color: #6b7f83; font-size: 0.76rem; line-height: 1.55; margin: 0.38rem 0 0; max-width: 34rem; }
+.customer-form { padding: clamp(1.25rem, 4vw, 2rem) clamp(1.25rem, 5vw, 2.5rem) clamp(1.35rem, 4vw, 2.1rem); }
+.customer-form-field { margin-bottom: 1.2rem; }
+.customer-form-field .form-label { color: #26443f; display: block; font-size: 0.75rem; font-weight: 750; margin-bottom: 0.42rem; }
+.customer-input-wrap { align-items: center; background: #fff; border: 1px solid #dce7e3; border-radius: 0.68rem; display: flex; min-height: 3rem; padding: 0 0.78rem; transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease; }
+.customer-input-wrap:focus-within { background: #fff; border-color: #70a69a; box-shadow: 0 0 0 3px rgba(44, 122, 123, 0.1); }
+.customer-input-wrap > i { color: #77928a; flex: 0 0 auto; font-size: 0.85rem; margin-right: 0.65rem; }
+.customer-input-wrap .form-control, .customer-input-wrap .form-select { background-color: transparent; border: 0; box-shadow: none; color: var(--ink); font-size: 0.78rem; min-height: 2.85rem; min-width: 0; padding: 0.65rem 0; }
+.customer-input-wrap .form-control:focus, .customer-input-wrap .form-select:focus { box-shadow: none; }
+.customer-input-wrap .form-control::placeholder { color: #9aa9a8; }
+.customer-select-wrap .form-select { cursor: pointer; }
+.customer-input-wrap:has([aria-invalid="true"]) { background: #fffaf9; border-color: #d98376; }
+.customer-field-help { color: #829196; display: block; font-size: 0.64rem; line-height: 1.45; margin-top: 0.38rem; }
+.customer-field-errors { display: grid; gap: 0.25rem; margin-top: 0.45rem; }
+.customer-field-errors span { align-items: flex-start; color: #b34d43; display: flex; font-size: 0.67rem; gap: 0.35rem; line-height: 1.4; }
+.customer-field-errors i { font-size: 0.68rem; margin-top: 0.08rem; }
+.customer-form-actions { align-items: center; border-top: 1px solid #edf1ef; display: flex; gap: 0.75rem; margin-top: 1.4rem; padding-top: 1.15rem; }
+.customer-save-button { align-items: center; background: linear-gradient(135deg, #2c7a7b, #205b5c); border: 0; border-radius: 0.65rem; box-shadow: 0 0.4rem 0.9rem rgba(32, 91, 92, 0.15); color: #fff; display: inline-flex; font-size: 0.74rem; font-weight: 750; gap: 0.42rem; justify-content: center; min-height: 2.65rem; padding: 0.62rem 0.9rem; transition: box-shadow 160ms ease, transform 160ms ease; }
+.customer-save-button:hover { box-shadow: 0 0.55rem 1.1rem rgba(32, 91, 92, 0.22); transform: translateY(-1px); }
+.customer-save-button:focus-visible, .customer-cancel-link:focus-visible { outline: 3px solid #8dbeb0; outline-offset: 3px; }
+.customer-cancel-link { color: #627a7c; font-size: 0.73rem; font-weight: 700; padding: 0.55rem 0.65rem; text-decoration: none; }
+.customer-cancel-link:hover { color: #245c51; text-decoration: underline; text-underline-offset: 3px; }
 
 .table-responsive {
   border-radius: 0.75rem;
@@ -306,6 +337,9 @@ body {
   .customer-directory-toolbar { align-items: flex-start; }
   .customer-result-count { margin-left: 0.2rem; }
   .customer-directory-table { min-width: 38rem; }
+  .customer-form-back { margin-top: 0.15rem; }
+  .customer-form-field { margin-bottom: 1rem; }
+  .customer-form-actions { flex-wrap: wrap; }
 }
 
 /* Authentication screens */

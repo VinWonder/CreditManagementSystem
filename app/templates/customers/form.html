@@ -1,30 +1,58 @@
 {% extends "base.html" %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card p-4">
-      <h4 class="mb-3">{{ title }}</h4>
-      <form method="POST" novalidate>
-        {{ form.hidden_tag() }}
-        <div class="mb-3">
-          {{ form.full_name.label(class="form-label") }}
-          {{ form.full_name(class="form-control") }}
-          {% for e in form.full_name.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-        </div>
-        <div class="mb-3">
-          {{ form.phone_number.label(class="form-label") }}
-          {{ form.phone_number(class="form-control", placeholder="+254712345678") }}
-          {% for e in form.phone_number.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-        </div>
-        <div class="mb-3">
-          {{ form.preferred_channel.label(class="form-label") }}
-          {{ form.preferred_channel(class="form-select") }}
-        </div>
-        {{ form.submit(class="btn btn-primary") }}
-        <a href="{{ url_for('customers.list_customers') }}" class="btn btn-link">Cancel</a>
-      </form>
+<section class="customer-form-layout" aria-labelledby="customer-form-title">
+  <a class="customer-form-back" href="{{ url_for('customers.list_customers') }}">
+    <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to customers
+  </a>
+  <div class="customer-form-card">
+    <div class="customer-form-intro">
+      <span class="customer-form-mark"><i class="bi bi-person-vcard" aria-hidden="true"></i></span>
+      <p class="eyebrow mb-1">Customer details</p>
+      <h1 id="customer-form-title">{{ title }}</h1>
+      <p>{% if title == "Add Customer" %}Add someone to your customer book and choose how you’ll contact them.{% else %}Keep this customer’s contact details and reminder preference up to date.{% endif %}</p>
     </div>
+    <form class="customer-form" method="POST" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="customer-form-field">
+        {{ form.full_name.label(class="form-label") }}
+        <span class="customer-input-wrap">
+          <i class="bi bi-person" aria-hidden="true"></i>
+          {{ form.full_name(class="form-control", placeholder="e.g. Amina Hassan", autocomplete="name", maxlength="100", **{"aria-describedby": "customer-name-help" ~ (" customer-name-errors" if form.full_name.errors else ""), "aria-invalid": "true" if form.full_name.errors else "false"}) }}
+        </span>
+        <small class="customer-field-help" id="customer-name-help">Use the name you recognize when recording a sale or payment.</small>
+        {% if form.full_name.errors %}
+        <div class="customer-field-errors" id="customer-name-errors" role="alert">
+          {% for e in form.full_name.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ e }}</span>{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="customer-form-field">
+        {{ form.phone_number.label(class="form-label") }}
+        <span class="customer-input-wrap">
+          <i class="bi bi-telephone" aria-hidden="true"></i>
+          {{ form.phone_number(class="form-control", placeholder="+254712345678", autocomplete="tel", inputmode="tel", **{"aria-describedby": "customer-phone-help" ~ (" customer-phone-errors" if form.phone_number.errors else ""), "aria-invalid": "true" if form.phone_number.errors else "false"}) }}
+        </span>
+        <small class="customer-field-help" id="customer-phone-help">Enter the full number with country code, for example +254712345678.</small>
+        {% if form.phone_number.errors %}
+        <div class="customer-field-errors" id="customer-phone-errors" role="alert">
+          {% for e in form.phone_number.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ e }}</span>{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="customer-form-field">
+        {{ form.preferred_channel.label(class="form-label") }}
+        <span class="customer-input-wrap customer-select-wrap">
+          <i class="bi bi-chat-dots" aria-hidden="true"></i>
+          {{ form.preferred_channel(class="form-select", **{"aria-describedby": "customer-channel-help"}) }}
+        </span>
+        <small class="customer-field-help" id="customer-channel-help">Choose the channel this customer prefers for reminders.</small>
+      </div>
+      <div class="customer-form-actions">
+        <button class="customer-save-button" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i>{{ form.submit.label.text }}</button>
+        <a class="customer-cancel-link" href="{{ url_for('customers.list_customers') }}">Cancel</a>
+      </div>
+    </form>
   </div>
-</div>
+</section>
 {% endblock %}
