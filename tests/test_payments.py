@@ -116,6 +116,8 @@ class PaymentFlowTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"No outstanding payments", response.data)
+        self.assertIn(b"View payment history", response.data)
+        self.assertIn(b"payment-history-button", response.data)
         self.assertNotIn(b"id=\"amount_paid\"", response.data)
 
     def test_payment_history_shows_empty_state_with_action(self):

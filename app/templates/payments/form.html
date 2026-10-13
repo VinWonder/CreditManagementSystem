@@ -8,8 +8,10 @@
       <h1 id="payment-page-title">Log a payment</h1>
       <p>Record what a customer has paid and keep their outstanding balance up to date.</p>
     </div>
-    <a class="payment-back-link" href="{{ url_for('payments.list_payments') }}">
-      <i class="bi bi-arrow-left" aria-hidden="true"></i> Payment history
+    <a class="payment-history-button" href="{{ url_for('payments.list_payments') }}">
+      <i class="bi bi-clock-history" aria-hidden="true"></i>
+      <span>View payment history</span>
+      <i class="bi bi-arrow-right payment-history-button-arrow" aria-hidden="true"></i>
     </a>
   </header>
 
