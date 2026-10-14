@@ -1,30 +1,138 @@
 {% extends "base.html" %}
-{% block title %}Transactions{% endblock %}
+{% block title %}Credit Transactions{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4><i class="bi bi-receipt"></i> Credit Transactions</h4>
-  <a href="{{ url_for('transactions.new_transaction') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Sale</a>
-</div>
-<div class="card">
-  <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
-      <thead class="table-light">
-        <tr><th>Date</th><th>Customer</th><th>Item</th><th>Amount</th><th>Sync</th></tr>
-      </thead>
-      <tbody>
-      {% for t in transactions %}
-        <tr>
-          <td class="small">{{ t.transaction_date.strftime('%d %b %Y %H:%M') }}</td>
-          <td><a href="{{ url_for('customers.view_customer', customer_id=t.customer_id) }}">{{ t.customer.full_name }}</a></td>
-          <td>{{ t.item_description }}</td>
-          <td>{{ t.amount | kes }}</td>
-          <td><span class="badge {{ 'text-bg-success' if t.sync_status == 'synced' else 'text-bg-warning' }}">{{ t.sync_status }}</span></td>
-        </tr>
-      {% else %}
-        <tr><td colspan="5" class="text-center text-muted py-4">No transactions recorded yet.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
+<section class="transaction-history-page" aria-labelledby="transaction-history-title">
+  <header class="transaction-history-header">
+    <div>
+      <p class="eyebrow mb-1">Customer credit book</p>
+      <h1 id="transaction-history-title"><i class="bi bi-receipt" aria-hidden="true"></i> Credit Transactions</h1>
+      <p>Review credit sales, find a customer purchase, and check offline sync status.</p>
+    </div>
+    <a href="{{ url_for('transactions.new_transaction') }}" class="transaction-history-add">
+      <i class="bi bi-plus-lg" aria-hidden="true"></i> New Sale
+    </a>
+  </header>
+
+  <div class="transaction-history-stats" aria-label="Credit transaction summary">
+    <article class="transaction-history-stat transaction-history-stat-total">
+      <span class="transaction-history-stat-icon"><i class="bi bi-wallet2" aria-hidden="true"></i></span>
+      <span class="transaction-history-stat-label">Total credit sales</span>
+      <strong>{{ total_amount | kes }}</strong>
+      <small>Across all recorded sales</small>
+    </article>
+    <article class="transaction-history-stat">
+      <span class="transaction-history-stat-icon"><i class="bi bi-receipt-cutoff" aria-hidden="true"></i></span>
+      <span class="transaction-history-stat-label">Sales recorded</span>
+      <strong>{{ total_count }}</strong>
+      <small>{{ 'transaction' if total_count == 1 else 'transactions' }} in your credit book</small>
+    </article>
+    <article class="transaction-history-stat{% if pending_count %} transaction-history-stat-pending{% endif %}">
+      <span class="transaction-history-stat-icon"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i></span>
+      <span class="transaction-history-stat-label">Awaiting sync</span>
+      <strong>{{ pending_count }}</strong>
+      <small>{{ 'sale needs a connection' if pending_count == 1 else 'sales need a connection' if pending_count else 'All saved sales are synced' }}</small>
+    </article>
   </div>
-</div>
+
+  <section class="transaction-history-card" aria-labelledby="transaction-table-title">
+    <div class="transaction-history-card-heading">
+      <div>
+        <h2 id="transaction-table-title">Sales history</h2>
+        <p>Newest sales appear first. Search by customer or item description.</p>
+      </div>
+      <span class="transaction-history-count">{{ filtered_count }} {{ 'result' if filtered_count == 1 else 'results' }}</span>
+    </div>
+
+    <form method="GET" action="{{ url_for('transactions.list_transactions') }}" class="transaction-history-filters" role="search">
+      <label class="transaction-search-box">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <span class="visually-hidden">Search customer or item</span>
+        <input type="search" name="q" value="{{ search }}" maxlength="100" placeholder="Search customer or item..." aria-label="Search customer or item">
+      </label>
+      <label class="transaction-status-select">
+        <span class="visually-hidden">Filter by sync status</span>
+        <i class="bi bi-cloud-check" aria-hidden="true"></i>
+        <select name="status" aria-label="Filter by sync status">
+          <option value="all" {% if sync_status == 'all' %}selected{% endif %}>All sync statuses</option>
+          <option value="synced" {% if sync_status == 'synced' %}selected{% endif %}>Synced</option>
+          <option value="pending" {% if sync_status == 'pending' %}selected{% endif %}>Awaiting sync</option>
+        </select>
+      </label>
+      <button type="submit" class="transaction-filter-submit"><i class="bi bi-funnel" aria-hidden="true"></i> Apply</button>
+      {% if search or sync_status != 'all' %}
+      <a href="{{ url_for('transactions.list_transactions') }}" class="transaction-filter-clear">Clear filters</a>
+      {% endif %}
+    </form>
+
+    {% if transactions %}
+    <div class="table-responsive">
+      <table class="table transaction-history-table align-middle mb-0">
+        <thead>
+          <tr><th scope="col">Date</th><th scope="col">Customer</th><th scope="col">Item</th><th scope="col" class="text-end">Amount</th><th scope="col">Sync status</th></tr>
+        </thead>
+        <tbody>
+        {% for transaction in transactions %}
+          <tr>
+            <td>
+              <span class="transaction-history-date">
+                <i class="bi bi-calendar3" aria-hidden="true"></i>
+                {{ transaction.transaction_date.strftime('%d %b %Y') if transaction.transaction_date else 'Date unavailable' }}
+              </span>
+              {% if transaction.transaction_date %}<small class="transaction-history-time">{{ transaction.transaction_date.strftime('%H:%M') }}</small>{% endif %}
+            </td>
+            <td>
+              <a class="transaction-history-customer" href="{{ url_for('customers.view_customer', customer_id=transaction.customer_id) }}">
+                <span class="transaction-history-avatar" aria-hidden="true">{{ transaction.customer.full_name.split()[0][0]|upper }}{{ transaction.customer.full_name.split()[-1][0]|upper if transaction.customer.full_name.split()|length > 1 else '' }}</span>
+                <span><strong>{{ transaction.customer.full_name }}</strong><small>{{ transaction.customer.phone_number }}</small></span>
+                <i class="bi bi-arrow-up-right transaction-history-customer-link" aria-hidden="true"></i>
+              </a>
+            </td>
+            <td><span class="transaction-history-item" title="{{ transaction.item_description }}">{{ transaction.item_description }}</span></td>
+            <td class="text-end"><span class="transaction-history-amount">{{ transaction.amount | kes }}</span></td>
+            <td>
+              {% if transaction.sync_status == 'pending' %}
+              <span class="transaction-sync-status is-pending" title="This sale is waiting to sync from the device that recorded it."><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Awaiting sync</span>
+              {% else %}
+              <span class="transaction-sync-status is-synced" title="This sale has been saved to your account."><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Synced</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="transaction-history-empty">
+      <span class="transaction-history-empty-icon"><i class="bi {{ 'bi-search' if total_count else 'bi-receipt-cutoff' }}" aria-hidden="true"></i></span>
+      {% if total_count %}
+      <h3>No matching sales</h3>
+      <p>Try another customer or item name, or clear your filters to see all recorded sales.</p>
+      <a href="{{ url_for('transactions.list_transactions') }}" class="transaction-history-empty-action"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Clear filters</a>
+      {% else %}
+      <h3>No credit sales yet</h3>
+      <p>When you record a customer's first credit purchase, it will appear here along with its sync status.</p>
+      <a href="{{ url_for('transactions.new_transaction') }}" class="transaction-history-empty-action"><i class="bi bi-plus-lg" aria-hidden="true"></i> Record your first sale</a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if total_pages > 1 %}
+    <nav class="transaction-history-pagination" aria-label="Transaction pages">
+      <span>Page {{ page }} of {{ total_pages }}</span>
+      <div>
+        {% if page > 1 %}
+        <a href="{{ url_for('transactions.list_transactions', q=search, status=sync_status, page=page - 1) }}"><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</a>
+        {% else %}
+        <span class="is-disabled"><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</span>
+        {% endif %}
+        {% if page < total_pages %}
+        <a href="{{ url_for('transactions.list_transactions', q=search, status=sync_status, page=page + 1) }}">Next <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+        {% else %}
+        <span class="is-disabled">Next <i class="bi bi-chevron-right" aria-hidden="true"></i></span>
+        {% endif %}
+      </div>
+    </nav>
+    {% endif %}
+  </section>
+</section>
 {% endblock %}

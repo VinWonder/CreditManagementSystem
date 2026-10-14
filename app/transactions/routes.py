@@ -2,7 +2,9 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+from math import ceil
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import or_, func
 
 from app.extensions import db
 from app.models import Customer, CreditTransaction, Ledger
@@ -82,12 +84,63 @@ def _apply_transaction(retailer_id, customer_id, item_description, amount, sync_
 @transactions_bp.route("/")
 @login_required
 def list_transactions():
+    page_size = 25
+    search = request.args.get("q", "").strip()[:100]
+    sync_status = request.args.get("status", "all")
+    if sync_status not in {"all", "synced", "pending"}:
+        sync_status = "all"
+
+    retailer_transactions = CreditTransaction.query.filter_by(
+        retailer_id=current_user.retailer_id
+    )
+    if search:
+        retailer_transactions = retailer_transactions.join(Customer).filter(
+            or_(
+                Customer.full_name.ilike(f"%{search}%"),
+                CreditTransaction.item_description.ilike(f"%{search}%"),
+            )
+        )
+    if sync_status != "all":
+        retailer_transactions = retailer_transactions.filter(
+            CreditTransaction.sync_status == sync_status
+        )
+
+    total_count = CreditTransaction.query.filter_by(
+        retailer_id=current_user.retailer_id
+    ).count()
+    total_amount = (
+        db.session.query(func.coalesce(func.sum(CreditTransaction.amount), 0))
+        .filter(CreditTransaction.retailer_id == current_user.retailer_id)
+        .scalar()
+    )
+    pending_count = CreditTransaction.query.filter_by(
+        retailer_id=current_user.retailer_id, sync_status="pending"
+    ).count()
+    filtered_count = retailer_transactions.count()
+    total_pages = ceil(filtered_count / page_size)
+    page = request.args.get("page", 1, type=int) or 1
+    page = min(max(page, 1), max(total_pages, 1))
     transactions = (
-        CreditTransaction.query.filter_by(retailer_id=current_user.retailer_id)
-        .order_by(CreditTransaction.transaction_date.desc())
+        retailer_transactions.order_by(
+            CreditTransaction.transaction_date.desc(),
+            CreditTransaction.transaction_id.desc(),
+        )
+        .offset((page - 1) * page_size)
+        .limit(page_size)
         .all()
     )
-    return render_template("transactions/list.html", transactions=transactions)
+    return render_template(
+        "transactions/list.html",
+        transactions=transactions,
+        total_count=total_count,
+        total_amount=total_amount,
+        pending_count=pending_count,
+        filtered_count=filtered_count,
+        search=search,
+        sync_status=sync_status,
+        page=page,
+        total_pages=total_pages,
+    )
 
 
 @transactions_bp.route("/new", methods=["GET", "POST"])
