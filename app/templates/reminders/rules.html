@@ -57,7 +57,7 @@
         <tbody>
         {% for rule in rules %}
           <tr>
-            <td><span class="reminder-trigger"><i class="bi bi-hourglass-split" aria-hidden="true"></i> {{ 'First day after sale' if rule.trigger_days_overdue == 1 else rule.trigger_days_overdue ~ ' days after sale' }}</span></td>
+            <td><span class="reminder-trigger"><i class="bi bi-hourglass-split" aria-hidden="true"></i> {{ 'On sale day' if rule.trigger_days_overdue == 0 else '1 day after sale' if rule.trigger_days_overdue == 1 else rule.trigger_days_overdue ~ ' days after sale' }}</span></td>
             <td><span class="reminder-channel"><i class="bi {{ 'bi-chat-square-dots-fill' if rule.channel == 'both' else 'bi-chat-dots-fill' if rule.channel == 'whatsapp' else 'bi-chat-left-text-fill' }}" aria-hidden="true"></i>{{ {'sms': 'SMS', 'whatsapp': 'WhatsApp', 'both': 'SMS + WhatsApp'}.get(rule.channel, rule.channel|capitalize) }}</span></td>
             <td><span class="reminder-message-preview" title="{{ rule.message_template }}">{{ rule.message_template }}</span></td>
             <td>{% if rule.active %}<span class="reminder-rule-status is-active"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Active</span>{% else %}<span class="reminder-rule-status is-paused"><i class="bi bi-pause-circle-fill" aria-hidden="true"></i> Paused</span>{% endif %}</td>

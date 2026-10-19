@@ -23,6 +23,7 @@
           {{ form.trigger_days_overdue.label(class="form-label") }}
           <div class="reminder-rule-presets" aria-label="Quick-start overdue thresholds">
             <span>Quick start</span>
+            <button type="button" data-trigger-days="0" aria-pressed="false">0 days · on sale day</button>
             <button type="button" data-trigger-days="1" aria-pressed="false">1 day · first-day reminder</button>
             <button type="button" data-trigger-days="3" aria-pressed="false">3 days · early nudge</button>
             <button type="button" data-trigger-days="7" aria-pressed="false">7 days · friendly reminder</button>
@@ -31,10 +32,10 @@
           </div>
           <span class="reminder-form-input reminder-trigger-input">
             <i class="bi bi-hourglass-split" aria-hidden="true"></i>
-            {{ form.trigger_days_overdue(class="form-control", min="1", max="365", step="1", inputmode="numeric", placeholder="e.g. 1", required=true, **{"aria-describedby": "trigger-help" ~ (" trigger-errors" if form.trigger_days_overdue.errors else ""), "aria-invalid": "true" if form.trigger_days_overdue.errors else "false"}) }}
+            {{ form.trigger_days_overdue(class="form-control", min="0", max="365", step="1", inputmode="numeric", placeholder="e.g. 0", required=true, **{"aria-describedby": "trigger-help" ~ (" trigger-errors" if form.trigger_days_overdue.errors else ""), "aria-invalid": "true" if form.trigger_days_overdue.errors else "false"}) }}
             <span>days after sale</span>
           </span>
-          <small class="reminder-form-help" id="trigger-help">Choose 1 day for the earliest reminder: the first calendar day after the credit sale in Nairobi time. Daily scans send when the account reaches this day. Choose 1–365 days.</small>
+          <small class="reminder-form-help" id="trigger-help">Choose 0 to send on the credit-sale calendar day, or 1 to start on the following day (Nairobi time). The daily scan sends once an account reaches the selected day. Choose 0–365 days.</small>
           {% if form.trigger_days_overdue.errors %}
           <div class="reminder-form-errors" id="trigger-errors" role="alert">
             {% for error in form.trigger_days_overdue.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}

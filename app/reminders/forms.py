@@ -2,7 +2,13 @@ import re
 
 from flask_wtf import FlaskForm
 from wtforms import IntegerField, TextAreaField, SelectField, BooleanField, SubmitField
-from wtforms.validators import DataRequired, NumberRange, Length, ValidationError
+from wtforms.validators import (
+    DataRequired,
+    InputRequired,
+    NumberRange,
+    Length,
+    ValidationError,
+)
 
 
 SUPPORTED_PLACEHOLDERS = {
@@ -34,7 +40,7 @@ class ReminderActionForm(FlaskForm):
 class ReminderRuleForm(FlaskForm):
     trigger_days_overdue = IntegerField(
         "Send after the credit sale (days)",
-        validators=[DataRequired(), NumberRange(min=1, max=365)],
+        validators=[InputRequired(), NumberRange(min=0, max=365)],
     )
     channel = SelectField(
         "Channel",

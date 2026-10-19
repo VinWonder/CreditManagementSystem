@@ -2,125 +2,140 @@
 {% block title %}{{ customer.full_name }}{% endblock %}
 {% block content %}
 <div class="customer-portfolio">
-<div class="customer-portfolio-heading d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <h4>{{ customer.full_name }}</h4>
-    <p class="text-muted mb-0"><i class="bi bi-telephone"></i> {{ customer.phone_number }} &middot; {{ 'SMS + WhatsApp' if customer.preferred_channel == 'both' else customer.preferred_channel|capitalize }}</p>
-    {% if current_user.is_admin %}<a class="small" href="{{ url_for('customers.edit_customer', customer_id=customer.customer_id) }}">Edit customer</a>{% endif %}
+<a class="customer-portfolio-back" href="{{ url_for('customers.list_customers') }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Customers</a>
+<header class="customer-profile-hero">
+  <div class="customer-profile-identity">
+    <span class="customer-profile-avatar" aria-hidden="true">{{ customer.full_name.split()[0][0]|upper }}{{ customer.full_name.split()[-1][0]|upper if customer.full_name.split()|length > 1 else '' }}</span>
+    <div class="customer-profile-copy">
+      <p class="customer-profile-kicker">CUSTOMER ACCOUNT</p>
+      <h1>{{ customer.full_name }}</h1>
+      <div class="customer-profile-meta">
+        <span><i class="bi bi-telephone" aria-hidden="true"></i>{{ customer.phone_number }}</span>
+        <span class="customer-channel-pill"><i class="bi {{ 'bi-chat-heart' if customer.preferred_channel == 'whatsapp' else 'bi-chat-dots' if customer.preferred_channel == 'sms' else 'bi-chat-square-heart' }}" aria-hidden="true"></i>{{ 'SMS + WhatsApp' if customer.preferred_channel == 'both' else customer.preferred_channel|capitalize }} preference</span>
+      </div>
+      {% if current_user.is_admin %}<a class="customer-profile-edit" href="{{ url_for('customers.edit_customer', customer_id=customer.customer_id) }}"><i class="bi bi-pencil" aria-hidden="true"></i> Edit customer details</a>{% endif %}
+    </div>
   </div>
   {% if customer.ledger %}
-    <div class="text-end">
-      <div class="text-muted small">Outstanding Balance</div>
-      <div class="fs-4 fw-bold {{ 'text-danger' if customer.ledger.outstanding_balance > 0 else 'text-success' }}">
-        {{ customer.ledger.outstanding_balance | kes }}
-      </div>
-      {% if customer.ledger.days_overdue > 0 %}
-        <span class="badge badge-overdue">{{ customer.ledger.days_overdue }} days overdue</span>
-      {% elif customer.ledger.outstanding_balance <= 0 %}
-        <span class="badge text-bg-success">Cleared</span>
-      {% endif %}
-    </div>
+  <div class="customer-balance-card {{ 'is-clear' if customer.ledger.outstanding_balance <= 0 else '' }}">
+    <span class="customer-balance-label"><i class="bi bi-wallet2" aria-hidden="true"></i> CURRENT BALANCE</span>
+    <strong>{{ customer.ledger.outstanding_balance | kes }}</strong>
+    {% if customer.ledger.outstanding_balance <= 0 %}
+    <span class="customer-balance-status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> All clear</span>
+    {% else %}
+    <span class="customer-balance-status"><i class="bi bi-hourglass-split" aria-hidden="true"></i>{{ customer.ledger.days_overdue }} {{ 'day' if customer.ledger.days_overdue == 1 else 'days' }} since oldest unpaid sale</span>
+    {% endif %}
+  </div>
   {% endif %}
-</div>
+</header>
 
 {% if customer.ledger and customer.ledger.outstanding_balance > 0 %}
-  {% if matching_rule %}
-<section class="customer-personal-reminder" aria-labelledby="customer-personal-reminder-title">
-  <span class="customer-personal-reminder-icon"><i class="bi bi-send" aria-hidden="true"></i></span>
-  <div class="customer-personal-reminder-copy">
-    <h2 id="customer-personal-reminder-title">Send a personal reminder</h2>
-    <p>Uses the {{ matching_rule.trigger_days_overdue }}-day rule and its saved message. The reminder goes through {{ 'SMS and WhatsApp' if customer.preferred_channel == 'both' else customer.preferred_channel|capitalize }}.</p>
+<section class="customer-reminder-card {{ 'is-ready' if matching_rule else 'is-waiting' }}" aria-labelledby="customer-personal-reminder-title">
+  <div class="customer-reminder-card-icon"><i class="bi {{ 'bi-send-check' if matching_rule else 'bi-calendar2-event' }}" aria-hidden="true"></i></div>
+  <div class="customer-reminder-card-copy">
+    <p class="customer-reminder-eyebrow">{{ 'READY TO SEND' if matching_rule else 'REMINDER RULE NEEDED' }}</p>
+    <h2 id="customer-personal-reminder-title">{{ 'Send a personal reminder' if matching_rule else 'This balance is not at a reminder trigger yet' }}</h2>
+    {% if matching_rule %}
+    <p>Uses the <strong>{{ 'sale-day' if matching_rule.trigger_days_overdue == 0 else matching_rule.trigger_days_overdue ~ '-day' }}</strong> rule and its saved message. Delivery uses this customer's saved <strong>{{ 'SMS + WhatsApp' if customer.preferred_channel == 'both' else customer.preferred_channel|capitalize }}</strong> preference.</p>
+    <form method="POST" action="{{ url_for('reminders.send_personal_reminder', customer_id=customer.customer_id) }}"
+      data-confirm-message="Send the configured reminder to {{ customer.full_name }} using {{ 'SMS and WhatsApp' if customer.preferred_channel == 'both' else customer.preferred_channel|capitalize }}?">
+      {{ reminder_form.hidden_tag() }}
+      <button class="customer-personal-reminder-button" type="submit"><i class="bi bi-send-fill" aria-hidden="true"></i> Send reminder</button>
+    </form>
+    {% else %}
+    {% if active_rules %}
+    {% set next_rule = active_rules[0] %}
+    <p>This account owes {{ customer.ledger.outstanding_balance | kes }} and is on day <strong>{{ customer.ledger.days_overdue }}</strong>. The earliest active rule starts at day <strong>{{ next_rule.trigger_days_overdue }}</strong>, so it has not triggered yet.</p>
+    {% else %}
+    <p>This account owes {{ customer.ledger.outstanding_balance | kes }}, but there are no active reminder rules for this shop yet.</p>
+    {% endif %}
+    {% if current_user.is_admin %}
+    {% if active_rules %}
+    <a class="customer-reminder-config-link" href="{{ url_for('reminders.edit_rule', rule_id=active_rules[0].rule_id) }}"><i class="bi bi-sliders" aria-hidden="true"></i> Edit earliest rule to day 0 to send on the sale day</a>
+    {% else %}
+    <a class="customer-reminder-config-link" href="{{ url_for('reminders.new_rule') }}"><i class="bi bi-plus-circle" aria-hidden="true"></i> Create a day 0 rule for same-day reminders</a>
+    {% endif %}
+    {% else %}
+    <p class="customer-reminder-admin-note">Ask your shop admin to activate a same-day (day 0) rule or adjust the earliest rule.</p>
+    {% endif %}
+    {% endif %}
+    {% if customer.preferred_channel != 'both' %}
+    <p class="customer-channel-explainer"><i class="bi bi-info-circle" aria-hidden="true"></i> This customer's saved preference is {{ customer.preferred_channel|capitalize }}, so a personal reminder will use that channel only. To use SMS and WhatsApp, {% if current_user.is_admin %}<a href="{{ url_for('customers.edit_customer', customer_id=customer.customer_id) }}">update their preference</a>{% else %}ask your shop admin to update their preference{% endif %} to “SMS + WhatsApp” after confirming they agree to both.</p>
+    {% endif %}
   </div>
-  <form method="POST" action="{{ url_for('reminders.send_personal_reminder', customer_id=customer.customer_id) }}"
-    data-confirm-message="Send a personal balance reminder to {{ customer.full_name }} using their saved contact preference?">
-    {{ reminder_form.hidden_tag() }}
-    <button class="customer-personal-reminder-button" type="submit">
-      <i class="bi bi-send-fill" aria-hidden="true"></i> Send reminder
-    </button>
-  </form>
 </section>
-  {% else %}
-<p class="customer-reminder-rule-note" role="status">
-  No active reminder rule matches this customer's overdue period yet, so a personal reminder cannot be sent. Configure or activate a rule under Reminders.
-</p>
-  {% endif %}
 {% endif %}
 
 {% if current_user.is_admin %}
-<div class="card p-3 mb-3">
-  <h6>Admin balance correction</h6>
-  <p class="small text-muted">Corrections require a reason and are permanently recorded in the balance audit history.</p>
-  <form method="POST" action="{{ url_for('payments.adjust_customer_balance', customer_id=customer.customer_id) }}" class="row g-2 align-items-end">
+<section class="customer-admin-card" aria-labelledby="customer-admin-title">
+  <div class="customer-section-heading"><span class="customer-section-icon"><i class="bi bi-shield-check" aria-hidden="true"></i></span><div><p class="customer-section-kicker">ADMIN ONLY</p><h2 id="customer-admin-title">Balance adjustment</h2><p>Every correction is recorded in the account audit history.</p></div></div>
+  <form method="POST" action="{{ url_for('payments.adjust_customer_balance', customer_id=customer.customer_id) }}" class="row g-2 align-items-end customer-adjustment-form">
     {{ adjustment_form.hidden_tag() }}
     <div class="col-sm-3">
-      {{ adjustment_form.amount_change.label(class="form-label small") }}
+      {{ adjustment_form.amount_change.label(class="form-label") }}
       {{ adjustment_form.amount_change(class="form-control", step="0.01", placeholder="e.g. -100.00", required=true) }}
     </div>
     <div class="col-sm-7">
-      {{ adjustment_form.reason.label(class="form-label small") }}
+      {{ adjustment_form.reason.label(class="form-label") }}
       {{ adjustment_form.reason(class="form-control", maxlength="255", required=true) }}
     </div>
     <div class="col-sm-2">
-      <button class="btn btn-primary w-100" type="submit">Save correction</button>
+      <button class="customer-adjustment-button w-100" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i> Save change</button>
     </div>
   </form>
-</div>
+</section>
 {% endif %}
 
-<div class="row g-3">
-  <div class="col-md-6">
-    <div class="card p-3">
-      <h6>Credit Transactions</h6>
+<div class="customer-history-grid">
+    <section class="customer-history-card">
+      <header class="customer-history-heading"><span class="customer-section-icon"><i class="bi bi-cart-check" aria-hidden="true"></i></span><div><h2>Credit sales</h2><p>{{ transactions|length }} {{ 'sale' if transactions|length == 1 else 'sales' }} recorded</p></div></header>
       <div class="table-responsive">
-        <table class="table table-sm mb-0">
-          <thead><tr><th>Date</th><th>Item</th><th>Amount</th></tr></thead>
+        <table class="table customer-history-table mb-0">
+          <thead><tr><th>Date</th><th>Item</th><th class="text-end">Amount</th></tr></thead>
           <tbody>
           {% for t in transactions %}
-            <tr><td class="small">{{ t.transaction_date|nairobi('%d %b %Y · %H:%M') }} EAT</td><td>{{ t.item_description }}</td><td>{{ t.amount | kes }}</td></tr>
+            <tr><td>{{ t.transaction_date|nairobi('%d %b %Y · %H:%M') }} EAT</td><td>{{ t.item_description }}</td><td class="text-end"><strong>{{ t.amount | kes }}</strong></td></tr>
           {% else %}
-            <tr><td colspan="3" class="text-muted text-center">None yet.</td></tr>
+            <tr><td colspan="3" class="customer-history-empty">No credit sales recorded yet.</td></tr>
           {% endfor %}
           </tbody>
         </table>
       </div>
-    </div>
-  </div>
-  <div class="col-md-6">
-    <div class="card p-3">
-      <h6>Payments</h6>
+    </section>
+    <section class="customer-history-card">
+      <header class="customer-history-heading"><span class="customer-section-icon is-payment"><i class="bi bi-wallet2" aria-hidden="true"></i></span><div><h2>Payments</h2><p>{{ payments|length }} {{ 'payment' if payments|length == 1 else 'payments' }} recorded</p></div></header>
       <div class="table-responsive">
-        <table class="table table-sm mb-0">
-          <thead><tr><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+        <table class="table customer-history-table mb-0">
+          <thead><tr><th>Date</th><th>Approval</th><th class="text-end">Amount</th></tr></thead>
           <tbody>
           {% for p in payments %}
             <tr>
-              <td class="small">{{ p.payment_date.strftime('%d %b %Y') }}</td>
-              <td>{{ p.amount_paid | kes }}</td>
-              <td>{{ p.approval_status|capitalize }}{% if p.review_note %}<small class="d-block text-muted">{{ p.review_note }}</small>{% endif %}</td>
+              <td>{{ p.payment_date|nairobi('%d %b %Y') }}</td>
+              <td><span class="customer-payment-status {{ 'is-approved' if p.approval_status == 'approved' else 'is-pending' if p.approval_status == 'pending' else 'is-rejected' }}">{{ p.approval_status|capitalize }}</span>{% if p.review_note %}<small class="customer-payment-note">{{ p.review_note }}</small>{% endif %}</td>
+              <td class="text-end"><strong>{{ p.amount_paid | kes }}</strong></td>
             </tr>
           {% else %}
-            <tr><td colspan="3" class="text-muted text-center">None yet.</td></tr>
+            <tr><td colspan="3" class="customer-history-empty">No payments recorded yet.</td></tr>
           {% endfor %}
           </tbody>
         </table>
       </div>
-    </div>
-  </div>
+    </section>
   {% if current_user.is_admin and adjustments %}
-  <div class="col-12">
-    <div class="card p-3">
-      <h6>Balance correction audit</h6>
+  <div class="customer-history-full">
+    <section class="customer-history-card">
+      <header class="customer-history-heading"><span class="customer-section-icon is-audit"><i class="bi bi-journal-check" aria-hidden="true"></i></span><div><h2>Adjustment history</h2><p>Admin balance corrections</p></div></header>
       <div class="table-responsive">
-        <table class="table table-sm mb-0">
+        <table class="table customer-history-table mb-0">
           <thead><tr><th>Date</th><th>Change</th><th>Reason</th></tr></thead>
           <tbody>
           {% for adjustment in adjustments %}
-            <tr><td>{{ adjustment.created_at.strftime('%d %b %Y %H:%M') }}</td><td>{{ adjustment.amount_change | kes }}</td><td>{{ adjustment.reason }}</td></tr>
+            <tr><td>{{ adjustment.created_at|nairobi('%d %b %Y · %H:%M') }} EAT</td><td><strong>{{ adjustment.amount_change | kes }}</strong></td><td>{{ adjustment.reason }}</td></tr>
           {% endfor %}
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   </div>
   {% endif %}
 </div>

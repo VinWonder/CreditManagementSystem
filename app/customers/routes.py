@@ -127,13 +127,16 @@ def view_customer(customer_id):
     payments = customer.payments.order_by(db.desc("payment_date")).all()
     adjustments = customer.balance_adjustments.order_by(db.desc("created_at")).all()
     matching_rule = None
+    active_rules = []
     if customer.ledger:
         customer.ledger.recalculate()
-        rules = ReminderRule.query.filter_by(
+        active_rules = ReminderRule.query.filter_by(
             retailer_id=current_user.retailer_id,
             active=True,
-        ).all()
-        matching_rule = select_matching_rule(rules, customer.ledger.days_overdue)
+        ).order_by(ReminderRule.trigger_days_overdue).all()
+        matching_rule = select_matching_rule(
+            active_rules, customer.ledger.days_overdue
+        )
     return render_template(
         "customers/view.html",
         customer=customer,
@@ -141,6 +144,7 @@ def view_customer(customer_id):
         payments=payments,
         adjustments=adjustments,
         matching_rule=matching_rule,
+        active_rules=active_rules,
         adjustment_form=BalanceAdjustmentForm(),
         reminder_form=ReminderActionForm(),
     )

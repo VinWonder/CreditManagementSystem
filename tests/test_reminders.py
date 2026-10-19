@@ -161,7 +161,110 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(ReminderRule.query.one().trigger_days_overdue, 1)
         rules_page = self.client.get("/reminders/rules")
-        self.assertIn(b"First day after sale", rules_page.data)
+        self.assertIn(b"1 day after sale", rules_page.data)
+
+    def test_new_rule_allows_same_day_trigger(self):
+        response = self.client.post(
+            "/reminders/rules/new",
+            data={
+                "csrf_token": self._csrf_token(),
+                "trigger_days_overdue": "0",
+                "channel": "both",
+                "message_template": "Hello {customer_name}, balance {balance}.",
+                "active": "y",
+                "submit": "Save Rule",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(ReminderRule.query.one().trigger_days_overdue, 0)
+        rules_page = self.client.get("/reminders/rules")
+        self.assertIn(b"On sale day", rules_page.data)
+
+    def test_customer_portfolio_explains_same_day_rule_wait(self):
+        customer = Customer(
+            retailer_id=self.retailer.retailer_id,
+            full_name="Sale Day Customer",
+            phone_number="+254700000098",
+            preferred_channel="whatsapp",
+        )
+        db.session.add(customer)
+        db.session.flush()
+        db.session.add(
+            CreditTransaction(
+                retailer_id=self.retailer.retailer_id,
+                customer_id=customer.customer_id,
+                item_description="Today's purchase",
+                amount=Decimal("1200.00"),
+                transaction_date=datetime.utcnow(),
+            )
+        )
+        db.session.add(
+            Ledger(
+                retailer_id=self.retailer.retailer_id,
+                customer_id=customer.customer_id,
+                outstanding_balance=Decimal("700.00"),
+            )
+        )
+        rule = self._add_rule(active=True)
+
+        response = self.client.get(f"/customers/{customer.customer_id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"This balance is not at a reminder trigger yet", response.data)
+        self.assertIn(b"day <strong>0</strong>", response.data)
+        self.assertIn(b"earliest active rule starts at day <strong>7</strong>", response.data)
+        self.assertIn(
+            f"/reminders/rules/{rule.rule_id}/edit".encode(),
+            response.data,
+        )
+        self.assertIn(b"a personal reminder will use that channel only", response.data)
+        self.assertNotIn(b"Send a personal reminder", response.data)
+
+    @patch("app.reminders.dispatch_service.send_whatsapp", return_value=(True, "accepted"))
+    def test_personal_reminder_can_send_on_sale_day_with_zero_day_rule(self, send_whatsapp):
+        customer = Customer(
+            retailer_id=self.retailer.retailer_id,
+            full_name="Same Day Customer",
+            phone_number="+254700000099",
+            preferred_channel="whatsapp",
+        )
+        db.session.add(customer)
+        db.session.flush()
+        db.session.add(
+            CreditTransaction(
+                retailer_id=self.retailer.retailer_id,
+                customer_id=customer.customer_id,
+                item_description="Today's purchase",
+                amount=Decimal("700.00"),
+                transaction_date=datetime.utcnow(),
+            )
+        )
+        db.session.add(
+            Ledger(
+                retailer_id=self.retailer.retailer_id,
+                customer_id=customer.customer_id,
+                outstanding_balance=Decimal("700.00"),
+            )
+        )
+        rule = ReminderRule(
+            retailer_id=self.retailer.retailer_id,
+            trigger_days_overdue=0,
+            message_template="Hello {customer_name}: {balance}.",
+            channel="both",
+            active=True,
+        )
+        db.session.add(rule)
+        db.session.commit()
+
+        response = self.client.post(
+            f"/reminders/customers/{customer.customer_id}/send-personal",
+            data={"csrf_token": self._csrf_token()},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        send_whatsapp.assert_called_once()
+        self.assertEqual(MessageDispatchLog.query.one().rule_id, rule.rule_id)
 
     def test_new_rule_rejects_unsupported_placeholder(self):
         response = self.client.post(

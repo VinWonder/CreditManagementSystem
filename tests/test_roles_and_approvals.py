@@ -342,7 +342,7 @@ class RoleAndApprovalTests(unittest.TestCase):
         self.assertEqual(payment_response.status_code, 302)
         self.assertEqual(Ledger.query.one().outstanding_balance, Decimal("0.00"))
         customer_response = self.client.get(f"/customers/{self.customer.customer_id}")
-        self.assertIn(b"Cleared", customer_response.data)
+        self.assertIn(b"All clear", customer_response.data)
 
 
 if __name__ == "__main__":
