@@ -93,7 +93,7 @@
               <i class="bi {{ 'bi-whatsapp' if log.channel == 'whatsapp' else 'bi-chat-left-text' }}" aria-hidden="true"></i>
               {{ log.channel|capitalize }}
             </span>
-            <span class="dispatch-rule-reference"><i class="bi bi-bezier2" aria-hidden="true"></i>{{ log.rule.trigger_days_overdue ~ '-day rule' if log.rule else 'Rule no longer available' }}</span>
+            <span class="dispatch-rule-reference"><i class="bi bi-bezier2" aria-hidden="true"></i>{{ log.rule.trigger_days_overdue ~ '-day rule' if log.rule else 'Personal reminder' }}</span>
           </div>
         </div>
         <div class="dispatch-entry-result">

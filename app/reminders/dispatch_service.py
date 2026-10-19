@@ -139,6 +139,17 @@ def dispatch_reminder(customer, rule, message):
     """Send and log reminders on the rule's channel(s) or customer's preference."""
     channel = rule.channel if rule.channel != "both" else customer.preferred_channel
     channels = ("sms", "whatsapp") if channel == "both" else (channel,)
+    return _dispatch_channels(customer, rule.rule_id, channels, message)
+
+
+def dispatch_personal_reminder(customer, message):
+    """Send an on-demand reminder using the customer's saved channel preference."""
+    channel = customer.preferred_channel
+    channels = ("sms", "whatsapp") if channel == "both" else (channel,)
+    return _dispatch_channels(customer, None, channels, message)
+
+
+def _dispatch_channels(customer, rule_id, channels, message):
     results = []
 
     for channel in channels:
@@ -151,7 +162,7 @@ def dispatch_reminder(customer, rule, message):
         db.session.add(
             MessageDispatchLog(
                 customer_id=customer.customer_id,
-                rule_id=rule.rule_id,
+                rule_id=rule_id,
                 channel=channel,
                 message_content=message,
                 status="sent" if success else "failed",

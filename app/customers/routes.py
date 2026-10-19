@@ -5,6 +5,7 @@ from app.extensions import db
 from app.models import CreditTransaction, Customer, Ledger
 from app.customers.forms import CustomerForm
 from app.payments.forms import BalanceAdjustmentForm
+from app.reminders.forms import ReminderActionForm
 from app.permissions import admin_required
 
 customers_bp = Blueprint("customers", __name__, url_prefix="/customers")
@@ -131,4 +132,5 @@ def view_customer(customer_id):
         payments=payments,
         adjustments=adjustments,
         adjustment_form=BalanceAdjustmentForm(),
+        reminder_form=ReminderActionForm(),
     )

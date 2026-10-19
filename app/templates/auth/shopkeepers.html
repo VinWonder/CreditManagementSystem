@@ -89,6 +89,11 @@
             <h3>{{ shopkeeper.full_name }}</h3>
             <p><i class="bi bi-telephone" aria-hidden="true"></i>{{ shopkeeper.phone_number }}</p>
           </div>
+          <a class="shop-team-action shop-team-action-password"
+            href="{{ url_for('auth.reset_shopkeeper_password', shopkeeper_id=shopkeeper.shopkeeper_id) }}"
+            aria-label="Reset password for {{ shopkeeper.full_name }}">
+            <i class="bi bi-key" aria-hidden="true"></i><span>Reset password</span>
+          </a>
           <span class="shop-team-status {{ 'shop-team-status-active' if shopkeeper.active else 'shop-team-status-paused' }}">
             <span></span>{{ 'Active' if shopkeeper.active else 'Deactivated' }}
           </span>

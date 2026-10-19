@@ -3,6 +3,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.exc import ProgrammingError
 from config import Config
 from app.extensions import db, login_manager, migrate, scheduler
+from app.timezones import format_nairobi_datetime
 
 
 def create_app(config_class=Config):
@@ -70,6 +71,10 @@ def create_app(config_class=Config):
             return f"KES {float(value):,.2f}"
         except (TypeError, ValueError):
             return "KES 0.00"
+
+    @app.template_filter("nairobi")
+    def nairobi_datetime(value, format_string="%d %b %Y %H:%M"):
+        return format_nairobi_datetime(value, format_string)
 
     with app.app_context():
         if app.config["AUTO_CREATE_DB"] and db.engine.url.drivername.startswith("sqlite"):

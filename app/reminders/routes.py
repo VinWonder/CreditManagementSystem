@@ -7,6 +7,7 @@ from app.extensions import db
 from app.models import ReminderRule, MessageDispatchLog, Customer
 from app.reminders.forms import ReminderActionForm, ReminderRuleForm
 from app.reminders.engine import run_ageing_analysis_and_dispatch
+from app.reminders.dispatch_service import dispatch_personal_reminder
 from app.permissions import admin_required
 
 reminders_bp = Blueprint("reminders", __name__, url_prefix="/reminders")
@@ -138,6 +139,61 @@ def run_now():
         f"{summary['sent']} reminders sent, {summary['failed']} failed.",
         "info",
     )
+    return redirect(url_for("reminders.dispatch_log"))
+
+
+@reminders_bp.route("/customers/<int:customer_id>/send-personal", methods=["POST"])
+@login_required
+def send_personal_reminder(customer_id):
+    form = ReminderActionForm()
+    if not form.validate_on_submit():
+        flash("The reminder request could not be verified. Please try again.", "danger")
+        return redirect(url_for("customers.view_customer", customer_id=customer_id))
+
+    customer = Customer.query.filter_by(
+        customer_id=customer_id,
+        retailer_id=current_user.retailer_id,
+    ).first_or_404()
+    if customer.preferred_channel not in {"sms", "whatsapp", "both"}:
+        flash(
+            "This customer's reminder preference is missing or invalid. "
+            "Update their contact preferences before sending.",
+            "warning",
+        )
+        return redirect(url_for("customers.view_customer", customer_id=customer_id))
+
+    ledger = customer.ledger
+    if not ledger:
+        flash("This customer does not have an account balance to remind them about.", "warning")
+        return redirect(url_for("customers.view_customer", customer_id=customer_id))
+
+    ledger.recalculate()
+    if ledger.outstanding_balance <= 0:
+        db.session.rollback()
+        flash("This customer has no outstanding balance to remind them about.", "info")
+        return redirect(url_for("customers.view_customer", customer_id=customer_id))
+
+    overdue_message = (
+        f" It is {ledger.days_overdue} days overdue." if ledger.days_overdue > 0 else ""
+    )
+    message = (
+        f"Hello {customer.full_name}, a friendly reminder from {current_user.business_name}: "
+        f"your outstanding balance is KES {ledger.outstanding_balance:,.2f}."
+        f"{overdue_message} If you have already paid, please ignore this message. Thank you."
+    )
+    delivered, _ = dispatch_personal_reminder(customer, message)
+    if delivered:
+        flash(
+            f"Personal reminder sent to {customer.full_name} via their saved "
+            f"{customer.preferred_channel.replace('_', ' ')} preference.",
+            "success",
+        )
+    else:
+        flash(
+            f"Reminder attempted for {customer.full_name}, but one or more channels "
+            "could not confirm delivery. Check the dispatch history.",
+            "warning",
+        )
     return redirect(url_for("reminders.dispatch_log"))
 
 

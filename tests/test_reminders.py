@@ -1,13 +1,21 @@
 import unittest
 import re
 from datetime import datetime, timedelta
+from decimal import Decimal
 from unittest.mock import patch
 
 from flask_login import login_user
 
 from app import create_app
 from app.extensions import db
-from app.models import Customer, MessageDispatchLog, ReminderRule, Retailer
+from app.models import (
+    CreditTransaction,
+    Customer,
+    Ledger,
+    MessageDispatchLog,
+    ReminderRule,
+    Retailer,
+)
 from app.reminders.engine import select_matching_rule
 
 
@@ -270,6 +278,108 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertNotIn(b"Other Tenant", second_page.data)
         self.assertEqual(first_page.data.count(b"class=\"dispatch-entry\""), 25)
         self.assertEqual(second_page.data.count(b"class=\"dispatch-entry\""), 2)
+
+    @patch(
+        "app.reminders.dispatch_service.send_whatsapp",
+        return_value=(True, "accepted"),
+    )
+    def test_personal_reminder_uses_saved_channel_and_logs_current_balance(
+        self, send_whatsapp
+    ):
+        customer = Customer(
+            retailer_id=self.retailer.retailer_id,
+            full_name="Amina Hassan",
+            phone_number="+254700000091",
+            preferred_channel="whatsapp",
+        )
+        db.session.add(customer)
+        db.session.flush()
+        db.session.add(
+            CreditTransaction(
+                retailer_id=self.retailer.retailer_id,
+                customer_id=customer.customer_id,
+                item_description="Water pipe",
+                amount=Decimal("500.00"),
+                transaction_date=datetime.utcnow() - timedelta(days=12),
+            )
+        )
+        db.session.add(
+            Ledger(
+                retailer_id=self.retailer.retailer_id,
+                customer_id=customer.customer_id,
+                outstanding_balance=Decimal("500.00"),
+            )
+        )
+        db.session.commit()
+        account_page = self.client.get(f"/customers/{customer.customer_id}")
+        self.assertEqual(account_page.status_code, 200)
+        self.assertIn(b"Send a personal reminder", account_page.data)
+        self.assertIn(b"using their saved contact preference", account_page.data)
+        token = self._csrf_token()
+
+        response = self.client.post(
+            f"/reminders/customers/{customer.customer_id}/send-personal",
+            data={"csrf_token": token},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/reminders/log")
+        send_whatsapp.assert_called_once()
+        sent_message = send_whatsapp.call_args.args[1]
+        self.assertIn("KES 500.00", sent_message)
+        self.assertIn("days overdue", sent_message)
+        dispatch = MessageDispatchLog.query.one()
+        self.assertEqual(dispatch.channel, "whatsapp")
+        self.assertEqual(dispatch.rule_id, None)
+        self.assertEqual(dispatch.status, "sent")
+
+    @patch("app.reminders.dispatch_service.send_sms")
+    def test_personal_reminder_does_not_send_for_cleared_account(self, send_sms):
+        customer = Customer(
+            retailer_id=self.retailer.retailer_id,
+            full_name="Paid Customer",
+            phone_number="+254700000092",
+            preferred_channel="sms",
+        )
+        db.session.add(customer)
+        db.session.flush()
+        db.session.add(
+            Ledger(
+                retailer_id=self.retailer.retailer_id,
+                customer_id=customer.customer_id,
+                outstanding_balance=Decimal("0.00"),
+            )
+        )
+        db.session.commit()
+
+        response = self.client.post(
+            f"/reminders/customers/{customer.customer_id}/send-personal",
+            data={"csrf_token": self._csrf_token()},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        send_sms.assert_not_called()
+        self.assertEqual(MessageDispatchLog.query.count(), 0)
+
+    @patch("app.reminders.dispatch_service.send_sms")
+    def test_personal_reminder_requires_a_valid_saved_channel(self, send_sms):
+        customer = Customer(
+            retailer_id=self.retailer.retailer_id,
+            full_name="Missing Preference",
+            phone_number="+254700000093",
+            preferred_channel=None,
+        )
+        db.session.add(customer)
+        db.session.commit()
+
+        response = self.client.post(
+            f"/reminders/customers/{customer.customer_id}/send-personal",
+            data={"csrf_token": self._csrf_token()},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        send_sms.assert_not_called()
+        self.assertEqual(MessageDispatchLog.query.count(), 0)
 
     @patch("app.reminders.routes.run_ageing_analysis_and_dispatch")
     def test_manual_scan_without_active_rules_does_not_run(self, run_scan):

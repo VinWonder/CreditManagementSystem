@@ -308,6 +308,28 @@ def toggle_shopkeeper(shopkeeper_id):
     return redirect(url_for("auth.manage_shopkeepers"))
 
 
+@auth_bp.route("/shopkeepers/<int:shopkeeper_id>/password", methods=["GET", "POST"])
+@login_required
+@admin_required
+def reset_shopkeeper_password(shopkeeper_id):
+    shopkeeper = Shopkeeper.query.filter_by(
+        shopkeeper_id=shopkeeper_id,
+        retailer_id=current_user.retailer_id,
+    ).first_or_404()
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        shopkeeper.set_password(form.password.data)
+        db.session.commit()
+        flash(f"Password updated for {shopkeeper.full_name}.", "success")
+        return redirect(url_for("auth.manage_shopkeepers"))
+
+    return render_template(
+        "auth/reset_shopkeeper_password.html",
+        shopkeeper=shopkeeper,
+        form=form,
+    )
+
+
 @auth_bp.route("/verify-login", methods=["GET", "POST"])
 def verify_login():
     flash("Sign-in by SMS code is temporarily disabled. Please log in with your phone number and password.", "info")

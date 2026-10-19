@@ -115,9 +115,15 @@
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-          {{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="app-flash app-flash-{{ category }}{% if category == 'success' %} app-flash-auto-dismiss{% endif %}"
+          role="{{ 'status' if category in ('success', 'info') else 'alert' }}"
+          aria-live="{{ 'polite' if category in ('success', 'info') else 'assertive' }}">
+          <span class="app-flash-icon" aria-hidden="true">
+            <i class="bi {{ 'bi-check-circle-fill' if category == 'success' else 'bi-exclamation-triangle-fill' if category in ('warning', 'danger') else 'bi-info-circle-fill' }}"></i>
+          </span>
+          <span class="app-flash-message">{{ message }}</span>
+          <button type="button" class="app-flash-close" aria-label="Dismiss notification"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+          {% if category == 'success' %}<span class="app-flash-progress" aria-hidden="true"></span>{% endif %}
         </div>
       {% endfor %}
     {% endif %}
@@ -137,6 +143,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{{ url_for('static', filename='js/offline-db.js') }}"></script>
 <script src="{{ url_for('static', filename='js/sync.js') }}"></script>
+<script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

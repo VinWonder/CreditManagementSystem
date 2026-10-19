@@ -234,6 +234,7 @@ class TransactionHistoryPageTests(unittest.TestCase):
         self.assertIn(b"Amina Hassan", response.data)
         self.assertIn(b"Synced", response.data)
         self.assertIn(b"Awaiting sync", response.data)
+        self.assertIn(b"11:00 EAT", response.data)
 
     def test_search_matches_customer_or_item_and_sync_filter(self):
         self._add_transaction(self.customer, "Rice", "120.00")

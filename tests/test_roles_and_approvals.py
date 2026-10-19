@@ -100,6 +100,65 @@ class RoleAndApprovalTests(unittest.TestCase):
         self.assertNotIn(b"Shopkeepers can record sales", response.data)
         self.assertNotIn(b"Only you can edit or delete customer records", response.data)
 
+    def test_admin_can_reset_shopkeeper_password(self):
+        page = self.client.get(
+            f"/auth/shopkeepers/{self.shopkeeper.shopkeeper_id}/password"
+        )
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(b"Set a new password", page.data)
+
+        response = self.client.post(
+            f"/auth/shopkeepers/{self.shopkeeper.shopkeeper_id}/password",
+            data={
+                "password": "newsecret123",
+                "confirm_password": "newsecret123",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(self.shopkeeper.check_password("newsecret123"))
+        self.assertFalse(self.shopkeeper.check_password("shopkeeper123"))
+
+    def test_admin_password_reset_rejects_invalid_confirmation_and_other_tenants(self):
+        response = self.client.post(
+            f"/auth/shopkeepers/{self.shopkeeper.shopkeeper_id}/password",
+            data={
+                "password": "newsecret123",
+                "confirm_password": "does-not-match",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.shopkeeper.check_password("shopkeeper123"))
+
+        other_retailer = Retailer(
+            business_name="Other Shop",
+            owner_name="Other Owner",
+            phone_number="+254700000046",
+            password_hash="test-hash",
+        )
+        db.session.add(other_retailer)
+        db.session.flush()
+        other_shopkeeper = Shopkeeper(
+            retailer_id=other_retailer.retailer_id,
+            full_name="Other Clerk",
+            phone_number="+254700000047",
+            active=True,
+        )
+        other_shopkeeper.set_password("original123")
+        db.session.add(other_shopkeeper)
+        db.session.commit()
+
+        denied = self.client.get(
+            f"/auth/shopkeepers/{other_shopkeeper.shopkeeper_id}/password"
+        )
+        self.assertEqual(denied.status_code, 404)
+
+        self._login(self.shopkeeper)
+        forbidden = self.client.get(
+            f"/auth/shopkeepers/{self.shopkeeper.shopkeeper_id}/password"
+        )
+        self.assertEqual(forbidden.status_code, 403)
+
     def test_shopkeeper_payment_requires_approval_before_balance_changes(self):
         self._login(self.shopkeeper)
         response = self.client.post(

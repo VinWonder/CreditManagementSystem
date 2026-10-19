@@ -22,6 +22,23 @@
   {% endif %}
 </div>
 
+{% if customer.ledger and customer.ledger.outstanding_balance > 0 %}
+<section class="customer-personal-reminder" aria-labelledby="customer-personal-reminder-title">
+  <span class="customer-personal-reminder-icon"><i class="bi bi-send" aria-hidden="true"></i></span>
+  <div class="customer-personal-reminder-copy">
+    <h2 id="customer-personal-reminder-title">Send a personal reminder</h2>
+    <p>Review this account, then send a message about the current balance via {{ 'SMS and WhatsApp' if customer.preferred_channel == 'both' else customer.preferred_channel|capitalize }}.</p>
+  </div>
+  <form method="POST" action="{{ url_for('reminders.send_personal_reminder', customer_id=customer.customer_id) }}"
+    data-confirm-message="Send a personal balance reminder to {{ customer.full_name }} using their saved contact preference?">
+    {{ reminder_form.hidden_tag() }}
+    <button class="customer-personal-reminder-button" type="submit">
+      <i class="bi bi-send-fill" aria-hidden="true"></i> Send reminder
+    </button>
+  </form>
+</section>
+{% endif %}
+
 {% if current_user.is_admin %}
 <div class="card p-3 mb-3">
   <h6>Admin balance correction</h6>
@@ -52,7 +69,7 @@
           <thead><tr><th>Date</th><th>Item</th><th>Amount</th></tr></thead>
           <tbody>
           {% for t in transactions %}
-            <tr><td class="small">{{ t.transaction_date.strftime('%d %b %Y') }}</td><td>{{ t.item_description }}</td><td>{{ t.amount | kes }}</td></tr>
+            <tr><td class="small">{{ t.transaction_date|nairobi('%d %b %Y · %H:%M') }} EAT</td><td>{{ t.item_description }}</td><td>{{ t.amount | kes }}</td></tr>
           {% else %}
             <tr><td colspan="3" class="text-muted text-center">None yet.</td></tr>
           {% endfor %}

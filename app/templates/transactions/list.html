@@ -93,9 +93,9 @@
             <td>
               <span class="transaction-history-date">
                 <i class="bi bi-calendar3" aria-hidden="true"></i>
-                {{ transaction.transaction_date.strftime('%d %b %Y') if transaction.transaction_date else 'Date unavailable' }}
+                {{ transaction.transaction_date|nairobi('%d %b %Y') if transaction.transaction_date else 'Date unavailable' }}
               </span>
-              {% if transaction.transaction_date %}<small class="transaction-history-time">{{ transaction.transaction_date.strftime('%H:%M') }}</small>{% endif %}
+              {% if transaction.transaction_date %}<small class="transaction-history-time">{{ transaction.transaction_date|nairobi('%H:%M') }} EAT</small>{% endif %}
             </td>
             <td>
               <a class="transaction-history-customer" href="{{ url_for('customers.view_customer', customer_id=transaction.customer_id) }}">
