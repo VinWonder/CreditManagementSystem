@@ -1,75 +1,116 @@
 {% extends "base.html" %}
 {% block title %}Shopkeeper access{% endblock %}
 {% block content %}
-<section class="container" aria-labelledby="shopkeepers-title">
-  <header class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-    <div>
-      <p class="eyebrow mb-1">Team permissions</p>
-      <h1 id="shopkeepers-title">Shopkeeper accounts</h1>
-      <p class="text-muted mb-0">Shopkeepers can record sales, add customers, and submit payments for your approval.</p>
+<section class="container shop-team-page" aria-labelledby="shopkeepers-title">
+  <header class="shop-team-hero mb-4">
+    <div class="shop-team-hero-copy">
+      <p class="shop-team-kicker"><i class="bi bi-grid-1x2-fill" aria-hidden="true"></i> Workspace · People</p>
+      <h1 id="shopkeepers-title">Your team,<br><span>in good hands.</span></h1>
+      <p>Shopkeeper accounts</p>
     </div>
+    <div class="shop-team-hero-art" aria-hidden="true">
+      <span class="shop-team-orbit shop-team-orbit-one"></span>
+      <span class="shop-team-orbit shop-team-orbit-two"></span>
+      <span class="shop-team-hero-icon"><i class="bi bi-person-vcard"></i></span>
+      <span class="shop-team-hero-spark shop-team-hero-spark-one"><i class="bi bi-stars"></i></span>
+      <span class="shop-team-hero-spark shop-team-hero-spark-two"><i class="bi bi-shield-check"></i></span>
+    </div>
+    <a class="shop-team-back" href="{{ url_for('main.dashboard') }}" aria-label="Back to dashboard">
+      <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+    </a>
   </header>
 
-  <div class="row g-3">
-    <div class="col-lg-5">
-      <article class="card p-3 p-md-4">
-        <h2 class="h5">Create a shopkeeper account</h2>
-        <p class="small text-muted">Share the initial password securely. Shopkeepers sign in with their phone number.</p>
-        <form method="POST" novalidate>
-          {{ form.hidden_tag() }}
-          <div class="mb-3">
-            {{ form.full_name.label(class="form-label") }}
-            {{ form.full_name(class="form-control", maxlength="100", required=true, autocomplete="name") }}
-            {% for error in form.full_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-          </div>
-          <div class="mb-3">
-            {{ form.phone_number.label(class="form-label") }}
-            {{ form.phone_number(class="form-control", maxlength="25", required=true, autocomplete="tel") }}
-            {% for error in form.phone_number.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-          </div>
-          <div class="mb-3">
-            {{ form.password.label(class="form-label") }}
-            {{ form.password(class="form-control", minlength="8", maxlength="128", required=true, autocomplete="new-password") }}
-            <div class="form-text">At least 8 characters, including a letter and a number.</div>
-            {% for error in form.password.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-          </div>
-          <button class="btn btn-primary" type="submit">{{ form.submit.label.text }}</button>
-        </form>
-      </article>
-    </div>
+  <div class="shop-team-stats" aria-label="Team account totals">
+    <article class="shop-team-stat">
+      <span class="shop-team-stat-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
+      <span><small>Total accounts</small><strong>{{ shopkeepers|length }}</strong></span>
+    </article>
+    <article class="shop-team-stat">
+      <span class="shop-team-stat-icon shop-team-stat-active"><i class="bi bi-person-check" aria-hidden="true"></i></span>
+      <span><small>Active</small><strong>{{ shopkeepers|selectattr("active")|list|length }}</strong></span>
+    </article>
+    <article class="shop-team-stat">
+      <span class="shop-team-stat-icon shop-team-stat-paused"><i class="bi bi-person-dash" aria-hidden="true"></i></span>
+      <span><small>Deactivated</small><strong>{{ shopkeepers|rejectattr("active")|list|length }}</strong></span>
+    </article>
+  </div>
 
-    <div class="col-lg-7">
-      <article class="card p-3 p-md-4">
-        <h2 class="h5">Your team</h2>
-        {% if shopkeepers %}
-        <div class="table-responsive">
-          <table class="table align-middle">
-            <thead><tr><th>Name</th><th>Phone</th><th>Access</th><th>Manage</th></tr></thead>
-            <tbody>
-            {% for shopkeeper in shopkeepers %}
-              <tr>
-                <td>{{ shopkeeper.full_name }}</td>
-                <td>{{ shopkeeper.phone_number }}</td>
-                <td><span class="badge {{ 'text-bg-success' if shopkeeper.active else 'text-bg-secondary' }}">{{ 'Active' if shopkeeper.active else 'Deactivated' }}</span></td>
-                <td>
-                  <form method="POST" action="{{ url_for('auth.toggle_shopkeeper', shopkeeper_id=shopkeeper.shopkeeper_id) }}">
-                    {{ action_form.hidden_tag() }}
-                    <button class="btn btn-sm {{ 'btn-outline-danger' if shopkeeper.active else 'btn-outline-success' }}" type="submit">{{ 'Deactivate' if shopkeeper.active else 'Reactivate' }}</button>
-                  </form>
-                </td>
-              </tr>
-            {% endfor %}
-            </tbody>
-          </table>
+  <div class="shop-team-layout">
+    <article class="shop-team-panel shop-team-create">
+      <div class="shop-team-panel-heading">
+        <span class="shop-team-panel-icon"><i class="bi bi-person-plus" aria-hidden="true"></i></span>
+        <div>
+          <p class="shop-team-overline">New member</p>
+          <h2>Create an account</h2>
         </div>
-        {% else %}
-        <p class="text-muted mb-0">No shopkeeper accounts yet. You remain the only user with admin permissions.</p>
-        {% endif %}
-        <div class="alert alert-light border small mb-0 mt-2">
-          Only you can edit or delete customer records, configure reminders, approve/reject staff payments, or correct a balance.
+      </div>
+      <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          {{ form.full_name.label(class="form-label") }}
+          {{ form.full_name(class="form-control", maxlength="100", required=true, autocomplete="name", placeholder="e.g. Amina Hassan") }}
+          {% for error in form.full_name.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
         </div>
-      </article>
-    </div>
+        <div class="mb-3">
+          {{ form.phone_number.label(class="form-label") }}
+          {{ form.phone_number(class="form-control", maxlength="25", required=true, autocomplete="tel", placeholder="e.g. +254 700 000 000") }}
+          {% for error in form.phone_number.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="mb-4">
+          {{ form.password.label(class="form-label") }}
+          {{ form.password(class="form-control", minlength="8", maxlength="128", required=true, autocomplete="new-password", placeholder="Create a secure password") }}
+          <div class="form-text">At least 8 characters, including a letter and a number.</div>
+          {% for error in form.password.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        <button class="btn shop-team-submit w-100" type="submit">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i>{{ form.submit.label.text }}
+        </button>
+      </form>
+      <div class="shop-team-secure-note"><i class="bi bi-lock-fill" aria-hidden="true"></i><span>Account details are stored securely.</span></div>
+    </article>
+
+    <article class="shop-team-panel shop-team-roster">
+      <div class="shop-team-roster-heading">
+        <div>
+          <p class="shop-team-overline">People directory</p>
+          <h2>Team accounts <span>{{ shopkeepers|length }}</span></h2>
+        </div>
+        <span class="shop-team-roster-mark"><i class="bi bi-person-lines-fill" aria-hidden="true"></i></span>
+      </div>
+
+      {% if shopkeepers %}
+      <div class="shop-team-list">
+        {% for shopkeeper in shopkeepers %}
+        <article class="shop-team-member">
+          <div class="shop-team-avatar {{ 'shop-team-avatar-active' if shopkeeper.active else 'shop-team-avatar-paused' }}" aria-hidden="true">
+            {{ shopkeeper.full_name[:1]|upper }}{% set name_parts = shopkeeper.full_name.split() %}{% if name_parts|length > 1 %}{{ name_parts[-1][:1]|upper }}{% endif %}
+          </div>
+          <div class="shop-team-member-info">
+            <h3>{{ shopkeeper.full_name }}</h3>
+            <p><i class="bi bi-telephone" aria-hidden="true"></i>{{ shopkeeper.phone_number }}</p>
+          </div>
+          <span class="shop-team-status {{ 'shop-team-status-active' if shopkeeper.active else 'shop-team-status-paused' }}">
+            <span></span>{{ 'Active' if shopkeeper.active else 'Deactivated' }}
+          </span>
+          <form method="POST" action="{{ url_for('auth.toggle_shopkeeper', shopkeeper_id=shopkeeper.shopkeeper_id) }}">
+            {{ action_form.hidden_tag() }}
+            <button class="shop-team-action {{ 'shop-team-action-deactivate' if shopkeeper.active else 'shop-team-action-reactivate' }}"
+              type="submit" aria-label="{{ 'Deactivate' if shopkeeper.active else 'Reactivate' }} {{ shopkeeper.full_name }}">
+              <i class="bi {{ 'bi-person-dash' if shopkeeper.active else 'bi-person-check' }}" aria-hidden="true"></i>
+              <span>{{ 'Deactivate' if shopkeeper.active else 'Reactivate' }}</span>
+            </button>
+          </form>
+        </article>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="shop-team-empty">
+        <span><i class="bi bi-person-plus" aria-hidden="true"></i></span>
+        <h3>Your team starts here</h3>
+        <p>No accounts yet. Add your first team member using the form.</p>
+      </div>
+      {% endif %}
+    </article>
   </div>
 </section>
 {% endblock %}

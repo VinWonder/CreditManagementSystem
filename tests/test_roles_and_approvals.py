@@ -89,6 +89,17 @@ class RoleAndApprovalTests(unittest.TestCase):
     def _login(self, user):
         self.authenticated_user = user
 
+    def test_shopkeeper_management_page_omits_role_capability_details(self):
+        self._login(self.retailer)
+
+        response = self.client.get("/auth/shopkeepers")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Team accounts", response.data)
+        self.assertIn(b"Shop Clerk", response.data)
+        self.assertNotIn(b"Shopkeepers can record sales", response.data)
+        self.assertNotIn(b"Only you can edit or delete customer records", response.data)
+
     def test_shopkeeper_payment_requires_approval_before_balance_changes(self):
         self._login(self.shopkeeper)
         response = self.client.post(
