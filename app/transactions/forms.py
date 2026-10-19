@@ -2,7 +2,43 @@ from decimal import Decimal, InvalidOperation
 
 from flask_wtf import FlaskForm
 from wtforms import StringField, DecimalField, SelectField, SubmitField
-from wtforms.validators import DataRequired, Length, ValidationError
+from wtforms.validators import DataRequired, Length, Optional, ValidationError
+
+
+ITEM_SIZE_CHOICES = [
+    ("1/2", '1/2"'),
+    ("1/4", '1/4"'),
+    ("3/4", '3/4"'),
+    ("1", '1"'),
+    ("1 1/4", '1 1/4"'),
+    ("1 1/2", '1 1/2"'),
+    ("2", '2"'),
+    ("2 1/2", '2 1/2"'),
+    ("3", '3"'),
+    ("4", '4"'),
+    ("6", '6"'),
+    ("8", '8"'),
+    ("12", '12"'),
+    ("16", '16"'),
+    ("18", '18"'),
+]
+ITEM_SIZES_INCHES = {value for value, _label in ITEM_SIZE_CHOICES}
+
+
+def format_item_description(description, size_inches=""):
+    description = description.strip()
+    if size_inches:
+        description = f"{description} ({size_inches} in)"
+    return description
+
+
+def _validate_item_size_description(form, field):
+    description = format_item_description(
+        form.item_description.data or "",
+        field.data or "",
+    )
+    if len(description) > 150:
+        raise ValidationError("Item description and size must be 150 characters or fewer.")
 
 
 def _coerce_customer_id(value):
@@ -39,6 +75,11 @@ class TransactionForm(FlaskForm):
         "Item / Goods Description",
         filters=[lambda value: value.strip() if value else value],
         validators=[DataRequired(), Length(max=150)],
+    )
+    item_size_inches = SelectField(
+        "Item size (inches)",
+        choices=[("", "No size specified")] + ITEM_SIZE_CHOICES,
+        validators=[Optional(), _validate_item_size_description],
     )
     amount = DecimalField(
         "Amount (KES)",

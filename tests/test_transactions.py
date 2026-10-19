@@ -8,7 +8,7 @@ from flask_login import login_user
 from app import create_app
 from app.extensions import db
 from app.models import CreditTransaction, Customer, Retailer
-from app.transactions.forms import TransactionForm
+from app.transactions.forms import ITEM_SIZE_CHOICES, TransactionForm
 from app.transactions.routes import _normalize_offline_transaction
 
 
@@ -28,12 +28,15 @@ class TransactionValidationTests(unittest.TestCase):
         self.app = Flask(__name__)
         self.app.config.update(SECRET_KEY="test-secret", WTF_CSRF_ENABLED=False)
 
-    def _form(self, *, customer_id="1", description=" Rice ", amount="0.01"):
+    def _form(
+        self, *, customer_id="1", description=" Rice ", amount="0.01", size_inches=""
+    ):
         form = TransactionForm(
             formdata=MultiDict(
                 {
                     "customer_id": customer_id,
                     "item_description": description,
+                    "item_size_inches": size_inches,
                     "amount": amount,
                 }
             )
@@ -64,6 +67,28 @@ class TransactionValidationTests(unittest.TestCase):
             self.assertFalse(form.validate())
             self.assertIn("2 decimal places", form.amount.errors[0])
 
+    def test_item_size_options_include_requested_fractional_and_whole_inches(self):
+        with self.app.test_request_context():
+            form = self._form()
+
+            self.assertEqual(
+                [value for value, _label in form.item_size_inches.choices[1:]],
+                [
+                    "1/2", "1/4", "3/4", "1", "1 1/4", "1 1/2", "2", "2 1/2",
+                    "3", "4", "6", "8", "12", "16", "18",
+                ],
+            )
+            self.assertEqual(len(ITEM_SIZE_CHOICES), 15)
+
+    def test_form_accepts_size_and_rejects_size_that_exceeds_description_limit(self):
+        with self.app.test_request_context():
+            sized_form = self._form(size_inches="1 1/4")
+            oversized_form = self._form(description="R" * 145, size_inches="1/2")
+
+            self.assertTrue(sized_form.validate(), sized_form.errors)
+            self.assertFalse(oversized_form.validate())
+            self.assertIn("item_size_inches", oversized_form.errors)
+
     def test_offline_transaction_normalizes_valid_values(self):
         transaction, error = _normalize_offline_transaction(
             {"customer_id": 3, "item_description": "  Maize flour  ", "amount": "125.50"}
@@ -73,6 +98,30 @@ class TransactionValidationTests(unittest.TestCase):
         self.assertEqual(transaction["customer_id"], 3)
         self.assertEqual(transaction["item_description"], "Maize flour")
         self.assertEqual(transaction["amount"], Decimal("125.50"))
+
+    def test_offline_transaction_includes_selected_size_and_rejects_unknown_size(self):
+        transaction, error = _normalize_offline_transaction(
+            {
+                "customer_id": 3,
+                "item_description": "PVC pipe",
+                "item_size_inches": "1 1/2",
+                "amount": "125.50",
+            }
+        )
+
+        self.assertIsNone(error)
+        self.assertEqual(transaction["item_description"], "PVC pipe (1 1/2 in)")
+
+        invalid_transaction, error = _normalize_offline_transaction(
+            {
+                "customer_id": 3,
+                "item_description": "PVC pipe",
+                "item_size_inches": "1/3",
+                "amount": "125.50",
+            }
+        )
+        self.assertIsNone(invalid_transaction)
+        self.assertIn("valid item size", error)
 
     def test_offline_transaction_rejects_invalid_amount_or_description(self):
         cases = [
@@ -151,6 +200,26 @@ class TransactionHistoryPageTests(unittest.TestCase):
         self.assertIn(b"No credit sales yet", response.data)
         self.assertIn(b"Record your first sale", response.data)
         self.assertIn(b"KES 0.00", response.data)
+
+    def test_credit_sale_form_offers_sizes_and_saves_size_with_description(self):
+        form_response = self.client.get("/transactions/new")
+        self.assertEqual(form_response.status_code, 200)
+        self.assertIn(b'1 1/4"', form_response.data)
+        self.assertIn(b'18"', form_response.data)
+
+        response = self.client.post(
+            "/transactions/new",
+            data={
+                "customer_id": str(self.customer.customer_id),
+                "item_description": "PVC pipe",
+                "item_size_inches": "1/2",
+                "amount": "125.00",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        transaction = CreditTransaction.query.one()
+        self.assertEqual(transaction.item_description, "PVC pipe (1/2 in)")
 
     def test_history_summaries_and_sync_labels_are_clear(self):
         self._add_transaction(self.customer, "Rice", "120.50")

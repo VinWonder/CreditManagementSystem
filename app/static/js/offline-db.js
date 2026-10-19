@@ -36,6 +36,7 @@ const DukaOfflineDB = (() => {
         client_id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         customer_id: txn.customer_id,
         item_description: txn.item_description,
+        item_size_inches: txn.item_size_inches || "",
         amount: txn.amount,
         created_at: new Date().toISOString(),
       };

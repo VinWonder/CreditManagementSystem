@@ -8,7 +8,11 @@ from sqlalchemy import or_, func
 
 from app.extensions import db
 from app.models import Customer, CreditTransaction, Ledger
-from app.transactions.forms import TransactionForm
+from app.transactions.forms import (
+    ITEM_SIZES_INCHES,
+    TransactionForm,
+    format_item_description,
+)
 
 transactions_bp = Blueprint("transactions", __name__, url_prefix="/transactions")
 
@@ -29,8 +33,12 @@ def _normalize_offline_transaction(item):
     if not isinstance(description, str) or not description.strip():
         return None, "enter an item description"
     description = description.strip()
+    size_inches = item.get("item_size_inches", "")
+    if not isinstance(size_inches, str) or size_inches not in ITEM_SIZES_INCHES | {""}:
+        return None, "choose a valid item size"
+    description = format_item_description(description, size_inches)
     if len(description) > 150:
-        return None, "item description must be 150 characters or fewer"
+        return None, "item description and size must be 150 characters or fewer"
 
     raw_amount = item.get("amount")
     if isinstance(raw_amount, bool):
@@ -165,7 +173,10 @@ def new_transaction():
         _apply_transaction(
             current_user.retailer_id,
             form.customer_id.data,
-            form.item_description.data,
+            format_item_description(
+                form.item_description.data,
+                form.item_size_inches.data,
+            ),
             form.amount.data,
         )
         flash("Credit sale recorded and ledger updated.", "success")

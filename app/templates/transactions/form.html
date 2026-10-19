@@ -65,6 +65,20 @@
         </div>
 
         <div class="transaction-field">
+          {{ form.item_size_inches.label(class="form-label") }}
+          <span class="transaction-input-wrap">
+            <i class="bi bi-rulers" aria-hidden="true"></i>
+            {{ form.item_size_inches(class="form-select", **{"aria-describedby": "txn-size-help" ~ (" txn-size-errors" if form.item_size_inches.errors else ""), "aria-invalid": "true" if form.item_size_inches.errors else "false"}) }}
+          </span>
+          <small class="transaction-field-help" id="txn-size-help">Optional: select the item's size in inches. The size will be saved with the item description.</small>
+          {% if form.item_size_inches.errors %}
+          <div class="transaction-field-errors" id="txn-size-errors" role="alert">
+            {% for error in form.item_size_inches.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="transaction-field">
           {{ form.amount.label(class="form-label") }}
           <span class="transaction-input-wrap transaction-amount-wrap">
             <span class="transaction-currency" aria-hidden="true">KES</span>
@@ -160,9 +174,11 @@
       if (!itemDescription || itemDescription.length > 150) {
         throw new Error("Enter an item description of 150 characters or fewer.");
       }
+      const itemSizeInches = form.elements.item_size_inches.value;
       await DukaOfflineDB.addPendingTransaction({
         customer_id: customerId,
         item_description: itemDescription,
+        item_size_inches: itemSizeInches,
         amount: amount.toFixed(2),
       });
       offlineNote.innerHTML = '<i class="bi bi-cloud-slash" aria-hidden="true"></i><span>Sale saved on this device. It will sync automatically when you are back online.</span>';
