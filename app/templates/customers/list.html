@@ -8,8 +8,18 @@
       <h1 id="customer-directory-title"><i class="bi bi-people-fill" aria-hidden="true"></i> Customers</h1>
       <p class="customer-directory-subtitle">Keep customer contact details and credit balances close at hand.</p>
     </div>
-    <a href="{{ url_for('customers.new_customer') }}" class="btn customer-add-button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Customer</a>
+    <div class="customer-directory-actions">
+      <button type="button" class="btn customer-print-button" onclick="window.print()"><i class="bi bi-printer" aria-hidden="true"></i> Print list</button>
+      <a href="{{ url_for('customers.new_customer') }}" class="btn customer-add-button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Customer</a>
+    </div>
   </header>
+
+  <div class="customer-print-heading">
+    <p>{{ current_user.business_name }}</p>
+    <h2>Customer directory</h2>
+    {% if query %}<p>Search: {{ query }}</p>{% endif %}
+    <p>{{ customers|length }} {{ 'customer' if customers|length == 1 else 'customers' }}</p>
+  </div>
 
   <div class="customer-directory-toolbar">
     <form class="customer-search" method="GET" role="search">
@@ -29,7 +39,7 @@
     <div class="table-responsive">
       <table class="table customer-directory-table align-middle mb-0">
         <thead>
-          <tr><th scope="col">Customer</th><th scope="col">Preferred channel</th><th scope="col">Outstanding balance</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+          <tr><th scope="col">Customer</th><th scope="col">Preferred channel</th><th scope="col">Outstanding balance</th><th scope="col" class="customer-actions-column"><span class="visually-hidden">Actions</span></th></tr>
         </thead>
         <tbody>
         {% for c in customers %}
@@ -65,7 +75,7 @@
                 <span class="customer-balance-unknown">No ledger</span>
               {% endif %}
             </td>
-            <td class="text-end">
+            <td class="text-end customer-actions-column">
               <div class="customer-row-actions">
                 <a href="{{ url_for('customers.edit_customer', customer_id=c.customer_id) }}" class="customer-action customer-action-edit" aria-label="Edit {{ c.full_name }}" title="Edit customer"><i class="bi bi-pencil" aria-hidden="true"></i></a>
                 <form action="{{ url_for('customers.delete_customer', customer_id=c.customer_id) }}" method="POST" onsubmit="return confirm('Delete this customer?');">

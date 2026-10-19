@@ -229,9 +229,13 @@ body {
 
 .customer-directory { margin: 0 auto; max-width: 76rem; }
 .customer-directory-header { align-items: center; display: flex; gap: 1rem; justify-content: space-between; margin-bottom: 1.25rem; }
+.customer-directory-actions { align-items: center; display: inline-flex; flex: 0 0 auto; gap: 0.55rem; }
 .customer-directory-header h1 { align-items: center; color: var(--ink); display: flex; font-size: clamp(1.45rem, 2.4vw, 1.85rem); font-weight: 800; gap: 0.65rem; letter-spacing: -0.04em; margin: 0; }
 .customer-directory-header h1 i { color: var(--brand); font-size: 1.3rem; }
 .customer-directory-subtitle { color: var(--muted); font-size: 0.78rem; margin: 0.35rem 0 0; }
+.customer-print-button { align-items: center; border: 1px solid #d8e5df; border-radius: 0.7rem; color: #315b50; display: inline-flex; font-size: 0.76rem; font-weight: 700; gap: 0.45rem; min-height: 2.7rem; padding: 0.65rem 0.9rem; white-space: nowrap; }
+.customer-print-button:hover { background: #eff6f3; border-color: #c7dbd1; color: #205b4b; }
+.customer-print-heading { display: none; }
 .customer-add-button { align-items: center; background: linear-gradient(135deg, #2c7a7b, #205b5c); border: 0; border-radius: 0.7rem; box-shadow: 0 0.4rem 1rem rgba(32, 91, 92, 0.15); color: #fff; display: inline-flex; font-size: 0.76rem; font-weight: 750; gap: 0.45rem; min-height: 2.7rem; padding: 0.65rem 0.9rem; white-space: nowrap; }
 .customer-add-button:hover { background: linear-gradient(135deg, #256d6e, #194e50); box-shadow: 0 0.55rem 1.2rem rgba(32, 91, 92, 0.2); color: #fff; transform: translateY(-1px); }
 .customer-directory-toolbar { align-items: center; display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: space-between; margin-bottom: 0.8rem; }
@@ -700,6 +704,30 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
   .app-offline-badge i { font-size: 0.85rem; }
   .app-footer-inner { justify-content: center; min-height: 5.5rem; text-align: center; }
   .app-footer-note { display: none; }
+}
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .app-navbar, .app-footer, .customer-directory-actions, .customer-directory-toolbar,
+  .customer-directory-header, .customer-actions-column, .customer-empty-action { display: none !important; }
+  main.container { margin: 0 !important; max-width: none !important; padding: 0 !important; }
+  .customer-directory { max-width: none; }
+  .customer-print-heading { border-bottom: 1px solid #777; display: block; margin-bottom: 1rem; padding-bottom: 0.5rem; }
+  .customer-print-heading p { font-size: 0.75rem; margin: 0.15rem 0; }
+  .customer-print-heading h2 { font-size: 1.1rem; margin: 0.2rem 0; }
+  .customer-directory-card { border: 0; border-radius: 0; box-shadow: none; overflow: visible; }
+  .table-responsive { overflow: visible !important; }
+  .customer-directory-table { color: #000; min-width: 0; width: 100%; }
+  .customer-directory-table thead th { background: #eee !important; color: #000; padding: 0.5rem; }
+  .customer-directory-table tbody td { border-color: #bbb; color: #000; padding: 0.45rem 0.5rem; }
+  .customer-identity { min-width: 0; }
+  .customer-avatar, .customer-channel i, .customer-contact a i,
+  .customer-balance-clear i { display: none; }
+  .customer-name, .customer-contact a, .customer-channel,
+  .customer-balance, .customer-balance-unknown { background: none; border: 0; color: #000; padding: 0; text-decoration: none; }
+  .customer-channel { white-space: normal; }
+  .customer-record-id { background: none; color: #444; padding: 0; }
+  .customer-directory-table tr { break-inside: avoid; }
+  a { color: #000 !important; text-decoration: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   .app-navbar *, .app-navbar *::before, .app-navbar *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
