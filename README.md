@@ -183,6 +183,63 @@ To create a migration after a schema change, run
 `flask db migrate -m "describe the schema change"`, review the generated file,
 then apply it with `flask db upgrade`.
 
+### Configure and test SMS/WhatsApp reminders
+
+The app calls the selected provider directly; no provider credentials are
+stored in the database or returned by the status API. Add credentials to the
+deployment environment (or a local, untracked `.env` file) and restart the
+web process:
+
+- **Africa's Talking SMS:** set `SMS_PROVIDER=africastalking`,
+  `AT_USERNAME` and `AT_API_KEY`. Use the sandbox account and its allowed
+  recipient numbers for initial testing.
+- **Twilio SMS:** set `SMS_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID`,
+  `TWILIO_AUTH_TOKEN`, and either `TWILIO_MESSAGING_SERVICE_SID` or
+  `TWILIO_FROM_NUMBER`.
+- **Meta WhatsApp Cloud API:** set `WHATSAPP_TOKEN` and `WHATSAPP_PHONE_ID`.
+  Configure an active WhatsApp Business sender and use an opted-in test
+  recipient. Meta may require an approved message template outside the
+  customer-service window; this integration currently sends text messages.
+
+Sign in and check provider readiness with:
+
+```javascript
+fetch("/reminders/api/providers/status")
+  .then(response => response.json())
+  .then(console.log);
+```
+
+For a **live test**, use a customer with a valid international phone number,
+an outstanding balance, an active rule whose overdue threshold has been met,
+and an SMS/WhatsApp preference that includes the channel being tested. From
+that customer's portfolio page, get the CSRF token and explicitly confirm the
+send:
+
+```javascript
+const csrf = document.querySelector('input[name="csrf_token"]').value;
+fetch("/reminders/api/customers/123/test", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "X-CSRFToken": csrf
+  },
+  body: JSON.stringify({ channel: "sms", confirm: true })
+}).then(async response => ({
+  status: response.status,
+  result: await response.json()
+})).then(console.log);
+```
+
+Replace `123` with the customer ID and `sms` with `whatsapp` to test that
+channel. This endpoint sends the **actual configured reminder message** to
+that customer and logs the matching rule; it is not a sandbox simulator.
+Obtain customer consent first. Provider use may incur charges. A `202`
+response means the provider accepted the request, not that the handset
+received it; final delivery status requires provider status callbacks, which
+are not currently configured. Without credentials, live sends are rejected
+instead of being marked as successful. Automated tests mock provider calls
+and never send real messages.
+
 For deployment:
 
 - Use a managed PostgreSQL instance and set `DATABASE_URL` in the host's

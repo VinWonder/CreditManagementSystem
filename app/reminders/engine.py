@@ -11,6 +11,10 @@ from app.extensions import db
 from app.models import Retailer, ReminderRule, Ledger, Customer
 from app.reminders.dispatch_service import dispatch_reminder
 
+PAID_MESSAGE_DISCLAIMER = (
+    "If you have already paid, please ignore this message. Thank you."
+)
+
 
 def select_matching_rule(rules, days_overdue):
     """Select the most specific eligible threshold to avoid stacked reminders."""
@@ -32,6 +36,16 @@ def render_template_message(template, customer, retailer, ledger):
         .replace("{balance}", f"KES {float(ledger.outstanding_balance):,.2f}")
         .replace("{days_overdue}", str(ledger.days_overdue))
     )
+
+
+def render_personal_reminder_message(rule, customer, retailer, ledger):
+    """Render the configured rule verbatim and append the required payment note."""
+    message = render_template_message(
+        rule.message_template, customer, retailer, ledger
+    )
+    if message.rstrip().endswith(PAID_MESSAGE_DISCLAIMER):
+        return message
+    return f"{message}\n{PAID_MESSAGE_DISCLAIMER}"
 
 
 def run_ageing_analysis_and_dispatch(retailer_id=None):
@@ -61,8 +75,8 @@ def run_ageing_analysis_and_dispatch(retailer_id=None):
 
             rule = select_matching_rule(rules, ledger.days_overdue)
             if rule:
-                message = render_template_message(
-                    rule.message_template, customer, retailer, ledger
+                message = render_personal_reminder_message(
+                    rule, customer, retailer, ledger
                 )
                 success, _info = dispatch_reminder(customer, rule, message)
                 if success:

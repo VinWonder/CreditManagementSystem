@@ -1,4 +1,15 @@
-from flask import Blueprint, current_app, render_template, redirect, url_for, flash, request
+import re
+
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from flask_login import login_required, current_user
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
@@ -6,8 +17,15 @@ from sqlalchemy.orm import joinedload
 from app.extensions import db
 from app.models import ReminderRule, MessageDispatchLog, Customer
 from app.reminders.forms import ReminderActionForm, ReminderRuleForm
-from app.reminders.engine import run_ageing_analysis_and_dispatch
-from app.reminders.dispatch_service import dispatch_personal_reminder
+from app.reminders.engine import (
+    render_personal_reminder_message,
+    run_ageing_analysis_and_dispatch,
+    select_matching_rule,
+)
+from app.reminders.dispatch_service import (
+    dispatch_personal_reminder,
+    provider_configuration,
+)
 from app.permissions import admin_required
 
 reminders_bp = Blueprint("reminders", __name__, url_prefix="/reminders")
@@ -173,28 +191,108 @@ def send_personal_reminder(customer_id):
         flash("This customer has no outstanding balance to remind them about.", "info")
         return redirect(url_for("customers.view_customer", customer_id=customer_id))
 
-    overdue_message = (
-        f" It is {ledger.days_overdue} days overdue." if ledger.days_overdue > 0 else ""
-    )
-    message = (
-        f"Hello {customer.full_name}, a friendly reminder from {current_user.business_name}: "
-        f"your outstanding balance is KES {ledger.outstanding_balance:,.2f}."
-        f"{overdue_message} If you have already paid, please ignore this message. Thank you."
-    )
-    delivered, _ = dispatch_personal_reminder(customer, message)
-    if delivered:
+    rules = ReminderRule.query.filter_by(
+        retailer_id=current_user.retailer_id,
+        active=True,
+    ).all()
+    rule = select_matching_rule(rules, ledger.days_overdue)
+    if not rule:
         flash(
-            f"Personal reminder sent to {customer.full_name} via their saved "
+            "No active reminder rule matches this customer's overdue period. "
+            "No message was sent.",
+            "warning",
+        )
+        return redirect(url_for("customers.view_customer", customer_id=customer_id))
+
+    message = render_personal_reminder_message(rule, customer, current_user, ledger)
+    accepted, _ = dispatch_personal_reminder(customer, message, rule_id=rule.rule_id)
+    if accepted:
+        flash(
+            f"Personal reminder accepted by the provider for {customer.full_name} via their saved "
             f"{customer.preferred_channel.replace('_', ' ')} preference.",
             "success",
         )
     else:
         flash(
             f"Reminder attempted for {customer.full_name}, but one or more channels "
-            "could not confirm delivery. Check the dispatch history.",
+            "were not accepted by the provider. Check the dispatch history.",
             "warning",
         )
     return redirect(url_for("reminders.dispatch_log"))
+
+
+@reminders_bp.route("/api/providers/status")
+@login_required
+def provider_status():
+    """Return configured provider names and readiness, never credentials."""
+    return jsonify(providers=provider_configuration())
+
+
+@reminders_bp.route("/api/customers/<int:customer_id>/test", methods=["POST"])
+@login_required
+def test_customer_reminder_provider(customer_id):
+    """Send a confirmed, real provider test using the applicable rule template."""
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict) or payload.get("confirm") is not True:
+        return jsonify(error="Confirm that this will send a real message to the customer."), 400
+
+    channel = payload.get("channel")
+    if not isinstance(channel, str) or channel not in {"sms", "whatsapp"}:
+        return jsonify(error="Choose either 'sms' or 'whatsapp' as the test channel."), 400
+
+    customer = Customer.query.filter_by(
+        customer_id=customer_id,
+        retailer_id=current_user.retailer_id,
+    ).first_or_404()
+    if not re.fullmatch(r"\+?\d{9,15}", customer.phone_number or ""):
+        return jsonify(error="The customer's phone number is invalid. Update it before testing."), 400
+    if customer.preferred_channel not in {channel, "both"}:
+        return jsonify(
+            error=f"The customer has not selected {channel.upper()} as an approved reminder channel."
+        ), 400
+
+    ledger = customer.ledger
+    if not ledger:
+        return jsonify(error="This customer does not have an account balance to remind them about."), 409
+
+    ledger.recalculate()
+    if ledger.outstanding_balance <= 0:
+        db.session.rollback()
+        return jsonify(error="This customer has no outstanding balance to remind them about."), 409
+
+    rules = ReminderRule.query.filter_by(
+        retailer_id=current_user.retailer_id,
+        active=True,
+    ).all()
+    rule = select_matching_rule(rules, ledger.days_overdue)
+    if not rule:
+        return jsonify(
+            error="No active reminder rule matches this customer's overdue period."
+        ), 409
+
+    channel_provider = provider_configuration()[channel]
+    configured = channel_provider["configured"]
+    if not configured:
+        return jsonify(
+            error=(
+                f"{channel_provider['provider']} is not configured. "
+                "Add its credentials before sending a live test."
+            )
+        ), 503
+
+    message = render_personal_reminder_message(rule, customer, current_user, ledger)
+    accepted, detail = dispatch_personal_reminder(
+        customer, message, rule_id=rule.rule_id, channel=channel
+    )
+    if not accepted:
+        return jsonify(error="The provider did not accept the message.", detail=detail), 502
+
+    return jsonify(
+        status="accepted",
+        channel=channel,
+        rule_id=rule.rule_id,
+        message="The provider accepted the message. This does not confirm handset delivery.",
+    ), 202
 
 
 @reminders_bp.route("/log")

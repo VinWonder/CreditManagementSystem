@@ -203,6 +203,11 @@ body {
 .activity-count { align-items: center; background: #edf5f2; border-radius: 2rem; color: #496c63; display: inline-flex; font-size: 0.64rem; font-weight: 700; gap: 0.35rem; margin-bottom: 0.35rem; padding: 0.32rem 0.55rem; }
 .activity-count-payments { background: #eff3fb; color: #526b93; }
 .activity-table { color: var(--ink); font-size: 0.78rem; min-width: 28rem; }
+.activity-payment-table { min-width: 0; table-layout: fixed; width: 100%; }
+.activity-payment-table th:first-child, .activity-payment-table td:first-child { width: 6.2rem; }
+.activity-payment-table th:last-child, .activity-payment-table td:last-child { width: 8.4rem; }
+.activity-payment-table .activity-customer-name { min-width: 0; overflow-wrap: anywhere; }
+.activity-payment-table .payment-amount { overflow-wrap: anywhere; white-space: normal; }
 .activity-table thead th { background: #f8faf9; border-bottom: 1px solid var(--line); color: #75878d; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.075em; padding: 0.65rem 0.7rem; text-transform: uppercase; }
 .activity-table thead th:first-child { border-radius: 0.45rem 0 0 0.45rem; }
 .activity-table thead th:last-child { border-radius: 0 0.45rem 0.45rem 0; }
@@ -731,12 +736,18 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .customer-personal-reminder { align-items: center; background: linear-gradient(105deg, #edf7ef, #fff 76%); border: 1px solid #d8eadc; border-radius: 0.85rem; display: flex; gap: 0.75rem; margin: 0 0 1rem; padding: 0.8rem 0.9rem; }
 .customer-personal-reminder-icon { align-items: center; background: #dff0e3; border-radius: 0.65rem; color: #34784e; display: flex; flex: 0 0 2.5rem; height: 2.5rem; justify-content: center; }
 .customer-personal-reminder-copy { flex: 1; min-width: 0; }
-.customer-personal-reminder-copy h2 { color: #294d38; font-size: 0.76rem; font-weight: 800; margin: 0 0 0.2rem; }
-.customer-personal-reminder-copy p { color: #718177; font-size: 0.61rem; line-height: 1.45; margin: 0; }
-.customer-personal-reminder-button { align-items: center; background: #246847; border: 1px solid #246847; border-radius: 0.58rem; color: #fff; display: inline-flex; font-size: 0.64rem; font-weight: 750; gap: 0.4rem; justify-content: center; min-height: 2.4rem; padding: 0.55rem 0.75rem; white-space: nowrap; }
+.customer-personal-reminder-copy h2 { color: #294d38; font-size: 1rem; font-weight: 800; margin: 0 0 0.3rem; }
+.customer-personal-reminder-copy p { color: #56685d; font-size: 0.88rem; line-height: 1.5; margin: 0; }
+.customer-personal-reminder-button { align-items: center; background: #246847; border: 1px solid #246847; border-radius: 0.58rem; color: #fff; display: inline-flex; font-size: 0.86rem; font-weight: 750; gap: 0.4rem; justify-content: center; min-height: 2.65rem; padding: 0.6rem 0.85rem; white-space: nowrap; }
 .customer-personal-reminder-button:hover { background: #194f36; color: #fff; }
 .customer-portfolio-link { color: #327356 !important; font-weight: 700; text-decoration: none; }
 .customer-portfolio-link:hover { color: #205b4b !important; text-decoration: underline !important; text-underline-offset: 2px; }
+.customer-portfolio .card h6 { color: var(--ink); font-size: 1.05rem; font-weight: 750; }
+.customer-portfolio .table { font-size: 0.9rem; }
+.customer-portfolio .table th { color: #52656a; font-size: 0.8rem; }
+.customer-portfolio .table td { line-height: 1.45; overflow-wrap: anywhere; }
+.customer-portfolio-heading { gap: 1rem; }
+.customer-reminder-rule-note { background: #f4f7f6; border: 1px solid #e1e9e6; border-radius: 0.75rem; color: #52645f; font-size: 0.9rem; line-height: 1.5; margin: 0 0 1rem; padding: 0.85rem 1rem; }
 .customer-personal-reminder :focus-visible, .shop-password-page :focus-visible { outline: 3px solid rgba(69, 139, 105, 0.55); outline-offset: 3px; }
 @media (max-width: 575.98px) {
   .customer-personal-reminder { align-items: flex-start; flex-wrap: wrap; }

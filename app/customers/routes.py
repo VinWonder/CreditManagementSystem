@@ -2,10 +2,11 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 
 from app.extensions import db
-from app.models import CreditTransaction, Customer, Ledger
+from app.models import CreditTransaction, Customer, Ledger, ReminderRule
 from app.customers.forms import CustomerForm
 from app.payments.forms import BalanceAdjustmentForm
 from app.reminders.forms import ReminderActionForm
+from app.reminders.engine import select_matching_rule
 from app.permissions import admin_required
 
 customers_bp = Blueprint("customers", __name__, url_prefix="/customers")
@@ -125,12 +126,21 @@ def view_customer(customer_id):
     ).all()
     payments = customer.payments.order_by(db.desc("payment_date")).all()
     adjustments = customer.balance_adjustments.order_by(db.desc("created_at")).all()
+    matching_rule = None
+    if customer.ledger:
+        customer.ledger.recalculate()
+        rules = ReminderRule.query.filter_by(
+            retailer_id=current_user.retailer_id,
+            active=True,
+        ).all()
+        matching_rule = select_matching_rule(rules, customer.ledger.days_overdue)
     return render_template(
         "customers/view.html",
         customer=customer,
         transactions=transactions,
         payments=payments,
         adjustments=adjustments,
+        matching_rule=matching_rule,
         adjustment_form=BalanceAdjustmentForm(),
         reminder_form=ReminderActionForm(),
     )

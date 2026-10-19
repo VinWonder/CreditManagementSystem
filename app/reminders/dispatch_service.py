@@ -5,26 +5,40 @@ Sends reminders via SMS (Africa's Talking - recommended for Kenya: cheap,
 reliable local delivery, simple REST API) or WhatsApp (Meta WhatsApp
 Business Cloud API - free-tier friendly, rich formatting, read receipts).
 
-Both integrations degrade gracefully in development: if API credentials are
-not configured, messages are logged to MessageDispatchLog with status
-'sent' (simulated) so the rest of the system can be demoed/tested without
-live credit-consuming API calls.
+Messages are never reported as sent unless the selected provider accepts
+them. A provider acceptance is not confirmation of handset delivery.
 """
+from datetime import datetime
+import re
+
 import requests
 from flask import current_app
-from datetime import datetime
 
 from app.extensions import db
 from app.models import MessageDispatchLog
 
 
 def _credentials_present_sms():
-    return bool(current_app.config.get("AT_API_KEY"))
+    provider = current_app.config.get("SMS_PROVIDER", "africastalking").lower()
+    if provider == "twilio":
+        account_sid = current_app.config.get("TWILIO_ACCOUNT_SID")
+        auth_token = current_app.config.get("TWILIO_AUTH_TOKEN")
+        sender = (
+            current_app.config.get("TWILIO_MESSAGING_SERVICE_SID")
+            or current_app.config.get("TWILIO_FROM_NUMBER")
+        )
+        return bool(account_sid and auth_token and sender)
+    if provider == "africastalking":
+        return bool(
+            current_app.config.get("AT_API_KEY")
+            and current_app.config.get("AT_USERNAME")
+        )
+    return False
 
 
 def _send_sms_africas_talking(phone_number, message):
     if not _credentials_present_sms():
-        return True, "simulated (no AT_API_KEY configured)"
+        return False, "Africa's Talking SMS is not configured"
 
     url = "https://api.africastalking.com/version1/messaging"
     headers = {
@@ -113,7 +127,7 @@ def send_sms(phone_number, message):
 def send_whatsapp(phone_number, message):
     """Send via Meta WhatsApp Business Cloud API. Returns (success: bool, info: str)."""
     if not _credentials_present_whatsapp():
-        return True, "simulated (no WHATSAPP_TOKEN configured)"
+        return False, "WhatsApp is not configured"
 
     phone_id = current_app.config["WHATSAPP_PHONE_ID"]
     url = f"https://graph.facebook.com/v19.0/{phone_id}/messages"
@@ -123,7 +137,7 @@ def send_whatsapp(phone_number, message):
     }
     payload = {
         "messaging_product": "whatsapp",
-        "to": phone_number,
+        "to": re.sub(r"\D", "", phone_number),
         "type": "text",
         "text": {"body": message},
     }
@@ -142,11 +156,28 @@ def dispatch_reminder(customer, rule, message):
     return _dispatch_channels(customer, rule.rule_id, channels, message)
 
 
-def dispatch_personal_reminder(customer, message):
-    """Send an on-demand reminder using the customer's saved channel preference."""
-    channel = customer.preferred_channel
+def dispatch_personal_reminder(customer, message, rule_id=None, channel=None):
+    """Send a reminder using the saved preference or an explicitly selected channel."""
+    channel = channel or customer.preferred_channel
     channels = ("sms", "whatsapp") if channel == "both" else (channel,)
-    return _dispatch_channels(customer, None, channels, message)
+    return _dispatch_channels(customer, rule_id, channels, message)
+
+
+def provider_configuration():
+    """Expose provider readiness without returning any credential values."""
+    provider = current_app.config.get("SMS_PROVIDER", "africastalking").lower()
+    sms_ready = _credentials_present_sms()
+
+    return {
+        "sms": {
+            "provider": provider,
+            "configured": sms_ready,
+        },
+        "whatsapp": {
+            "provider": "meta_whatsapp_cloud",
+            "configured": _credentials_present_whatsapp(),
+        },
+    }
 
 
 def _dispatch_channels(customer, rule_id, channels, message):

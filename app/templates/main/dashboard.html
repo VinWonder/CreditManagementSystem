@@ -187,7 +187,7 @@
       {% if recent_transactions %}
       <div class="activity-count"><i class="bi bi-receipt" aria-hidden="true"></i> Latest {{ recent_transactions|length }} sales</div>
       <div class="table-responsive">
-        <table class="table activity-table align-middle mb-0">
+        <table class="table activity-table activity-payment-table align-middle mb-0">
           <thead><tr><th scope="col">Date</th><th scope="col">Sale and customer</th><th scope="col" class="text-end">Amount</th></tr></thead>
           <tbody>
             {% for t in recent_transactions %}

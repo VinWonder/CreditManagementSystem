@@ -16,7 +16,10 @@ from app.models import (
     ReminderRule,
     Retailer,
 )
-from app.reminders.engine import select_matching_rule
+from app.reminders.engine import (
+    run_ageing_analysis_and_dispatch,
+    select_matching_rule,
+)
 
 
 class TestConfig:
@@ -310,11 +313,22 @@ class ReminderRulePageTests(unittest.TestCase):
                 outstanding_balance=Decimal("500.00"),
             )
         )
+        rule = ReminderRule(
+            retailer_id=self.retailer.retailer_id,
+            trigger_days_overdue=7,
+            message_template=(
+                "Hello {customer_name}, {business_name} balance: "
+                "{balance}; overdue {days_overdue} days."
+            ),
+            channel="whatsapp",
+            active=True,
+        )
+        db.session.add(rule)
         db.session.commit()
         account_page = self.client.get(f"/customers/{customer.customer_id}")
         self.assertEqual(account_page.status_code, 200)
         self.assertIn(b"Send a personal reminder", account_page.data)
-        self.assertIn(b"using their saved contact preference", account_page.data)
+        self.assertIn(b"saved message", account_page.data)
         token = self._csrf_token()
 
         response = self.client.post(
@@ -326,12 +340,217 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertEqual(response.headers["Location"], "/reminders/log")
         send_whatsapp.assert_called_once()
         sent_message = send_whatsapp.call_args.args[1]
-        self.assertIn("KES 500.00", sent_message)
-        self.assertIn("days overdue", sent_message)
+        self.assertEqual(
+            sent_message,
+            "Hello Amina Hassan, Test Shop balance: KES 500.00; "
+            "overdue 12 days.\n"
+            "If you have already paid, please ignore this message. Thank you.",
+        )
         dispatch = MessageDispatchLog.query.one()
         self.assertEqual(dispatch.channel, "whatsapp")
-        self.assertEqual(dispatch.rule_id, None)
+        self.assertEqual(dispatch.rule_id, rule.rule_id)
         self.assertEqual(dispatch.status, "sent")
+
+    @patch("app.reminders.dispatch_service.send_sms")
+    def test_personal_reminder_does_not_send_without_matching_active_rule(self, send_sms):
+        customer = Customer(
+            retailer_id=self.retailer.retailer_id,
+            full_name="Not Yet Overdue",
+            phone_number="+254700000094",
+            preferred_channel="sms",
+        )
+        db.session.add(customer)
+        db.session.flush()
+        db.session.add(
+            CreditTransaction(
+                retailer_id=self.retailer.retailer_id,
+                customer_id=customer.customer_id,
+                item_description="Older purchase",
+                amount=Decimal("500.00"),
+                transaction_date=datetime.utcnow() - timedelta(days=2),
+            )
+        )
+        db.session.add(
+            Ledger(
+                retailer_id=self.retailer.retailer_id,
+                customer_id=customer.customer_id,
+                outstanding_balance=Decimal("500.00"),
+                days_overdue=0,
+            )
+        )
+        self._add_rule(active=False)
+        db.session.commit()
+
+        response = self.client.post(
+            f"/reminders/customers/{customer.customer_id}/send-personal",
+            data={"csrf_token": self._csrf_token()},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], f"/customers/{customer.customer_id}")
+        send_sms.assert_not_called()
+        self.assertEqual(MessageDispatchLog.query.count(), 0)
+
+    @patch("app.reminders.engine.dispatch_reminder", return_value=(True, "accepted"))
+    def test_scheduled_reminders_use_rule_message_and_required_disclaimer(self, dispatch):
+        customer = Customer(
+            retailer_id=self.retailer.retailer_id,
+            full_name="Scheduled Customer",
+            phone_number="+254700000097",
+            preferred_channel="sms",
+        )
+        db.session.add(customer)
+        db.session.flush()
+        db.session.add(
+            CreditTransaction(
+                retailer_id=self.retailer.retailer_id,
+                customer_id=customer.customer_id,
+                item_description="Older purchase",
+                amount=Decimal("275.00"),
+                transaction_date=datetime.utcnow() - timedelta(days=12),
+            )
+        )
+        db.session.add(
+            Ledger(
+                retailer_id=self.retailer.retailer_id,
+                customer_id=customer.customer_id,
+                outstanding_balance=Decimal("275.00"),
+            )
+        )
+        rule = ReminderRule(
+            retailer_id=self.retailer.retailer_id,
+            trigger_days_overdue=7,
+            message_template=(
+                "Rule text for {customer_name} at {business_name}: {balance}, "
+                "{days_overdue} days."
+            ),
+            channel="sms",
+            active=True,
+        )
+        db.session.add(rule)
+        db.session.commit()
+
+        result = run_ageing_analysis_and_dispatch(self.retailer.retailer_id)
+
+        self.assertEqual(result, {"scanned": 1, "sent": 1, "failed": 0})
+        dispatch.assert_called_once()
+        self.assertEqual(dispatch.call_args.args[1].rule_id, rule.rule_id)
+        self.assertEqual(
+            dispatch.call_args.args[2],
+            "Rule text for Scheduled Customer at Test Shop: KES 275.00, 12 days.\n"
+            "If you have already paid, please ignore this message. Thank you.",
+        )
+
+    @patch("app.reminders.dispatch_service.send_whatsapp", return_value=(True, "accepted"))
+    def test_live_test_api_uses_selected_opted_in_channel_and_rule_template(self, send_whatsapp):
+        customer = Customer(
+            retailer_id=self.retailer.retailer_id,
+            full_name="Amina Hassan",
+            phone_number="+254700000095",
+            preferred_channel="both",
+        )
+        db.session.add(customer)
+        db.session.flush()
+        db.session.add(
+            CreditTransaction(
+                retailer_id=self.retailer.retailer_id,
+                customer_id=customer.customer_id,
+                item_description="Test item",
+                amount=Decimal("350.00"),
+                transaction_date=datetime.utcnow() - timedelta(days=12),
+            )
+        )
+        db.session.add(
+            Ledger(
+                retailer_id=self.retailer.retailer_id,
+                customer_id=customer.customer_id,
+                outstanding_balance=Decimal("350.00"),
+            )
+        )
+        rule = ReminderRule(
+            retailer_id=self.retailer.retailer_id,
+            trigger_days_overdue=7,
+            message_template="Exact: {customer_name} owes {balance}.",
+            channel="sms",
+            active=True,
+        )
+        db.session.add(rule)
+        db.session.commit()
+        self.app.config["WHATSAPP_TOKEN"] = "test-token"
+        self.app.config["WHATSAPP_PHONE_ID"] = "test-phone-id"
+
+        response = self.client.post(
+            f"/reminders/api/customers/{customer.customer_id}/test",
+            json={"channel": "whatsapp", "confirm": True},
+            headers={"X-CSRFToken": self._csrf_token()},
+        )
+
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.json["status"], "accepted")
+        self.assertIn("does not confirm handset delivery", response.json["message"])
+        send_whatsapp.assert_called_once()
+        self.assertEqual(
+            send_whatsapp.call_args.args[1],
+            "Exact: Amina Hassan owes KES 350.00.\n"
+            "If you have already paid, please ignore this message. Thank you.",
+        )
+        dispatch = MessageDispatchLog.query.one()
+        self.assertEqual(dispatch.channel, "whatsapp")
+        self.assertEqual(dispatch.rule_id, rule.rule_id)
+
+    def test_live_test_api_rejects_missing_confirmation_and_unconfigured_provider(self):
+        customer = Customer(
+            retailer_id=self.retailer.retailer_id,
+            full_name="SMS Test",
+            phone_number="+254700000096",
+            preferred_channel="sms",
+        )
+        db.session.add(customer)
+        db.session.flush()
+        db.session.add(
+            CreditTransaction(
+                retailer_id=self.retailer.retailer_id,
+                customer_id=customer.customer_id,
+                item_description="Test item",
+                amount=Decimal("100.00"),
+                transaction_date=datetime.utcnow() - timedelta(days=12),
+            )
+        )
+        db.session.add(
+            Ledger(
+                retailer_id=self.retailer.retailer_id,
+                customer_id=customer.customer_id,
+                outstanding_balance=Decimal("100.00"),
+            )
+        )
+        self._add_rule(active=True)
+        db.session.commit()
+        headers = {"X-CSRFToken": self._csrf_token()}
+
+        unconfirmed = self.client.post(
+            f"/reminders/api/customers/{customer.customer_id}/test",
+            json={"channel": "sms", "confirm": False},
+            headers=headers,
+        )
+        unconfigured = self.client.post(
+            f"/reminders/api/customers/{customer.customer_id}/test",
+            json={"channel": "sms", "confirm": True},
+            headers=headers,
+        )
+
+        self.assertEqual(unconfirmed.status_code, 400)
+        self.assertEqual(unconfigured.status_code, 503)
+        self.assertEqual(MessageDispatchLog.query.count(), 0)
+
+    def test_provider_status_api_never_returns_credentials(self):
+        self.app.config["WHATSAPP_TOKEN"] = "do-not-expose"
+        self.app.config["WHATSAPP_PHONE_ID"] = "phone-id"
+
+        response = self.client.get("/reminders/api/providers/status")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json["providers"]["whatsapp"]["configured"])
+        self.assertNotIn(b"do-not-expose", response.data)
 
     @patch("app.reminders.dispatch_service.send_sms")
     def test_personal_reminder_does_not_send_for_cleared_account(self, send_sms):
