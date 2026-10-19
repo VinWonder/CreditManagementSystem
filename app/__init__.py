@@ -1,5 +1,6 @@
-from flask import Flask
+from flask import Flask, render_template
 from sqlalchemy import inspect, text
+from sqlalchemy.exc import ProgrammingError
 from config import Config
 from app.extensions import db, login_manager, migrate, scheduler
 
@@ -18,6 +19,15 @@ def create_app(config_class=Config):
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
+
+    @app.errorhandler(ProgrammingError)
+    def handle_database_programming_error(error):
+        db.session.rollback()
+        app.logger.error(
+            "Database programming error (%s). Verify that database migrations are current.",
+            type(error.orig).__name__,
+        )
+        return render_template("errors/database.html"), 503
 
     from app.models import Retailer, Shopkeeper
 
