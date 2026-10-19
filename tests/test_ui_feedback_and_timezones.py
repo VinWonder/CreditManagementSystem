@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from flask import flash, render_template
 
 from app import create_app
-from app.timezones import format_nairobi_datetime
+from app.timezones import days_since_nairobi_date, format_nairobi_datetime
 
 
 class UiFeedbackConfig:
@@ -43,6 +43,21 @@ class UiFeedbackAndTimezoneTests(unittest.TestCase):
         self.assertEqual(
             format_nairobi_datetime(recorded_utc, "%H:%M"),
             "15:00",
+        )
+
+    def test_first_reminder_day_uses_nairobi_calendar_date_not_24_hours(self):
+        sale_just_before_midnight = datetime(
+            2026, 10, 18, 20, 50, tzinfo=timezone.utc
+        )
+        next_day_just_after_midnight = datetime(
+            2026, 10, 18, 21, 10, tzinfo=timezone.utc
+        )
+
+        self.assertEqual(
+            days_since_nairobi_date(
+                sale_just_before_midnight, next_day_just_after_midnight
+            ),
+            1,
         )
 
     def test_success_notice_has_unique_style_and_twenty_second_dismissal(self):

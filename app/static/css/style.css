@@ -854,9 +854,12 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .app-account-label { color: rgba(255, 255, 255, 0.55); font-size: 0.59rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .app-account-name { color: #fff; font-size: 0.74rem; font-weight: 650; margin-top: 0.18rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-logout-link { align-items: center; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 0.62rem; color: rgba(255, 255, 255, 0.8); display: inline-flex; font-size: 0.73rem; font-weight: 650; gap: 0.42rem; min-height: 2.4rem; padding: 0.45rem 0.7rem; text-decoration: none; transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease; white-space: nowrap; }
+.app-logout-form { display: inline-flex; margin: 0; }
+.app-logout-link { background: transparent; cursor: pointer; font-family: inherit; }
 .app-logout-link i { color: #d8ef9f; font-size: 0.95rem; }
 .app-logout-link:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.4); color: #fff; }
 .app-navbar a:focus-visible, .app-nav-toggle:focus-visible { outline: 2px solid #d8ef9f; outline-offset: 3px; }
+.app-logout-link:focus-visible { outline: 2px solid #d8ef9f; outline-offset: 3px; }
 .app-nav-toggle { border-color: rgba(255, 255, 255, 0.28); padding: 0.4rem 0.55rem; }
 .app-nav-toggle .navbar-toggler-icon { filter: brightness(0) invert(1); height: 1.25rem; width: 1.25rem; }
 
@@ -1063,7 +1066,7 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .payment-history-card-heading h2 { color: #26443f; font-size: 0.8rem; font-weight: 800; margin: 0; }
 .payment-history-card-heading p { color: #82918d; font-size: 0.61rem; margin: 0.2rem 0 0; }
 .payment-history-count { background: #eef5f1; border: 1px solid #e3eee8; border-radius: 2rem; color: #5c7d70; font-size: 0.58rem; font-weight: 750; padding: 0.3rem 0.55rem; }
-.payment-history-table { --bs-table-bg: transparent; }
+.payment-history-table { --bs-table-bg: transparent; min-width: 50rem; }
 .payment-history-table thead th { background: #f7faf8; border-bottom-color: #e7eeeb; color: #78908a; font-size: 0.57rem; font-weight: 800; letter-spacing: 0.08em; padding: 0.7rem 1.1rem; text-transform: uppercase; }
 .payment-history-table tbody td { border-bottom-color: #edf2ef; padding: 0.75rem 1.1rem; }
 .payment-history-table tbody tr:last-child td { border-bottom: 0; }
@@ -1079,7 +1082,10 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .payment-history-customer:hover strong { color: #2c7a7b; text-decoration: underline; text-underline-offset: 2px; }
 .payment-history-customer:hover .payment-history-customer-link, .payment-history-customer:focus-visible .payment-history-customer-link { opacity: 1; }
 .payment-history-customer:focus-visible { border-radius: 0.35rem; outline: 2px solid var(--brand); outline-offset: 3px; }
-.payment-history-amount { background: #eaf6ef; border: 1px solid #dcefe3; border-radius: 0.52rem; color: #287751; display: inline-flex; font-size: 0.67rem; font-variant-numeric: tabular-nums; font-weight: 800; padding: 0.38rem 0.55rem; white-space: nowrap; }
+.payment-history-amount-cell { min-width: 10rem; }
+.payment-history-approval-cell { min-width: 8rem; }
+.payment-history-amount { background: #eaf6ef; border: 1px solid #c9e5d3; border-radius: 0.52rem; color: #205d3b; display: inline-flex; font-size: 0.95rem; font-variant-numeric: tabular-nums; font-weight: 850; justify-content: center; min-width: 9rem; padding: 0.48rem 0.65rem; white-space: nowrap; }
+.payment-history-table .badge { font-size: 0.78rem; padding: 0.42rem 0.58rem; }
 .payment-history-table tfoot th, .payment-history-table tfoot td { background: #f7faf8; border-top: 1px solid #e5eeea; color: #46665a; font-size: 0.64rem; padding: 0.7rem 1.1rem; }
 .payment-history-table tfoot td strong { color: #287751; font-variant-numeric: tabular-nums; }
 .payment-history-empty { align-items: center; display: flex; flex-direction: column; min-height: 14rem; justify-content: center; padding: 2rem 1.25rem; text-align: center; }
@@ -1098,7 +1104,7 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
   .payment-history-header > div > p:last-child { max-width: 18rem; }
   .payment-history-add { font-size: 0; gap: 0; height: 2.45rem; padding: 0; width: 2.45rem; }
   .payment-history-add i { font-size: 0.85rem; }
-  .payment-history-table { min-width: 37rem; }
+  .payment-history-table { min-width: 50rem; }
 }
 .receivables-page { margin: 0 auto; max-width: 72rem; }
 .receivables-header { align-items: flex-end; display: flex; flex-wrap: wrap; gap: 0.9rem; justify-content: space-between; margin-bottom: 1.1rem; }

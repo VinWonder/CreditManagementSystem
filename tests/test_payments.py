@@ -1,4 +1,5 @@
 import unittest
+from decimal import Decimal
 from werkzeug.datastructures import MultiDict
 
 from app import create_app
@@ -168,6 +169,26 @@ class PaymentFlowTests(unittest.TestCase):
         self.assertIn(b"Customers paid", response.data)
         self.assertNotIn(b"Other Customer", response.data)
         self.assertNotIn(b"KES 900.00", response.data)
+
+    def test_approved_payment_amount_is_fully_visible_and_emphasized(self):
+        db.session.add(
+            Payment(
+                retailer_id=self.retailer_id,
+                customer_id=self.customer_id,
+                amount_paid=Decimal("500.00"),
+                approval_status="approved",
+            )
+        )
+        db.session.commit()
+
+        response = self.client.get("/payments/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            b'<span class="payment-history-amount" aria-label="Amount received KES 500.00">KES 500.00</span>',
+            response.data,
+        )
+        self.assertIn(b"payment-history-amount-cell", response.data)
 
 
 if __name__ == "__main__":

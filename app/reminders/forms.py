@@ -33,7 +33,8 @@ class ReminderActionForm(FlaskForm):
 
 class ReminderRuleForm(FlaskForm):
     trigger_days_overdue = IntegerField(
-        "Send when overdue by (days)", validators=[DataRequired(), NumberRange(min=1, max=365)]
+        "Send after the credit sale (days)",
+        validators=[DataRequired(), NumberRange(min=1, max=365)],
     )
     channel = SelectField(
         "Channel",

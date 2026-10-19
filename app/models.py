@@ -3,6 +3,7 @@ from decimal import Decimal
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.extensions import db
+from app.timezones import days_since_nairobi_date
 
 
 class Retailer(UserMixin, db.Model):
@@ -321,7 +322,9 @@ class Ledger(db.Model):
                 ).first()
             )
             if oldest_unpaid:
-                self.days_overdue = (datetime.utcnow() - oldest_unpaid.transaction_date).days
+                self.days_overdue = days_since_nairobi_date(
+                    oldest_unpaid.transaction_date
+                )
         else:
             self.days_overdue = 0
         self.last_updated = datetime.utcnow()

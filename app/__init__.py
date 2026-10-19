@@ -41,6 +41,7 @@ def create_app(config_class=Config):
 
     # ---- Blueprints ----
     from app.auth.routes import auth_bp
+    from app.auth.forms import LogoutForm
     from app.main.routes import main_bp
     from app.customers.routes import customers_bp
     from app.transactions.routes import transactions_bp
@@ -55,6 +56,10 @@ def create_app(config_class=Config):
     app.register_blueprint(payments_bp)
     app.register_blueprint(ledger_bp)
     app.register_blueprint(reminders_bp)
+
+    @app.context_processor
+    def inject_logout_form():
+        return {"logout_form": LogoutForm()}
 
     # ---- Scheduler: daily automated reminder scan ----
     if app.config["SCHEDULER_ENABLED"] and not scheduler.running:

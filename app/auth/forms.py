@@ -43,6 +43,10 @@ class LoginForm(FlaskForm):
     submit = SubmitField("Log In")
 
 
+class LogoutForm(FlaskForm):
+    """CSRF-protected form for ending an authenticated session."""
+
+
 class ShopkeeperForm(FlaskForm):
     full_name = StringField("Shopkeeper full name", validators=[DataRequired(), Length(max=100)])
     phone_number = StringField(

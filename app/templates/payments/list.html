@@ -69,11 +69,11 @@
                 <i class="bi bi-arrow-up-right payment-history-customer-link" aria-hidden="true"></i>
               </a>
             </td>
-            <td class="text-end">
-              <span class="payment-history-amount">{{ payment.amount_paid | kes }}</span>
+            <td class="text-end payment-history-amount-cell">
+              <span class="payment-history-amount" aria-label="Amount received {{ payment.amount_paid | kes }}">{{ payment.amount_paid | kes }}</span>
               {% if payment.submitted_by_shopkeeper %}<small class="d-block text-muted">Submitted by {{ payment.submitted_by_shopkeeper.full_name }}</small>{% endif %}
             </td>
-            <td>
+            <td class="payment-history-approval-cell">
               <span class="badge {{ 'text-bg-warning' if payment.approval_status == 'pending' else 'text-bg-success' if payment.approval_status == 'approved' else 'text-bg-secondary' }}">{{ payment.approval_status|capitalize }}</span>
               {% if payment.review_note %}<small class="d-block text-muted">{{ payment.review_note }}</small>{% endif %}
             </td>

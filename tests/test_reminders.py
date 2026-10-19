@@ -145,6 +145,24 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertTrue(rule.active)
         self.assertIn("{days_overdue}", rule.message_template)
 
+    def test_new_rule_allows_first_day_after_credit_sale(self):
+        response = self.client.post(
+            "/reminders/rules/new",
+            data={
+                "csrf_token": self._csrf_token(),
+                "trigger_days_overdue": "1",
+                "channel": "sms",
+                "message_template": "Hello {customer_name}, balance {balance}.",
+                "active": "y",
+                "submit": "Save Rule",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(ReminderRule.query.one().trigger_days_overdue, 1)
+        rules_page = self.client.get("/reminders/rules")
+        self.assertIn(b"First day after sale", rules_page.data)
+
     def test_new_rule_rejects_unsupported_placeholder(self):
         response = self.client.post(
             "/reminders/rules/new",
