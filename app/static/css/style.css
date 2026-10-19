@@ -1193,6 +1193,11 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .reminder-form { display: grid; gap: 1.05rem; padding: 1.15rem 1.2rem 1.2rem; }
 .reminder-form-field { min-width: 0; }
 .reminder-form-field > .form-label, .reminder-message-label-row .form-label { color: #304e45; display: block; font-size: 0.68rem; font-weight: 800; margin-bottom: 0.38rem; }
+.reminder-rule-presets { align-items: center; display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0 0 0.5rem; }
+.reminder-rule-presets > span { color: #74877f; font-size: 0.57rem; font-weight: 750; margin-right: 0.12rem; }
+.reminder-rule-presets button { background: #f5f8f5; border: 1px solid #e1ebe3; border-radius: 1rem; color: #5d7468; cursor: pointer; font-size: 0.55rem; padding: 0.3rem 0.48rem; transition: background 140ms ease, border-color 140ms ease, color 140ms ease; }
+.reminder-rule-presets button:hover, .reminder-rule-presets button[aria-pressed="true"] { background: #e7f2e9; border-color: #cfe3d2; color: #286b50; }
+.reminder-rule-presets button:focus-visible { outline: 2px solid #73a894; outline-offset: 2px; }
 .reminder-form-input { align-items: center; background: #fff; border: 1px solid #dce7e2; border-radius: 0.62rem; display: flex; min-height: 2.8rem; }
 .reminder-form-input:focus-within { border-color: #73a894; box-shadow: 0 0 0 0.18rem rgba(64, 132, 105, 0.12); }
 .reminder-form-input > i { color: #6c9484; flex: 0 0 auto; font-size: 0.8rem; margin-left: 0.75rem; }

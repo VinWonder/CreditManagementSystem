@@ -10,6 +10,16 @@ from app.permissions import admin_required
 reminders_bp = Blueprint("reminders", __name__, url_prefix="/reminders")
 
 
+def _has_duplicate_trigger_days(trigger_days, excluding_rule_id=None):
+    query = ReminderRule.query.filter_by(
+        retailer_id=current_user.retailer_id,
+        trigger_days_overdue=trigger_days,
+    )
+    if excluding_rule_id is not None:
+        query = query.filter(ReminderRule.rule_id != excluding_rule_id)
+    return query.first() is not None
+
+
 @reminders_bp.route("/rules")
 @login_required
 def list_rules():
@@ -35,6 +45,12 @@ def list_rules():
 def new_rule():
     form = ReminderRuleForm()
     if form.validate_on_submit():
+        if _has_duplicate_trigger_days(form.trigger_days_overdue.data):
+            form.trigger_days_overdue.errors.append(
+                "A rule already exists for this overdue threshold. Edit that rule instead."
+            )
+            return render_template("reminders/form.html", form=form, title="New Reminder Rule")
+
         rule = ReminderRule(
             retailer_id=current_user.retailer_id,
             trigger_days_overdue=form.trigger_days_overdue.data,
@@ -60,6 +76,15 @@ def edit_rule(rule_id):
 
     form = ReminderRuleForm(obj=rule)
     if form.validate_on_submit():
+        if _has_duplicate_trigger_days(
+            form.trigger_days_overdue.data,
+            excluding_rule_id=rule.rule_id,
+        ):
+            form.trigger_days_overdue.errors.append(
+                "A rule already exists for this overdue threshold. Choose another threshold."
+            )
+            return render_template("reminders/form.html", form=form, title="Edit Reminder Rule")
+
         rule.trigger_days_overdue = form.trigger_days_overdue.data
         rule.channel = form.channel.data
         rule.message_template = form.message_template.data

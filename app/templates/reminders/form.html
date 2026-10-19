@@ -13,7 +13,7 @@
         <div>
           <p class="eyebrow mb-1">Automated collections</p>
           <h1 id="reminder-form-title">{{ title }}</h1>
-          <p>Set a clear trigger and write a helpful message for customers with an overdue balance.</p>
+          <p>Set a clear trigger and write a helpful message for customers with an overdue balance. The most specific matching rule is used for each customer in a scan.</p>
         </div>
       </header>
 
@@ -21,6 +21,13 @@
         {{ form.hidden_tag() }}
         <div class="reminder-form-field">
           {{ form.trigger_days_overdue.label(class="form-label") }}
+          <div class="reminder-rule-presets" aria-label="Quick-start overdue thresholds">
+            <span>Quick start</span>
+            <button type="button" data-trigger-days="3" aria-pressed="false">3 days · early nudge</button>
+            <button type="button" data-trigger-days="7" aria-pressed="false">7 days · friendly reminder</button>
+            <button type="button" data-trigger-days="14" aria-pressed="false">14 days · follow-up</button>
+            <button type="button" data-trigger-days="30" aria-pressed="false">30 days · overdue</button>
+          </div>
           <span class="reminder-form-input reminder-trigger-input">
             <i class="bi bi-hourglass-split" aria-hidden="true"></i>
             {{ form.trigger_days_overdue(class="form-control", min="1", max="365", step="1", inputmode="numeric", placeholder="e.g. 7", required=true, **{"aria-describedby": "trigger-help" ~ (" trigger-errors" if form.trigger_days_overdue.errors else ""), "aria-invalid": "true" if form.trigger_days_overdue.errors else "false"}) }}
@@ -103,10 +110,30 @@
 {% block scripts %}
 <script>
 (() => {
+  const trigger = document.getElementById("trigger_days_overdue");
+  const presets = document.querySelectorAll("[data-trigger-days]");
   const message = document.getElementById("message_template");
   const characterCount = document.getElementById("reminder-character-count");
   const preview = document.getElementById("reminder-message-preview");
-  if (!message || !characterCount || !preview) return;
+  if (!trigger || !message || !characterCount || !preview) return;
+
+  function updatePresets() {
+    presets.forEach((preset) => {
+      preset.setAttribute(
+        "aria-pressed",
+        String(preset.dataset.triggerDays === trigger.value)
+      );
+    });
+  }
+
+  presets.forEach((preset) => {
+    preset.addEventListener("click", () => {
+      trigger.value = preset.dataset.triggerDays;
+      trigger.dispatchEvent(new Event("input", { bubbles: true }));
+      updatePresets();
+    });
+  });
+  trigger.addEventListener("input", updatePresets);
 
   const examples = {
     customer_name: "Amina",
@@ -122,6 +149,7 @@
     characterCount.classList.toggle("is-near-limit", message.value.length >= 450);
   }
   message.addEventListener("input", updatePreview);
+  updatePresets();
   updatePreview();
 })();
 </script>

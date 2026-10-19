@@ -11,7 +11,7 @@
     <div class="reminder-rules-actions">
       <a href="{{ url_for('reminders.dispatch_log') }}" class="reminder-secondary-button"><i class="bi bi-clock-history" aria-hidden="true"></i> Dispatch log</a>
       {% if current_user.is_admin %}
-      <a href="{{ url_for('reminders.new_rule') }}" class="reminder-primary-button"><i class="bi bi-plus-lg" aria-hidden="true"></i> New rule</a>
+      <a href="{{ url_for('reminders.new_rule') }}" class="reminder-primary-button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Create reminder rule</a>
       {% endif %}
     </div>
   </header>

@@ -7,6 +7,7 @@ from flask_login import login_user
 from app import create_app
 from app.extensions import db
 from app.models import ReminderRule, Retailer
+from app.reminders.engine import select_matching_rule
 
 
 class TestConfig:
@@ -78,6 +79,7 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertIn(b"name=\"csrf_token\"", response.data)
         self.assertIn(b"Matching customers may receive a real SMS or WhatsApp message", response.data)
         self.assertIn(b"08:00", response.data)
+        self.assertIn(b"Create reminder rule", response.data)
 
     def test_new_rule_form_shows_placeholder_guidance_and_preview(self):
         response = self.client.get("/reminders/rules/new")
@@ -86,6 +88,7 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertIn(b"Available placeholders", response.data)
         self.assertIn(b"reminder-message-preview", response.data)
         self.assertIn(b"Activate this rule", response.data)
+        self.assertIn(b"data-trigger-days=\"7\"", response.data)
 
     def test_new_rule_accepts_supported_placeholders(self):
         response = self.client.post(
@@ -142,6 +145,25 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Placeholders must use complete braces", response.data)
         self.assertEqual(ReminderRule.query.count(), 0)
+
+    def test_new_rule_rejects_duplicate_overdue_threshold(self):
+        self._add_rule()
+
+        response = self.client.post(
+            "/reminders/rules/new",
+            data={
+                "csrf_token": self._csrf_token(),
+                "trigger_days_overdue": "7",
+                "channel": "whatsapp",
+                "message_template": "Hello {customer_name}.",
+                "active": "y",
+                "submit": "Save Rule",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"A rule already exists for this overdue threshold", response.data)
+        self.assertEqual(ReminderRule.query.count(), 1)
 
     @patch("app.reminders.routes.run_ageing_analysis_and_dispatch")
     def test_manual_scan_without_active_rules_does_not_run(self, run_scan):
@@ -213,6 +235,24 @@ class ReminderRulePageTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIsNone(db.session.get(ReminderRule, rule.rule_id))
+
+
+class ReminderRuleSelectionTests(unittest.TestCase):
+    def test_selects_only_the_most_specific_matching_threshold(self):
+        rules = [
+            ReminderRule(trigger_days_overdue=3),
+            ReminderRule(trigger_days_overdue=7),
+            ReminderRule(trigger_days_overdue=14),
+        ]
+
+        selected = select_matching_rule(rules, days_overdue=10)
+
+        self.assertEqual(selected.trigger_days_overdue, 7)
+
+    def test_returns_no_rule_when_threshold_has_not_been_reached(self):
+        rules = [ReminderRule(trigger_days_overdue=7)]
+
+        self.assertIsNone(select_matching_rule(rules, days_overdue=6))
 
 
 if __name__ == "__main__":

@@ -1,15 +1,28 @@
 """
 Ageing analysis + automated reminder trigger engine.
 
-For every retailer, every active ReminderRule is matched against customer
-Ledgers whose days_overdue has crossed the rule's trigger threshold, a
-message is rendered from the template, and dispatched via dispatch_service.
+For every retailer, active ReminderRules are matched against customer
+Ledgers whose days_overdue has crossed a trigger threshold. The most specific
+eligible rule is selected so a single scan does not stack reminders.
 This is run automatically once a day by APScheduler (see scheduler_jobs.py)
 and can also be triggered manually from the reminders UI ("Run Now").
 """
 from app.extensions import db
 from app.models import Retailer, ReminderRule, Ledger, Customer
 from app.reminders.dispatch_service import dispatch_reminder
+
+
+def select_matching_rule(rules, days_overdue):
+    """Select the most specific eligible threshold to avoid stacked reminders."""
+    return max(
+        (
+            rule
+            for rule in rules
+            if days_overdue >= rule.trigger_days_overdue
+        ),
+        key=lambda rule: rule.trigger_days_overdue,
+        default=None,
+    )
 
 
 def render_template_message(template, customer, retailer, ledger):
@@ -46,16 +59,16 @@ def run_ageing_analysis_and_dispatch(retailer_id=None):
             summary["scanned"] += 1
             customer = Customer.query.get(ledger.customer_id)
 
-            for rule in rules:
-                if ledger.days_overdue >= rule.trigger_days_overdue:
-                    message = render_template_message(
-                        rule.message_template, customer, retailer, ledger
-                    )
-                    success, _info = dispatch_reminder(customer, rule, message)
-                    if success:
-                        summary["sent"] += 1
-                    else:
-                        summary["failed"] += 1
+            rule = select_matching_rule(rules, ledger.days_overdue)
+            if rule:
+                message = render_template_message(
+                    rule.message_template, customer, retailer, ledger
+                )
+                success, _info = dispatch_reminder(customer, rule, message)
+                if success:
+                    summary["sent"] += 1
+                else:
+                    summary["failed"] += 1
 
         db.session.commit()
 

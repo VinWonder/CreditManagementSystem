@@ -174,8 +174,12 @@ class RoleAndApprovalTests(unittest.TestCase):
         self.assertEqual(manage.status_code, 403)
         reminder_rules = self.client.get("/reminders/rules")
         self.assertEqual(reminder_rules.status_code, 200)
+        self.assertNotIn(b"Create reminder rule", reminder_rules.data)
+        self.assertNotIn(b"Create your first rule", reminder_rules.data)
         self.assertNotIn(b"New rule", reminder_rules.data)
         self.assertNotIn(b"Edit rule", reminder_rules.data)
+        create_rule = self.client.get("/reminders/rules/new")
+        self.assertEqual(create_rule.status_code, 403)
         self.assertEqual(Ledger.query.one().outstanding_balance, Decimal("100.00"))
         self.assertEqual(BalanceAdjustment.query.count(), 0)
 
