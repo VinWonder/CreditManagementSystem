@@ -1,18 +1,32 @@
 {% extends "base.html" %}
 {% block title %}Credit Transactions{% endblock %}
 {% block content %}
-<section class="transaction-history-page" aria-labelledby="transaction-history-title">
+<section class="transaction-history-page{% if print_mode %} is-print-view{% endif %}" aria-labelledby="transaction-history-title">
   <header class="transaction-history-header">
     <div>
       <p class="eyebrow mb-1">Customer credit book</p>
       <h1 id="transaction-history-title"><i class="bi bi-receipt" aria-hidden="true"></i> Credit Transactions</h1>
       <p>Review credit sales, find a customer purchase, and check offline sync status.</p>
     </div>
-    <a href="{{ url_for('transactions.new_transaction') }}" class="transaction-history-add">
-      <i class="bi bi-plus-lg" aria-hidden="true"></i> New Sale
-    </a>
+    <div class="transaction-history-actions">
+      <a href="{{ url_for('transactions.list_transactions', q=search, status=sync_status, print=1) }}" class="transaction-history-print">
+        <i class="bi bi-printer" aria-hidden="true"></i> Print all sales
+      </a>
+      <a href="{{ url_for('transactions.new_transaction') }}" class="transaction-history-add">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i> New Sale
+      </a>
+    </div>
   </header>
 
+  {% if print_mode %}
+  <div class="transaction-print-heading">
+    <p class="transaction-print-shop">{{ current_user.business_name }}</p>
+    <h2>Credit sales report</h2>
+    <p>{{ filtered_count }} {{ 'sale' if filtered_count == 1 else 'sales' }} &middot; Total {{ filtered_amount | kes }}</p>
+    {% if search %}<p>Search: {{ search }}</p>{% endif %}
+    {% if sync_status != 'all' %}<p>Status: {{ 'Awaiting sync' if sync_status == 'pending' else 'Synced' }}</p>{% endif %}
+  </div>
+  {% else %}
   <div class="transaction-history-stats" aria-label="Credit transaction summary">
     <article class="transaction-history-stat transaction-history-stat-total">
       <span class="transaction-history-stat-icon"><i class="bi bi-wallet2" aria-hidden="true"></i></span>
@@ -33,16 +47,18 @@
       <small>{{ 'sale needs a connection' if pending_count == 1 else 'sales need a connection' if pending_count else 'All saved sales are synced' }}</small>
     </article>
   </div>
+  {% endif %}
 
   <section class="transaction-history-card" aria-labelledby="transaction-table-title">
     <div class="transaction-history-card-heading">
-      <div>
+      <div class="transaction-history-card-copy">
         <h2 id="transaction-table-title">Sales history</h2>
         <p>Newest sales appear first. Search by customer or item description.</p>
       </div>
       <span class="transaction-history-count">{{ filtered_count }} {{ 'result' if filtered_count == 1 else 'results' }}</span>
     </div>
 
+    {% if not print_mode %}
     <form method="GET" action="{{ url_for('transactions.list_transactions') }}" class="transaction-history-filters" role="search">
       <label class="transaction-search-box">
         <i class="bi bi-search" aria-hidden="true"></i>
@@ -63,6 +79,7 @@
       <a href="{{ url_for('transactions.list_transactions') }}" class="transaction-filter-clear">Clear filters</a>
       {% endif %}
     </form>
+    {% endif %}
 
     {% if transactions %}
     <div class="table-responsive">
@@ -116,7 +133,7 @@
     </div>
     {% endif %}
 
-    {% if total_pages > 1 %}
+    {% if not print_mode and total_pages > 1 %}
     <nav class="transaction-history-pagination" aria-label="Transaction pages">
       <span>Page {{ page }} of {{ total_pages }}</span>
       <div>
@@ -135,4 +152,12 @@
     {% endif %}
   </section>
 </section>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+{% if print_mode %}
+<script>
+  window.addEventListener("load", () => window.print());
+</script>
+{% endif %}
 {% endblock %}

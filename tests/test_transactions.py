@@ -229,6 +229,29 @@ class TransactionHistoryPageTests(unittest.TestCase):
         self.assertIn(b"Item 00", second_page.data)
         self.assertIn(b"Page 2 of 2", second_page.data)
 
+    def test_print_view_includes_all_matching_sales_across_pages(self):
+        start = datetime(2026, 10, 1)
+        for index in range(26):
+            self._add_transaction(
+                self.customer,
+                f"Item {index:02}",
+                "1.00",
+                transaction_date=start + timedelta(minutes=index),
+            )
+        self._add_transaction(self.other_customer, "Filtered item", "15.00", status="pending")
+
+        response = self.client.get("/transactions/?q=Item&status=synced&print=1")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Credit sales report", response.data)
+        self.assertIn(b"Test Shop", response.data)
+        self.assertIn(b"Total KES 26.00", response.data)
+        self.assertIn(b"Item 00", response.data)
+        self.assertIn(b"Item 25", response.data)
+        self.assertNotIn(b"Filtered item", response.data)
+        self.assertNotIn(b"Page 1 of 2", response.data)
+        self.assertIn(b"window.print()", response.data)
+
 
 if __name__ == "__main__":
     unittest.main()

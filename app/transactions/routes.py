@@ -87,6 +87,7 @@ def list_transactions():
     page_size = 25
     search = request.args.get("q", "").strip()[:100]
     sync_status = request.args.get("status", "all")
+    print_mode = request.args.get("print") == "1"
     if sync_status not in {"all", "synced", "pending"}:
         sync_status = "all"
 
@@ -120,15 +121,23 @@ def list_transactions():
     total_pages = ceil(filtered_count / page_size)
     page = request.args.get("page", 1, type=int) or 1
     page = min(max(page, 1), max(total_pages, 1))
-    transactions = (
-        retailer_transactions.order_by(
-            CreditTransaction.transaction_date.desc(),
-            CreditTransaction.transaction_id.desc(),
-        )
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-        .all()
+    ordered_transactions = retailer_transactions.order_by(
+        CreditTransaction.transaction_date.desc(),
+        CreditTransaction.transaction_id.desc(),
     )
+    if print_mode:
+        transactions = ordered_transactions.all()
+        filtered_amount = (
+            retailer_transactions.with_entities(
+                func.coalesce(func.sum(CreditTransaction.amount), 0)
+            ).scalar()
+        )
+    else:
+        transactions = (
+            ordered_transactions.offset((page - 1) * page_size).limit(page_size).all()
+        )
+        filtered_amount = 0
+
     return render_template(
         "transactions/list.html",
         transactions=transactions,
@@ -140,6 +149,8 @@ def list_transactions():
         sync_status=sync_status,
         page=page,
         total_pages=total_pages,
+        print_mode=print_mode,
+        filtered_amount=filtered_amount,
     )
 
 

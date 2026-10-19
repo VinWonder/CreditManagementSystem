@@ -1155,9 +1155,13 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 }
 .transaction-history-page { margin: 0 auto; max-width: 76rem; }
 .transaction-history-header { align-items: center; display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: space-between; margin-bottom: 1rem; }
+.transaction-history-actions { align-items: center; display: inline-flex; flex-wrap: wrap; gap: 0.5rem; }
 .transaction-history-header h1 { color: var(--ink); font-size: clamp(1.45rem, 3.2vw, 1.95rem); font-weight: 800; letter-spacing: -0.045em; margin: 0; }
 .transaction-history-header h1 i { color: #347b65; font-size: 0.88em; margin-right: 0.22rem; }
 .transaction-history-header p:last-child { color: #71847c; font-size: 0.68rem; line-height: 1.5; margin: 0.32rem 0 0; }
+.transaction-history-print { align-items: center; border: 1px solid #d8e5df; border-radius: 0.62rem; color: #315b50; display: inline-flex; font-size: 0.67rem; font-weight: 750; gap: 0.4rem; justify-content: center; min-height: 2.55rem; padding: 0.58rem 0.85rem; text-decoration: none; white-space: nowrap; }
+.transaction-history-print:hover { background: #eff6f3; border-color: #c7dbd1; color: #205b4b; }
+.transaction-print-heading { display: none; }
 .transaction-history-add, .transaction-history-empty-action { align-items: center; background: linear-gradient(135deg, #2c7a7b, #205b5c); border: 1px solid #205b5c; border-radius: 0.62rem; box-shadow: 0 0.35rem 0.85rem rgba(32, 91, 92, 0.15); color: #fff; display: inline-flex; font-size: 0.67rem; font-weight: 800; gap: 0.4rem; justify-content: center; min-height: 2.55rem; padding: 0.58rem 0.85rem; text-decoration: none; transition: box-shadow 150ms ease, transform 150ms ease; }
 .transaction-history-add:hover, .transaction-history-empty-action:hover { box-shadow: 0 0.55rem 1rem rgba(32, 91, 92, 0.23); color: #fff; transform: translateY(-1px); }
 .transaction-history-add:focus-visible, .transaction-history-empty-action:focus-visible, .transaction-history-pagination a:focus-visible { outline: 3px solid #8dbeb0; outline-offset: 3px; }
@@ -1230,4 +1234,31 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
   .transaction-filter-submit { flex: 0 0 auto; }
   .transaction-history-table { min-width: 48rem; }
   .transaction-history-card-heading { align-items: flex-start; }
+}
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .app-navbar, .app-footer, .transaction-history-header, .transaction-history-stats,
+  .transaction-history-card-copy, .transaction-history-count, .transaction-history-filters,
+  .transaction-history-pagination, .transaction-history-actions, .transaction-history-empty-action { display: none !important; }
+  main.container { margin: 0 !important; max-width: none !important; padding: 0 !important; }
+  .transaction-history-page { max-width: none; }
+  .transaction-print-heading { border-bottom: 1px solid #777; display: block; margin-bottom: 0.7rem; padding-bottom: 0.5rem; }
+  .transaction-print-heading p { font-size: 0.72rem; margin: 0.12rem 0; }
+  .transaction-print-heading .transaction-print-shop { font-size: 0.9rem; font-weight: 700; }
+  .transaction-print-heading h2 { font-size: 1.1rem; margin: 0.15rem 0; }
+  .transaction-history-card { border: 0; border-radius: 0; box-shadow: none; overflow: visible; }
+  .table-responsive { overflow: visible !important; }
+  .transaction-history-table { color: #000; min-width: 0; width: 100%; }
+  .transaction-history-table thead th { background: #eee !important; color: #000; padding: 0.4rem; }
+  .transaction-history-table tbody td { border-color: #bbb; color: #000; padding: 0.35rem 0.4rem; }
+  .transaction-history-date, .transaction-history-time, .transaction-history-customer,
+  .transaction-history-customer strong, .transaction-history-customer small,
+  .transaction-history-item, .transaction-history-amount, .transaction-sync-status { color: #000 !important; }
+  .transaction-history-date i, .transaction-history-avatar, .transaction-history-customer-link,
+  .transaction-sync-status i { display: none; }
+  .transaction-history-customer { min-width: 0; }
+  .transaction-history-item { max-width: none; white-space: normal; }
+  .transaction-sync-status { background: none !important; padding: 0; }
+  .transaction-history-table tr { break-inside: avoid; }
+  a { color: #000 !important; text-decoration: none !important; }
 }
