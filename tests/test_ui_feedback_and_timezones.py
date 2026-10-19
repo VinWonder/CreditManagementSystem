@@ -56,6 +56,17 @@ class UiFeedbackAndTimezoneTests(unittest.TestCase):
         with open("app/static/js/flash-messages.js", encoding="utf-8") as source:
             self.assertIn("dismiss, 20000", source.read())
 
+    def test_welcome_preview_uses_shop_workflow_instead_of_scary_debt_total(self):
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Every account,", response.data)
+        self.assertIn(b"Sales", response.data)
+        self.assertIn(b"Payments", response.data)
+        self.assertIn(b"Follow-up", response.data)
+        self.assertNotIn(b"KES 18,450", response.data)
+        self.assertNotIn(b"OUTSTANDING CREDIT", response.data)
+
 
 if __name__ == "__main__":
     unittest.main()
