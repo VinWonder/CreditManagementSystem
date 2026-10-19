@@ -77,6 +77,14 @@
             <i class="bi bi-bell" aria-hidden="true"></i><span>Reminders</span>
           </a>
         </li>
+        {% if current_user.is_admin %}
+        <li class="nav-item">
+          <a class="nav-link{% if request.endpoint == 'auth.manage_shopkeepers' %} active{% endif %}"
+            href="{{ url_for('auth.manage_shopkeepers') }}"{% if request.endpoint == 'auth.manage_shopkeepers' %} aria-current="page"{% endif %}>
+            <i class="bi bi-person-gear" aria-hidden="true"></i><span>Shopkeepers</span>
+          </a>
+        </li>
+        {% endif %}
       </ul>
 
       <div class="app-nav-account">
@@ -90,7 +98,7 @@
             {% endif %}
           </span>
           <span class="app-account-details">
-            <span class="app-account-label">Your shop</span>
+            <span class="app-account-label">{{ 'Shop admin' if current_user.is_admin else 'Shopkeeper' }}</span>
             <span class="app-account-name">{{ current_user.business_name }}</span>
           </span>
         </div>

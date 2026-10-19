@@ -76,12 +76,14 @@
               {% endif %}
             </td>
             <td class="text-end customer-actions-column">
+              {% if current_user.is_admin %}
               <div class="customer-row-actions">
                 <a href="{{ url_for('customers.edit_customer', customer_id=c.customer_id) }}" class="customer-action customer-action-edit" aria-label="Edit {{ c.full_name }}" title="Edit customer"><i class="bi bi-pencil" aria-hidden="true"></i></a>
                 <form action="{{ url_for('customers.delete_customer', customer_id=c.customer_id) }}" method="POST" onsubmit="return confirm('Delete this customer?');">
                   <button type="submit" class="customer-action customer-action-delete" aria-label="Delete {{ c.full_name }}" title="Delete customer"><i class="bi bi-trash3" aria-hidden="true"></i></button>
                 </form>
               </div>
+              {% endif %}
             </td>
           </tr>
         {% endfor %}

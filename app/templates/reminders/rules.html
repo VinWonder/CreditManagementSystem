@@ -10,7 +10,9 @@
     </div>
     <div class="reminder-rules-actions">
       <a href="{{ url_for('reminders.dispatch_log') }}" class="reminder-secondary-button"><i class="bi bi-clock-history" aria-hidden="true"></i> Dispatch log</a>
+      {% if current_user.is_admin %}
       <a href="{{ url_for('reminders.new_rule') }}" class="reminder-primary-button"><i class="bi bi-plus-lg" aria-hidden="true"></i> New rule</a>
+      {% endif %}
     </div>
   </header>
 
@@ -51,7 +53,7 @@
     {% if rules %}
     <div class="table-responsive">
       <table class="table reminder-rules-table align-middle mb-0">
-        <thead><tr><th scope="col">Reminder trigger</th><th scope="col">Channel</th><th scope="col">Message preview</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+        <thead><tr><th scope="col">Reminder trigger</th><th scope="col">Channel</th><th scope="col">Message preview</th><th scope="col">Status</th>{% if current_user.is_admin %}<th scope="col"><span class="visually-hidden">Actions</span></th>{% endif %}</tr></thead>
         <tbody>
         {% for rule in rules %}
           <tr>
@@ -59,6 +61,7 @@
             <td><span class="reminder-channel"><i class="bi {{ 'bi-chat-square-dots-fill' if rule.channel == 'both' else 'bi-chat-dots-fill' if rule.channel == 'whatsapp' else 'bi-chat-left-text-fill' }}" aria-hidden="true"></i>{{ {'sms': 'SMS', 'whatsapp': 'WhatsApp', 'both': 'SMS + WhatsApp'}.get(rule.channel, rule.channel|capitalize) }}</span></td>
             <td><span class="reminder-message-preview" title="{{ rule.message_template }}">{{ rule.message_template }}</span></td>
             <td>{% if rule.active %}<span class="reminder-rule-status is-active"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Active</span>{% else %}<span class="reminder-rule-status is-paused"><i class="bi bi-pause-circle-fill" aria-hidden="true"></i> Paused</span>{% endif %}</td>
+            {% if current_user.is_admin %}
             <td class="text-end">
               <div class="reminder-row-actions">
                 <a href="{{ url_for('reminders.edit_rule', rule_id=rule.rule_id) }}" class="reminder-row-action" aria-label="Edit rule for {{ rule.trigger_days_overdue }} days overdue" title="Edit rule"><i class="bi bi-pencil" aria-hidden="true"></i></a>
@@ -68,6 +71,7 @@
                 </form>
               </div>
             </td>
+            {% endif %}
           </tr>
         {% endfor %}
         </tbody>
@@ -78,7 +82,7 @@
       <span class="reminder-empty-icon"><i class="bi bi-bell-slash" aria-hidden="true"></i></span>
       <h3>No reminder rules yet</h3>
       <p>Create a rule to choose when overdue customers are reminded and which channel to use. You can pause or edit a rule at any time.</p>
-      <a href="{{ url_for('reminders.new_rule') }}" class="reminder-primary-button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Create your first rule</a>
+      {% if current_user.is_admin %}<a href="{{ url_for('reminders.new_rule') }}" class="reminder-primary-button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Create your first rule</a>{% endif %}
     </div>
     {% endif %}
   </section>

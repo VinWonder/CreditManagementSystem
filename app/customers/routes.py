@@ -4,6 +4,8 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import CreditTransaction, Customer, Ledger
 from app.customers.forms import CustomerForm
+from app.payments.forms import BalanceAdjustmentForm
+from app.permissions import admin_required
 
 customers_bp = Blueprint("customers", __name__, url_prefix="/customers")
 
@@ -80,6 +82,7 @@ def new_customer():
 
 @customers_bp.route("/<int:customer_id>/edit", methods=["GET", "POST"])
 @login_required
+@admin_required
 def edit_customer(customer_id):
     customer = _owned_customer_or_404(customer_id)
     if not customer:
@@ -99,6 +102,7 @@ def edit_customer(customer_id):
 
 @customers_bp.route("/<int:customer_id>/delete", methods=["POST"])
 @login_required
+@admin_required
 def delete_customer(customer_id):
     customer = _owned_customer_or_404(customer_id)
     if customer:
@@ -119,6 +123,12 @@ def view_customer(customer_id):
         db.desc("transaction_date")
     ).all()
     payments = customer.payments.order_by(db.desc("payment_date")).all()
+    adjustments = customer.balance_adjustments.order_by(db.desc("created_at")).all()
     return render_template(
-        "customers/view.html", customer=customer, transactions=transactions, payments=payments
+        "customers/view.html",
+        customer=customer,
+        transactions=transactions,
+        payments=payments,
+        adjustments=adjustments,
+        adjustment_form=BalanceAdjustmentForm(),
     )

@@ -43,6 +43,26 @@ class LoginForm(FlaskForm):
     submit = SubmitField("Log In")
 
 
+class ShopkeeperForm(FlaskForm):
+    full_name = StringField("Shopkeeper full name", validators=[DataRequired(), Length(max=100)])
+    phone_number = StringField(
+        "Phone Number",
+        validators=[
+            DataRequired(),
+            Regexp(
+                r"^\+?[\d\s().-]{7,25}$",
+                message="Enter a valid phone number using the country selector.",
+            ),
+        ],
+    )
+    password = PasswordField("Initial password", validators=PASSWORD_VALIDATORS)
+    submit = SubmitField("Create shopkeeper account")
+
+
+class ShopkeeperActionForm(FlaskForm):
+    submit = SubmitField("Update shopkeeper access")
+
+
 class ForgotPasswordForm(FlaskForm):
     phone_number = StringField(
         "Phone Number",

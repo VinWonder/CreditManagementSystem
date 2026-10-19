@@ -27,7 +27,11 @@ class Retailer(UserMixin, db.Model):
         "CreditTransaction", backref="retailer", lazy="dynamic", cascade="all, delete-orphan"
     )
     payments = db.relationship(
-        "Payment", backref="retailer", lazy="dynamic", cascade="all, delete-orphan"
+        "Payment",
+        backref="retailer",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+        foreign_keys="Payment.retailer_id",
     )
     reminder_rules = db.relationship(
         "ReminderRule", backref="retailer", lazy="dynamic", cascade="all, delete-orphan"
@@ -35,11 +39,18 @@ class Retailer(UserMixin, db.Model):
     ledgers = db.relationship(
         "Ledger", backref="retailer", lazy="dynamic", cascade="all, delete-orphan"
     )
+    shopkeepers = db.relationship(
+        "Shopkeeper", backref="retailer", lazy="dynamic", cascade="all, delete-orphan"
+    )
 
     # Flask-Login expects get_id() -> str; UserMixin provides it using self.id,
     # so we alias the primary key.
     def get_id(self):
         return str(self.retailer_id)
+
+    @property
+    def is_admin(self):
+        return True
 
     def set_password(self, raw_password):
         self.password_hash = generate_password_hash(raw_password)
@@ -49,6 +60,50 @@ class Retailer(UserMixin, db.Model):
 
     def __repr__(self):
         return f"<Retailer {self.business_name}>"
+
+
+class Shopkeeper(UserMixin, db.Model):
+    """A limited staff account belonging to one retailer."""
+
+    __tablename__ = "shopkeepers"
+
+    shopkeeper_id = db.Column(db.Integer, primary_key=True)
+    retailer_id = db.Column(
+        db.Integer, db.ForeignKey("retailers.retailer_id"), nullable=False, index=True
+    )
+    full_name = db.Column(db.String(100), nullable=False)
+    phone_number = db.Column(db.String(20), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def get_id(self):
+        return f"shopkeeper:{self.shopkeeper_id}"
+
+    @property
+    def is_admin(self):
+        return False
+
+    @property
+    def owner_name(self):
+        return self.full_name
+
+    @property
+    def business_name(self):
+        return self.retailer.business_name
+
+    @property
+    def logo_filename(self):
+        return self.retailer.logo_filename
+
+    def set_password(self, raw_password):
+        self.password_hash = generate_password_hash(raw_password)
+
+    def check_password(self, raw_password):
+        return check_password_hash(self.password_hash, raw_password)
+
+    def __repr__(self):
+        return f"<Shopkeeper {self.full_name}>"
 
 
 class PasswordResetCode(db.Model):
@@ -137,6 +192,9 @@ class Customer(db.Model):
     payments = db.relationship(
         "Payment", backref="customer", lazy="dynamic", cascade="all, delete-orphan"
     )
+    balance_adjustments = db.relationship(
+        "BalanceAdjustment", backref="customer", lazy="dynamic", cascade="all, delete-orphan"
+    )
     ledger = db.relationship(
         "Ledger", backref="customer", uselist=False, cascade="all, delete-orphan"
     )
@@ -182,9 +240,42 @@ class Payment(db.Model):
     amount_paid = db.Column(db.Numeric(10, 2), nullable=False)
     payment_date = db.Column(db.DateTime, default=datetime.utcnow)
     sync_status = db.Column(db.String(10), default="synced")  # pending | synced
+    approval_status = db.Column(
+        db.String(10), default="approved", server_default="approved", nullable=False
+    )
+    submitted_by_shopkeeper_id = db.Column(
+        db.Integer, db.ForeignKey("shopkeepers.shopkeeper_id"), nullable=True
+    )
+    reviewed_by_retailer_id = db.Column(
+        db.Integer, db.ForeignKey("retailers.retailer_id"), nullable=True
+    )
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    review_note = db.Column(db.String(255), nullable=True)
+    submitted_by_shopkeeper = db.relationship(
+        "Shopkeeper", foreign_keys=[submitted_by_shopkeeper_id]
+    )
 
     def __repr__(self):
         return f"<Payment {self.payment_id} KES {self.amount_paid}>"
+
+
+class BalanceAdjustment(db.Model):
+    """A reasoned, admin-authored correction to a customer's running balance."""
+
+    __tablename__ = "balance_adjustments"
+
+    adjustment_id = db.Column(db.Integer, primary_key=True)
+    retailer_id = db.Column(db.Integer, db.ForeignKey("retailers.retailer_id"), nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey("customers.customer_id"), nullable=False)
+    amount_change = db.Column(db.Numeric(10, 2), nullable=False)
+    reason = db.Column(db.String(255), nullable=False)
+    created_by_retailer_id = db.Column(
+        db.Integer, db.ForeignKey("retailers.retailer_id"), nullable=False
+    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<BalanceAdjustment {self.adjustment_id} {self.amount_change}>"
 
 
 class Ledger(db.Model):
@@ -211,9 +302,17 @@ class Ledger(db.Model):
             (to_decimal(t.amount) for t in self.customer.transactions), start=Decimal("0")
         )
         total_paid = sum(
-            (to_decimal(p.amount_paid) for p in self.customer.payments), start=Decimal("0")
+            (
+                to_decimal(p.amount_paid)
+                for p in self.customer.payments.filter_by(approval_status="approved")
+            ),
+            start=Decimal("0"),
         )
-        self.outstanding_balance = total_credit - total_paid
+        total_adjustments = sum(
+            (to_decimal(a.amount_change) for a in self.customer.balance_adjustments),
+            start=Decimal("0"),
+        )
+        self.outstanding_balance = total_credit - total_paid + total_adjustments
 
         if self.outstanding_balance > 0:
             oldest_unpaid = (

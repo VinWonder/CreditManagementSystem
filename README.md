@@ -102,12 +102,21 @@ IndexedDB and synced when the connection comes back.
 
 | Feature | Where to find it |
 |---|---|
-| Retailer accounts and password hashing | `app/auth` and `Retailer` in `app/models.py` |
+| Admin and shopkeeper accounts, roles, and password hashing | `app/auth` and `Retailer` / `Shopkeeper` in `app/models.py` |
 | Customer records and SMS/WhatsApp reminder preferences | `app/customers` |
 | Credit sales and payments | `app/transactions` and `app/payments` |
 | Balance updates and receivables report | `Ledger.recalculate()` and `app/ledger` |
 | Reminder rules and delivery | `app/reminders` |
 | Offline sale queue and sync | `app/static/js/offline-db.js`, `app/static/js/sync.js`, and `/transactions/api/sync` |
+
+Retailer owners are shop admins. Admins create and deactivate shopkeeper
+accounts from **Shopkeepers**; shopkeepers can add customers, record sales,
+submit payments for admin approval, view balances, and run configured
+reminders. Customer edits/deletion, reminder rule changes, payment approvals,
+and balance corrections are admin-only. A shopkeeper payment does not reduce
+the customer's outstanding balance until approved. Partial approved payments
+reduce the balance; a zero balance is shown as cleared. Manual corrections
+require a reason and are retained in the customer balance audit history.
 
 Phone verification and SMS sign-in codes are currently disabled. Password
 reset codes are supported.

@@ -6,7 +6,7 @@
     <div>
       <p class="eyebrow mb-1">Customer accounts</p>
       <h1 id="payment-page-title">Log a payment</h1>
-      <p>Record what a customer has paid and keep their outstanding balance up to date.</p>
+      <p>Record the amount actually received. Partial payments leave the remaining balance outstanding.</p>
     </div>
     <a class="payment-history-button" href="{{ url_for('payments.list_payments') }}">
       <i class="bi bi-clock-history" aria-hidden="true"></i>
@@ -22,7 +22,7 @@
         <div>
           <p class="payment-heading-kicker">New entry</p>
           <h2>Payment details</h2>
-          <p>Choose a customer with an outstanding balance, then enter the amount received.</p>
+          <p>Choose a customer with an available balance, then enter the amount received.</p>
         </div>
       </div>
 
@@ -52,7 +52,7 @@
             <i class="bi bi-person" aria-hidden="true"></i>
             {{ form.customer_id(class="form-select", required=true, **{"aria-describedby": "payment-customer-help" ~ (" payment-customer-errors" if form.customer_id.errors else ""), "aria-invalid": "true" if form.customer_id.errors else "false"}) }}
           </span>
-          <small class="payment-field-help" id="payment-customer-help">Only customers with a balance due are listed.</small>
+          <small class="payment-field-help" id="payment-customer-help">Only customers with an amount available after other payments awaiting review are listed.</small>
           {% if form.customer_id.errors %}
           <div class="payment-field-errors" id="payment-customer-errors" role="alert">
             {% for error in form.customer_id.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
@@ -62,7 +62,7 @@
 
         <div id="payment-balance-summary" class="payment-balance-summary" aria-live="polite">
           <span class="payment-balance-icon"><i class="bi bi-wallet2" aria-hidden="true"></i></span>
-          <span><small>Outstanding balance</small><strong id="payment-current-balance">Choose a customer</strong></span>
+          <span><small>Available balance</small><strong id="payment-current-balance">Choose a customer</strong></span>
         </div>
 
         <div class="payment-field">
@@ -71,7 +71,7 @@
             <span class="payment-currency" aria-hidden="true">KES</span>
             {{ form.amount_paid(class="form-control", placeholder="0.00", inputmode="decimal", min="0.01", max="99999999.99", step="0.01", required=true, **{"aria-describedby": "payment-amount-help" ~ (" payment-amount-errors" if form.amount_paid.errors else ""), "aria-invalid": "true" if form.amount_paid.errors else "false"}) }}
           </span>
-          <small class="payment-field-help" id="payment-amount-help">Enter the amount received. It cannot exceed the selected customer's balance.</small>
+          <small class="payment-field-help" id="payment-amount-help">Enter the amount received. The remaining balance will stay due until it is paid.</small>
           {% if form.amount_paid.errors %}
           <div class="payment-field-errors" id="payment-amount-errors" role="alert">
             {% for error in form.amount_paid.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
@@ -82,7 +82,7 @@
         <div id="payment-remaining-preview" class="payment-remaining-preview d-none" aria-live="polite"></div>
         <div class="payment-form-actions">
           <button type="submit" class="payment-submit-button">
-            <i class="bi bi-check2-circle" aria-hidden="true"></i> Log payment
+            <i class="bi bi-check2-circle" aria-hidden="true"></i> {{ 'Submit for approval' if not current_user.is_admin else 'Log payment' }}
           </button>
           <a href="{{ url_for('payments.list_payments') }}" class="payment-cancel-link">Cancel</a>
         </div>
@@ -99,7 +99,7 @@
         <li><i class="bi bi-check2" aria-hidden="true"></i><span>Enter the amount actually received.</span></li>
         <li><i class="bi bi-check2" aria-hidden="true"></i><span>The balance is recalculated from sales and payments.</span></li>
       </ul>
-      <div class="payment-side-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Payments reduce the balance owed; they do not create a new credit sale.</div>
+      <div class="payment-side-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Payments reduce the balance owed; they do not create a new credit sale. {% if not current_user.is_admin %}Your submission will update the balance after admin approval.{% endif %}</div>
     </aside>
   </div>
 </section>
@@ -114,6 +114,7 @@
   const amount = document.getElementById("amount_paid");
   const current = document.getElementById("payment-current-balance");
   const preview = document.getElementById("payment-remaining-preview");
+  const requiresApproval = {{ 'false' if current_user.is_admin else 'true' }};
   const formatKes = (value) => `KES ${Number(value).toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   function updateBalance() {
@@ -130,9 +131,11 @@
     const payment = Number(amount.value);
     if (Number.isFinite(payment) && payment > 0) {
       const remaining = Number(balance) - payment;
-      preview.textContent = remaining >= 0
-        ? `Balance after payment: ${formatKes(remaining)}`
-        : `Payment is ${formatKes(Math.abs(remaining))} above the balance due.`;
+      preview.textContent = remaining < 0
+        ? `Payment is ${formatKes(Math.abs(remaining))} above the available balance.`
+        : remaining === 0
+          ? `This payment will clear the balance${requiresApproval ? " after admin approval" : ""}.`
+          : `Balance remaining${requiresApproval ? " after approval" : " after payment"}: ${formatKes(remaining)}`;
       preview.classList.toggle("is-over", remaining < 0);
       preview.classList.remove("d-none");
     } else {

@@ -19,11 +19,14 @@ def create_app(config_class=Config):
     login_manager.init_app(app)
     migrate.init_app(app, db)
 
-    from app.models import Retailer
+    from app.models import Retailer, Shopkeeper
 
     @login_manager.user_loader
-    def load_user(retailer_id):
-        return db.session.get(Retailer, int(retailer_id))
+    def load_user(user_id):
+        if user_id.startswith("shopkeeper:"):
+            shopkeeper = db.session.get(Shopkeeper, int(user_id.split(":", 1)[1]))
+            return shopkeeper if shopkeeper and shopkeeper.active else None
+        return db.session.get(Retailer, int(user_id))
 
     # ---- Blueprints ----
     from app.auth.routes import auth_bp
@@ -85,6 +88,22 @@ def _upgrade_local_auth_schema():
         for name, definition in additions.items():
             if name not in columns:
                 connection.execute(text(f"ALTER TABLE retailers ADD COLUMN {name} {definition}"))
+        if "payments" in inspector.get_table_names():
+            payment_columns = {
+                column["name"] for column in inspector.get_columns("payments")
+            }
+            payment_additions = {
+                "approval_status": "VARCHAR(10) NOT NULL DEFAULT 'approved'",
+                "submitted_by_shopkeeper_id": "INTEGER",
+                "reviewed_by_retailer_id": "INTEGER",
+                "reviewed_at": "DATETIME",
+                "review_note": "VARCHAR(255)",
+            }
+            for name, definition in payment_additions.items():
+                if name not in payment_columns:
+                    connection.execute(
+                        text(f"ALTER TABLE payments ADD COLUMN {name} {definition}")
+                    )
         connection.execute(
             text("CREATE UNIQUE INDEX IF NOT EXISTS uq_retailers_email ON retailers (email)")
         )

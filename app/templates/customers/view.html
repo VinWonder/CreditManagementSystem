@@ -5,6 +5,7 @@
   <div>
     <h4>{{ customer.full_name }}</h4>
     <p class="text-muted mb-0"><i class="bi bi-telephone"></i> {{ customer.phone_number }} &middot; {{ 'SMS + WhatsApp' if customer.preferred_channel == 'both' else customer.preferred_channel|capitalize }}</p>
+    {% if current_user.is_admin %}<a class="small" href="{{ url_for('customers.edit_customer', customer_id=customer.customer_id) }}">Edit customer</a>{% endif %}
   </div>
   {% if customer.ledger %}
     <div class="text-end">
@@ -14,10 +15,33 @@
       </div>
       {% if customer.ledger.days_overdue > 0 %}
         <span class="badge badge-overdue">{{ customer.ledger.days_overdue }} days overdue</span>
+      {% elif customer.ledger.outstanding_balance <= 0 %}
+        <span class="badge text-bg-success">Cleared</span>
       {% endif %}
     </div>
   {% endif %}
 </div>
+
+{% if current_user.is_admin %}
+<div class="card p-3 mb-3">
+  <h6>Admin balance correction</h6>
+  <p class="small text-muted">Corrections require a reason and are permanently recorded in the balance audit history.</p>
+  <form method="POST" action="{{ url_for('payments.adjust_customer_balance', customer_id=customer.customer_id) }}" class="row g-2 align-items-end">
+    {{ adjustment_form.hidden_tag() }}
+    <div class="col-sm-3">
+      {{ adjustment_form.amount_change.label(class="form-label small") }}
+      {{ adjustment_form.amount_change(class="form-control", step="0.01", placeholder="e.g. -100.00", required=true) }}
+    </div>
+    <div class="col-sm-7">
+      {{ adjustment_form.reason.label(class="form-label small") }}
+      {{ adjustment_form.reason(class="form-control", maxlength="255", required=true) }}
+    </div>
+    <div class="col-sm-2">
+      <button class="btn btn-primary w-100" type="submit">Save correction</button>
+    </div>
+  </form>
+</div>
+{% endif %}
 
 <div class="row g-3">
   <div class="col-md-6">
@@ -42,17 +66,38 @@
       <h6>Payments</h6>
       <div class="table-responsive">
         <table class="table table-sm mb-0">
-          <thead><tr><th>Date</th><th>Amount</th></tr></thead>
+          <thead><tr><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
           <tbody>
           {% for p in payments %}
-            <tr><td class="small">{{ p.payment_date.strftime('%d %b %Y') }}</td><td>{{ p.amount_paid | kes }}</td></tr>
+            <tr>
+              <td class="small">{{ p.payment_date.strftime('%d %b %Y') }}</td>
+              <td>{{ p.amount_paid | kes }}</td>
+              <td>{{ p.approval_status|capitalize }}{% if p.review_note %}<small class="d-block text-muted">{{ p.review_note }}</small>{% endif %}</td>
+            </tr>
           {% else %}
-            <tr><td colspan="2" class="text-muted text-center">None yet.</td></tr>
+            <tr><td colspan="3" class="text-muted text-center">None yet.</td></tr>
           {% endfor %}
           </tbody>
         </table>
       </div>
     </div>
   </div>
+  {% if current_user.is_admin and adjustments %}
+  <div class="col-12">
+    <div class="card p-3">
+      <h6>Balance correction audit</h6>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Date</th><th>Change</th><th>Reason</th></tr></thead>
+          <tbody>
+          {% for adjustment in adjustments %}
+            <tr><td>{{ adjustment.created_at.strftime('%d %b %Y %H:%M') }}</td><td>{{ adjustment.amount_change | kes }}</td><td>{{ adjustment.reason }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

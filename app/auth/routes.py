@@ -12,16 +12,25 @@ import phonenumbers
 from phonenumbers import NumberParseException, PhoneNumberFormat
 
 from app.extensions import db
-from app.models import Retailer, PasswordResetCode, PhoneVerificationCode, LoginChallenge
+from app.models import (
+    Retailer,
+    Shopkeeper,
+    PasswordResetCode,
+    PhoneVerificationCode,
+    LoginChallenge,
+)
 from app.auth.forms import (
     RegisterForm,
     LoginForm,
+    ShopkeeperForm,
+    ShopkeeperActionForm,
     ForgotPasswordForm,
     VerifyResetCodeForm,
     ResetPasswordForm,
     ResendVerificationForm,
 )
 from app.reminders.dispatch_service import send_sms
+from app.permissions import admin_required
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -152,7 +161,8 @@ def register():
             return render_template("auth/register.html", form=form)
         email = normalized_email(form.email.data)
         existing = Retailer.query.filter_by(phone_number=phone_number).first()
-        if existing:
+        existing_shopkeeper = Shopkeeper.query.filter_by(phone_number=phone_number).first()
+        if existing or existing_shopkeeper:
             flash("That phone number is already registered. Please log in.", "warning")
             return redirect(url_for("auth.login"))
         if Retailer.query.filter_by(email=email).first():
@@ -204,18 +214,98 @@ def login():
         except ValueError:
             phone_number = None
         retailer = Retailer.query.filter_by(phone_number=phone_number).first()
-        if retailer and retailer.check_password(form.password.data):
+        shopkeeper = (
+            Shopkeeper.query.filter_by(phone_number=phone_number, active=True).first()
+            if not retailer
+            else None
+        )
+        account = retailer or shopkeeper
+        if account and account.check_password(form.password.data):
             session.pop("phone_verification_retailer_id", None)
             session.pop("login_challenge_id", None)
             session.pop("login_next", None)
             next_page = request.args.get("next")
-            login_user(retailer, fresh=True)
+            login_user(account, fresh=True)
             destination = next_page if is_safe_redirect(next_page) else url_for("main.dashboard")
             return redirect(destination)
 
         flash("Invalid phone number or password.", "danger")
 
     return render_template("auth/login.html", form=form)
+
+
+@auth_bp.route("/shopkeepers", methods=["GET", "POST"])
+@login_required
+@admin_required
+def manage_shopkeepers():
+    form = ShopkeeperForm()
+    if form.validate_on_submit():
+        try:
+            phone_number = normalize_phone(form.phone_number.data)
+        except ValueError as exc:
+            form.phone_number.errors.append(str(exc))
+            return render_template(
+                "auth/shopkeepers.html",
+                form=form,
+                action_form=ShopkeeperActionForm(),
+                shopkeepers=current_user.shopkeepers.order_by(Shopkeeper.full_name).all(),
+            )
+
+        if Retailer.query.filter_by(phone_number=phone_number).first() or Shopkeeper.query.filter_by(
+            phone_number=phone_number
+        ).first():
+            form.phone_number.errors.append("That phone number is already in use.")
+        else:
+            shopkeeper = Shopkeeper(
+                retailer_id=current_user.retailer_id,
+                full_name=form.full_name.data.strip(),
+                phone_number=phone_number,
+            )
+            shopkeeper.set_password(form.password.data)
+            db.session.add(shopkeeper)
+            try:
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                form.phone_number.errors.append("That phone number is already in use.")
+                return render_template(
+                    "auth/shopkeepers.html",
+                    form=form,
+                    action_form=ShopkeeperActionForm(),
+                    shopkeepers=current_user.shopkeepers.order_by(Shopkeeper.full_name).all(),
+                )
+            flash(f"Shopkeeper account created for {shopkeeper.full_name}.", "success")
+            return redirect(url_for("auth.manage_shopkeepers"))
+
+    return render_template(
+        "auth/shopkeepers.html",
+        form=form,
+        action_form=ShopkeeperActionForm(),
+        shopkeepers=current_user.shopkeepers.order_by(Shopkeeper.full_name).all(),
+    )
+
+
+@auth_bp.route("/shopkeepers/<int:shopkeeper_id>/toggle", methods=["POST"])
+@login_required
+@admin_required
+def toggle_shopkeeper(shopkeeper_id):
+    form = ShopkeeperActionForm()
+    if not form.validate_on_submit():
+        flash("The account change could not be verified. Please try again.", "danger")
+        return redirect(url_for("auth.manage_shopkeepers"))
+
+    shopkeeper = Shopkeeper.query.filter_by(
+        shopkeeper_id=shopkeeper_id,
+        retailer_id=current_user.retailer_id,
+    ).first_or_404()
+    shopkeeper.active = not shopkeeper.active
+    db.session.commit()
+    flash(
+        f"{shopkeeper.full_name}'s account "
+        f"{'activated' if shopkeeper.active else 'deactivated'}.",
+        "success",
+    )
+    return redirect(url_for("auth.manage_shopkeepers"))
 
 
 @auth_bp.route("/verify-login", methods=["GET", "POST"])

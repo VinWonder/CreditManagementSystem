@@ -5,6 +5,7 @@ from app.extensions import db
 from app.models import ReminderRule, MessageDispatchLog, Customer
 from app.reminders.forms import ReminderActionForm, ReminderRuleForm
 from app.reminders.engine import run_ageing_analysis_and_dispatch
+from app.permissions import admin_required
 
 reminders_bp = Blueprint("reminders", __name__, url_prefix="/reminders")
 
@@ -30,6 +31,7 @@ def list_rules():
 
 @reminders_bp.route("/rules/new", methods=["GET", "POST"])
 @login_required
+@admin_required
 def new_rule():
     form = ReminderRuleForm()
     if form.validate_on_submit():
@@ -49,6 +51,7 @@ def new_rule():
 
 @reminders_bp.route("/rules/<int:rule_id>/edit", methods=["GET", "POST"])
 @login_required
+@admin_required
 def edit_rule(rule_id):
     rule = ReminderRule.query.get_or_404(rule_id)
     if rule.retailer_id != current_user.retailer_id:
@@ -69,6 +72,7 @@ def edit_rule(rule_id):
 
 @reminders_bp.route("/rules/<int:rule_id>/delete", methods=["POST"])
 @login_required
+@admin_required
 def delete_rule(rule_id):
     rule = ReminderRule.query.get_or_404(rule_id)
     if rule.retailer_id != current_user.retailer_id:

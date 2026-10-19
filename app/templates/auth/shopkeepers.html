@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Shopkeeper access{% endblock %}
+{% block content %}
+<section class="container" aria-labelledby="shopkeepers-title">
+  <header class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <p class="eyebrow mb-1">Team permissions</p>
+      <h1 id="shopkeepers-title">Shopkeeper accounts</h1>
+      <p class="text-muted mb-0">Shopkeepers can record sales, add customers, and submit payments for your approval.</p>
+    </div>
+  </header>
+
+  <div class="row g-3">
+    <div class="col-lg-5">
+      <article class="card p-3 p-md-4">
+        <h2 class="h5">Create a shopkeeper account</h2>
+        <p class="small text-muted">Share the initial password securely. Shopkeepers sign in with their phone number.</p>
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            {{ form.full_name.label(class="form-label") }}
+            {{ form.full_name(class="form-control", maxlength="100", required=true, autocomplete="name") }}
+            {% for error in form.full_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
+            {{ form.phone_number.label(class="form-label") }}
+            {{ form.phone_number(class="form-control", maxlength="25", required=true, autocomplete="tel") }}
+            {% for error in form.phone_number.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
+            {{ form.password.label(class="form-label") }}
+            {{ form.password(class="form-control", minlength="8", maxlength="128", required=true, autocomplete="new-password") }}
+            <div class="form-text">At least 8 characters, including a letter and a number.</div>
+            {% for error in form.password.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <button class="btn btn-primary" type="submit">{{ form.submit.label.text }}</button>
+        </form>
+      </article>
+    </div>
+
+    <div class="col-lg-7">
+      <article class="card p-3 p-md-4">
+        <h2 class="h5">Your team</h2>
+        {% if shopkeepers %}
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead><tr><th>Name</th><th>Phone</th><th>Access</th><th>Manage</th></tr></thead>
+            <tbody>
+            {% for shopkeeper in shopkeepers %}
+              <tr>
+                <td>{{ shopkeeper.full_name }}</td>
+                <td>{{ shopkeeper.phone_number }}</td>
+                <td><span class="badge {{ 'text-bg-success' if shopkeeper.active else 'text-bg-secondary' }}">{{ 'Active' if shopkeeper.active else 'Deactivated' }}</span></td>
+                <td>
+                  <form method="POST" action="{{ url_for('auth.toggle_shopkeeper', shopkeeper_id=shopkeeper.shopkeeper_id) }}">
+                    {{ action_form.hidden_tag() }}
+                    <button class="btn btn-sm {{ 'btn-outline-danger' if shopkeeper.active else 'btn-outline-success' }}" type="submit">{{ 'Deactivate' if shopkeeper.active else 'Reactivate' }}</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No shopkeeper accounts yet. You remain the only user with admin permissions.</p>
+        {% endif %}
+        <div class="alert alert-light border small mb-0 mt-2">
+          Only you can edit or delete customer records, configure reminders, approve/reject staff payments, or correct a balance.
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+{% endblock %}
