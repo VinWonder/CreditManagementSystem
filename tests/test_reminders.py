@@ -1,12 +1,13 @@
 import unittest
 import re
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 from flask_login import login_user
 
 from app import create_app
 from app.extensions import db
-from app.models import ReminderRule, Retailer
+from app.models import Customer, MessageDispatchLog, ReminderRule, Retailer
 from app.reminders.engine import select_matching_rule
 
 
@@ -59,6 +60,27 @@ class ReminderRulePageTests(unittest.TestCase):
         db.session.add(rule)
         db.session.commit()
         return rule
+
+    def _add_dispatch(self, *, name, phone, status="sent", channel="sms", retailer_id=None,
+                      sent_at=None, rule=None):
+        customer = Customer(
+            retailer_id=retailer_id or self.retailer.retailer_id,
+            full_name=name,
+            phone_number=phone,
+        )
+        db.session.add(customer)
+        db.session.flush()
+        dispatch = MessageDispatchLog(
+            customer_id=customer.customer_id,
+            rule_id=rule.rule_id if rule else None,
+            channel=channel,
+            message_content=f"Hello {name}, your balance is KES 500.",
+            status=status,
+            sent_at=sent_at or datetime.utcnow(),
+        )
+        db.session.add(dispatch)
+        db.session.commit()
+        return dispatch
 
     def _csrf_token(self):
         response = self.client.get("/reminders/rules")
@@ -164,6 +186,90 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"A rule already exists for this overdue threshold", response.data)
         self.assertEqual(ReminderRule.query.count(), 1)
+
+    def test_dispatch_log_shows_delivery_context_and_summary(self):
+        rule = self._add_rule()
+        self._add_dispatch(
+            name="Amina Hassan",
+            phone="+254700000081",
+            rule=rule,
+        )
+        self._add_dispatch(
+            name="Baraka Otieno",
+            phone="+254700000082",
+            status="failed",
+            channel="whatsapp",
+            rule=rule,
+        )
+
+        response = self.client.get("/reminders/log")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Dispatch history", response.data)
+        self.assertIn(b"Total attempts", response.data)
+        self.assertIn(b"Amina Hassan", response.data)
+        self.assertIn(b"+254700000081", response.data)
+        self.assertIn(b"7-day rule", response.data)
+        self.assertIn(b"Accepted", response.data)
+        self.assertIn(b"Failed", response.data)
+        self.assertIn(b'name="status"', response.data)
+
+    def test_dispatch_log_filters_records_by_status_channel_and_search(self):
+        self._add_dispatch(
+            name="Amina Hassan",
+            phone="+254700000083",
+            status="sent",
+            channel="sms",
+        )
+        self._add_dispatch(
+            name="Baraka Otieno",
+            phone="+254700000084",
+            status="failed",
+            channel="whatsapp",
+        )
+
+        response = self.client.get(
+            "/reminders/log?status=failed&channel=whatsapp&q=Baraka"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Baraka Otieno", response.data)
+        self.assertNotIn(b"Amina Hassan", response.data)
+        self.assertIn(b"Total attempts", response.data)
+        self.assertIn(b"2", response.data)
+
+    def test_dispatch_log_is_tenant_scoped_and_paginated(self):
+        for index in range(27):
+            self._add_dispatch(
+                name=f"Customer {index:02}",
+                phone=f"+254711000{index:03}",
+                sent_at=datetime.utcnow() - timedelta(minutes=index),
+            )
+        other_retailer = Retailer(
+            business_name="Other Shop",
+            owner_name="Other Owner",
+            phone_number="+254700000085",
+            password_hash="test-hash",
+        )
+        db.session.add(other_retailer)
+        db.session.commit()
+        self._add_dispatch(
+            name="Other Tenant",
+            phone="+254700000086",
+            retailer_id=other_retailer.retailer_id,
+        )
+
+        first_page = self.client.get("/reminders/log")
+        second_page = self.client.get("/reminders/log?page=2")
+
+        self.assertEqual(first_page.status_code, 200)
+        self.assertIn(b"Page 1 of 2", first_page.data)
+        self.assertIn(b"Page 2 of 2", second_page.data)
+        self.assertIn(b"Total attempts", first_page.data)
+        self.assertNotIn(b"Other Tenant", first_page.data)
+        self.assertNotIn(b"Other Tenant", second_page.data)
+        self.assertEqual(first_page.data.count(b"class=\"dispatch-entry\""), 25)
+        self.assertEqual(second_page.data.count(b"class=\"dispatch-entry\""), 2)
 
     @patch("app.reminders.routes.run_ageing_analysis_and_dispatch")
     def test_manual_scan_without_active_rules_does_not_run(self, run_scan):

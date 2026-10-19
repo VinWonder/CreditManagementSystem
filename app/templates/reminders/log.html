@@ -1,28 +1,142 @@
 {% extends "base.html" %}
-{% block title %}Dispatch Log{% endblock %}
+{% block title %}Dispatch history{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4><i class="bi bi-clock-history"></i> Message Dispatch Log</h4>
-  <a href="{{ url_for('reminders.list_rules') }}" class="btn btn-outline-secondary">Back to Rules</a>
-</div>
-<div class="card">
-  <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
-      <thead class="table-light"><tr><th>Sent At</th><th>Customer</th><th>Channel</th><th>Message</th><th>Status</th></tr></thead>
-      <tbody>
-      {% for log in logs %}
-        <tr>
-          <td class="small">{{ log.sent_at.strftime('%d %b %Y %H:%M') }}</td>
-          <td>{{ log.customer.full_name }}</td>
-          <td><span class="badge text-bg-secondary">{{ log.channel }}</span></td>
-          <td class="small text-truncate" style="max-width: 320px;">{{ log.message_content }}</td>
-          <td><span class="badge {{ 'text-bg-success' if log.status == 'sent' else 'text-bg-danger' }}">{{ log.status }}</span></td>
-        </tr>
-      {% else %}
-        <tr><td colspan="5" class="text-center text-muted py-4">No reminders dispatched yet.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
+<section class="dispatch-page" aria-labelledby="dispatch-title">
+  <header class="dispatch-hero">
+    <div class="dispatch-hero-copy">
+      <a class="dispatch-back-link" href="{{ url_for('reminders.list_rules') }}">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i> Reminder rules
+      </a>
+      <p class="dispatch-kicker"><i class="bi bi-broadcast-pin" aria-hidden="true"></i> Customer communications</p>
+      <h1 id="dispatch-title">Dispatch <span>history</span></h1>
+      <p>A clear record of reminder attempts made for your shop.</p>
+    </div>
+    <div class="dispatch-hero-art" aria-hidden="true">
+      <span class="dispatch-orbit dispatch-orbit-one"></span>
+      <span class="dispatch-orbit dispatch-orbit-two"></span>
+      <span class="dispatch-hero-icon"><i class="bi bi-send-check"></i></span>
+      <span class="dispatch-art-dot dispatch-art-dot-one"></span>
+      <span class="dispatch-art-dot dispatch-art-dot-two"></span>
+    </div>
+  </header>
+
+  <div class="dispatch-stats" aria-label="Dispatch attempt totals">
+    <article class="dispatch-stat">
+      <span class="dispatch-stat-icon"><i class="bi bi-envelope-paper" aria-hidden="true"></i></span>
+      <span><small>Total attempts</small><strong>{{ total_count }}</strong></span>
+    </article>
+    <article class="dispatch-stat">
+      <span class="dispatch-stat-icon dispatch-stat-success"><i class="bi bi-check2-circle" aria-hidden="true"></i></span>
+      <span><small>Accepted</small><strong>{{ sent_count }}</strong></span>
+    </article>
+    <article class="dispatch-stat">
+      <span class="dispatch-stat-icon dispatch-stat-failed"><i class="bi bi-exclamation-circle" aria-hidden="true"></i></span>
+      <span><small>Failed</small><strong>{{ failed_count }}</strong></span>
+    </article>
   </div>
-</div>
+
+  <section class="dispatch-records" aria-label="Reminder dispatch records">
+    <div class="dispatch-records-heading">
+      <div>
+        <p class="dispatch-overline">Delivery ledger</p>
+        <h2>Recent attempts <span>{{ page.total }}</span></h2>
+      </div>
+      <p class="dispatch-page-note">Showing up to 25 records per page</p>
+    </div>
+
+    <form class="dispatch-filters" method="GET" action="{{ url_for('reminders.dispatch_log') }}">
+      <label class="dispatch-search">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <span class="visually-hidden">Search customer, phone, or message</span>
+        <input type="search" name="q" value="{{ filters.q }}" placeholder="Search customer, phone, or message">
+      </label>
+      <label class="dispatch-filter-select">
+        <span class="visually-hidden">Filter by delivery status</span>
+        <i class="bi bi-funnel" aria-hidden="true"></i>
+        <select name="status" aria-label="Filter by status">
+          <option value="" {{ 'selected' if not filters.status else '' }}>All outcomes</option>
+          <option value="sent" {{ 'selected' if filters.status == 'sent' else '' }}>Accepted</option>
+          <option value="failed" {{ 'selected' if filters.status == 'failed' else '' }}>Failed</option>
+          <option value="pending" {{ 'selected' if filters.status == 'pending' else '' }}>Pending</option>
+        </select>
+      </label>
+      <label class="dispatch-filter-select">
+        <span class="visually-hidden">Filter by channel</span>
+        <i class="bi bi-chat-dots" aria-hidden="true"></i>
+        <select name="channel" aria-label="Filter by channel">
+          <option value="" {{ 'selected' if not filters.channel else '' }}>All channels</option>
+          <option value="sms" {{ 'selected' if filters.channel == 'sms' else '' }}>SMS</option>
+          <option value="whatsapp" {{ 'selected' if filters.channel == 'whatsapp' else '' }}>WhatsApp</option>
+        </select>
+      </label>
+      <button class="dispatch-filter-submit" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Filter</span></button>
+      {% if filters.q or filters.status or filters.channel %}
+      <a class="dispatch-filter-reset" href="{{ url_for('reminders.dispatch_log') }}">Clear</a>
+      {% endif %}
+    </form>
+
+    {% if logs %}
+    <div class="dispatch-list">
+      {% for log in logs %}
+      <article class="dispatch-entry">
+        <div class="dispatch-entry-avatar {{ 'dispatch-avatar-failed' if log.status == 'failed' else '' }}" aria-hidden="true">
+          {{ log.customer.full_name[:1]|upper }}
+        </div>
+        <div class="dispatch-entry-main">
+          <div class="dispatch-entry-title">
+            <h3>{{ log.customer.full_name }}</h3>
+            <span class="dispatch-entry-phone"><i class="bi bi-telephone" aria-hidden="true"></i>{{ log.customer.phone_number }}</span>
+          </div>
+          <p class="dispatch-entry-message">{{ log.message_content }}</p>
+          <div class="dispatch-entry-meta">
+            <span class="dispatch-channel-badge {{ 'dispatch-channel-whatsapp' if log.channel == 'whatsapp' else 'dispatch-channel-sms' }}">
+              <i class="bi {{ 'bi-whatsapp' if log.channel == 'whatsapp' else 'bi-chat-left-text' }}" aria-hidden="true"></i>
+              {{ log.channel|capitalize }}
+            </span>
+            <span class="dispatch-rule-reference"><i class="bi bi-bezier2" aria-hidden="true"></i>{{ log.rule.trigger_days_overdue ~ '-day rule' if log.rule else 'Rule no longer available' }}</span>
+          </div>
+        </div>
+        <div class="dispatch-entry-result">
+          {% if log.status == 'sent' %}
+          <span class="dispatch-result-badge dispatch-result-sent"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Accepted</span>
+          {% elif log.status == 'failed' %}
+          <span class="dispatch-result-badge dispatch-result-failed"><i class="bi bi-x-circle-fill" aria-hidden="true"></i> Failed</span>
+          {% else %}
+          <span class="dispatch-result-badge dispatch-result-pending"><i class="bi bi-clock-fill" aria-hidden="true"></i>{{ log.status|capitalize }}</span>
+          {% endif %}
+          <time datetime="{{ log.sent_at.isoformat() if log.sent_at else '' }}">
+            {{ log.sent_at.strftime('%d %b %Y · %H:%M') if log.sent_at else 'Time unavailable' }}
+          </time>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+
+    {% if page.pages > 1 %}
+    <nav class="dispatch-pagination" aria-label="Dispatch history pages">
+      <span>Page {{ page.page }} of {{ page.pages }}</span>
+      <div>
+        {% if page.has_prev %}
+        <a href="{{ url_for('reminders.dispatch_log', page=page.prev_num, q=filters.q, status=filters.status, channel=filters.channel) }}" aria-label="Previous page"><i class="bi bi-arrow-left" aria-hidden="true"></i> Previous</a>
+        {% endif %}
+        {% if page.has_next %}
+        <a href="{{ url_for('reminders.dispatch_log', page=page.next_num, q=filters.q, status=filters.status, channel=filters.channel) }}" aria-label="Next page">Next <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+        {% endif %}
+      </div>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="dispatch-empty">
+      <span><i class="bi {{ 'bi-search' if filters.q or filters.status or filters.channel else 'bi-send-slash' }}" aria-hidden="true"></i></span>
+      <h3>{{ 'No matching attempts' if filters.q or filters.status or filters.channel else 'No reminders dispatched yet' }}</h3>
+      <p>{{ 'Adjust your filters or try another search.' if filters.q or filters.status or filters.channel else 'When a reminder is sent or attempted, its customer, channel, and outcome will appear here.' }}</p>
+      {% if filters.q or filters.status or filters.channel %}
+      <a href="{{ url_for('reminders.dispatch_log') }}">Clear filters</a>
+      {% else %}
+      <a href="{{ url_for('reminders.list_rules') }}"><i class="bi bi-bell" aria-hidden="true"></i> View reminder rules</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+</section>
 {% endblock %}
