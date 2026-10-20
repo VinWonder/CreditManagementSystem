@@ -17,9 +17,6 @@ class Config:
     AUTO_CREATE_DB = os.environ.get(
         "AUTO_CREATE_DB", "false" if APP_ENV == "production" else "true"
     ).lower() == "true"
-    SCHEDULER_ENABLED = os.environ.get(
-        "SCHEDULER_ENABLED", "false" if APP_ENV == "production" else "true"
-    ).lower() == "true"
     PASSWORD_RESET_CODE_MINUTES = int(os.environ.get("PASSWORD_RESET_CODE_MINUTES", 10))
     PASSWORD_RESET_MAX_ATTEMPTS = int(os.environ.get("PASSWORD_RESET_MAX_ATTEMPTS", 5))
     PHONE_VERIFICATION_CODE_MINUTES = int(os.environ.get("PHONE_VERIFICATION_CODE_MINUTES", 10))
@@ -66,11 +63,6 @@ class Config:
     MESSAGING_CREDENTIALS_ENCRYPTION_KEY = os.environ.get(
         "MESSAGING_CREDENTIALS_ENCRYPTION_KEY", ""
     )
-
-    # Reminder scheduler
-    SCHEDULER_API_ENABLED = True
-    REMINDER_SCAN_HOUR = int(os.environ.get("REMINDER_SCAN_HOUR", 8))
-    REMINDER_SCAN_MINUTE = int(os.environ.get("REMINDER_SCAN_MINUTE", 0))
 
     # Ageing buckets (days overdue) used in receivables report
     AGEING_BUCKETS = [(0, 7), (8, 14), (15, 30), (31, 60), (61, 10_000)]

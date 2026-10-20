@@ -151,10 +151,6 @@ def list_rules():
         active_count=sum(rule.active for rule in rules),
         inactive_count=sum(not rule.active for rule in rules),
         action_form=ReminderActionForm(),
-        daily_schedule=(
-            f"{current_app.config.get('REMINDER_SCAN_HOUR', 8):02d}:"
-            f"{current_app.config.get('REMINDER_SCAN_MINUTE', 0):02d}"
-        ),
     )
 
 

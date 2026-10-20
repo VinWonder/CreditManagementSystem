@@ -34,7 +34,6 @@ class TestConfig:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {}
     AUTO_CREATE_DB = False
-    SCHEDULER_ENABLED = False
     WTF_CSRF_ENABLED = True
     MESSAGING_CREDENTIALS_ENCRYPTION_KEY = Fernet.generate_key().decode("ascii")
 
