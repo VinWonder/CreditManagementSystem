@@ -225,6 +225,7 @@ def login():
             session.pop("login_challenge_id", None)
             session.pop("login_next", None)
             next_page = request.args.get("next")
+            session.permanent = True
             login_user(account, fresh=True)
             destination = next_page if is_safe_redirect(next_page) else url_for("main.dashboard")
             return redirect(destination)

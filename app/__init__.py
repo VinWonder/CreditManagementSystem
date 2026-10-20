@@ -21,6 +21,14 @@ def create_app(config_class=Config):
     login_manager.init_app(app)
     migrate.init_app(app, db)
 
+    @app.before_request
+    def refresh_session_lifetime():
+        """Slide the idle timeout forward while the user stays active."""
+        from flask import session
+
+        if session.get("_user_id"):
+            session.permanent = True
+            session.modified = True
     @app.errorhandler(ProgrammingError)
     def handle_database_programming_error(error):
         db.session.rollback()

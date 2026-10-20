@@ -1,4 +1,6 @@
 import os
+from datetime import timedelta
+
 from dotenv import load_dotenv
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -10,6 +12,12 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
+    # Sessions end on their own instead of lasting for the browser's lifetime:
+    # a retailer idle for longer than this must sign in again.
+    PERMANENT_SESSION_LIFETIME = timedelta(
+        hours=int(os.environ.get("SESSION_IDLE_HOURS", 12))
+    )
+    REMEMBER_COOKIE_DURATION = PERMANENT_SESSION_LIFETIME
     SESSION_COOKIE_SECURE = os.environ.get(
         "SESSION_COOKIE_SECURE", "true" if APP_ENV == "production" else "false"
     ).lower() == "true"
