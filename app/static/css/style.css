@@ -291,6 +291,10 @@ body {
 .customer-name { color: #1e5448; display: block; font-size: 0.79rem; font-weight: 750; line-height: 1.35; overflow-wrap: anywhere; text-decoration: none; }
 .customer-name:hover { color: #2c7a7b; text-decoration: underline; text-underline-offset: 2px; }
 .customer-contact { align-items: center; display: flex; flex-wrap: wrap; gap: 0.45rem 0.65rem; margin-top: 0.22rem; }
+.customer-contact > span { align-items: center; color: #687d82; display: inline-flex; font-size: 0.68rem; gap: 0.3rem; }
+.customer-contact > span i { color: #6c9990; font-size: 0.65rem; }
+.customer-contact > span { align-items: center; color: #687d82; display: inline-flex; font-size: 0.68rem; gap: 0.3rem; }
+.customer-contact > span i { color: #6c9990; font-size: 0.65rem; }
 .customer-contact a { align-items: center; color: #687d82; display: inline-flex; font-size: 0.68rem; gap: 0.3rem; text-decoration: none; }
 .customer-contact a:hover { color: #226c5d; text-decoration: underline; text-underline-offset: 2px; }
 .customer-contact a i { color: #6c9990; font-size: 0.65rem; }
@@ -1464,6 +1468,8 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .dispatch-entry-phone { color: #86938b; font-size: 0.57rem; }
 .dispatch-entry-phone i { color: #71907d; margin-right: 0.25rem; }
 .dispatch-entry-message { color: #60746a; font-size: 0.62rem; line-height: 1.45; margin: 0.25rem 0 0.4rem; overflow-wrap: anywhere; }
+.dispatch-entry-error { background: #fff5f1; border-left: 2px solid #d68a75; border-radius: 0.2rem; color: #8e493b; font-size: 0.58rem; line-height: 1.45; margin: 0.25rem 0 0.45rem; overflow-wrap: anywhere; padding: 0.38rem 0.5rem; }
+.dispatch-entry-error { background: #fff5f1; border-left: 2px solid #d68a75; border-radius: 0.2rem; color: #8e493b; font-size: 0.58rem; line-height: 1.45; margin: 0.25rem 0 0.45rem; overflow-wrap: anywhere; padding: 0.38rem 0.5rem; }
 .dispatch-entry-meta { align-items: center; display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .dispatch-channel-badge, .dispatch-rule-reference { align-items: center; border-radius: 1rem; display: inline-flex; font-size: 0.53rem; gap: 0.25rem; padding: 0.23rem 0.42rem; }
 .dispatch-channel-sms { background: #eff4f0; color: #5b7464; }

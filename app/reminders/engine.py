@@ -8,8 +8,9 @@ This is run automatically once a day by APScheduler (see scheduler_jobs.py)
 and can also be triggered manually from the reminders UI ("Run Now").
 """
 from app.extensions import db
-from app.models import Retailer, ReminderRule, Ledger, Customer
+from app.models import CreditTransaction, Retailer, ReminderRule, Ledger, Customer
 from app.reminders.dispatch_service import dispatch_reminder
+from app.timezones import format_nairobi_datetime
 
 PAID_MESSAGE_DISCLAIMER = (
     "If you have already paid, please ignore this message. Thank you."
@@ -30,12 +31,26 @@ def select_matching_rule(rules, days_overdue):
 
 
 def render_template_message(template, customer, retailer, ledger):
-    return (
+    item_details = "; ".join(
+        f"{transaction.item_description} (taken "
+        f"{format_nairobi_datetime(transaction.transaction_date, '%d %b %Y')})"
+        for transaction in customer.transactions.order_by(
+            CreditTransaction.transaction_date.asc()
+        ).all()
+    )
+    item_details = item_details or "No item details recorded"
+
+    message = (
         template.replace("{customer_name}", customer.full_name)
+        .replace("{customer_shop}", customer.shop_name or "not provided")
         .replace("{business_name}", retailer.business_name)
         .replace("{balance}", f"KES {float(ledger.outstanding_balance):,.2f}")
         .replace("{days_overdue}", str(ledger.days_overdue))
+        .replace("{item_details}", item_details)
     )
+    if "{item_details}" not in template:
+        message = f"{message.rstrip()}\nCredit purchases: {item_details}."
+    return message
 
 
 def render_personal_reminder_message(rule, customer, retailer, ledger):

@@ -225,12 +225,14 @@ class RoleAndApprovalTests(unittest.TestCase):
             data={"amount_change": "-10.00", "reason": "Not allowed"},
         )
         manage = self.client.get("/auth/shopkeepers")
+        messaging_settings = self.client.get("/reminders/settings")
 
         self.assertEqual(edit.status_code, 403)
         self.assertEqual(delete.status_code, 403)
         self.assertEqual(approve.status_code, 403)
         self.assertEqual(adjust.status_code, 403)
         self.assertEqual(manage.status_code, 403)
+        self.assertEqual(messaging_settings.status_code, 403)
         reminder_rules = self.client.get("/reminders/rules")
         self.assertEqual(reminder_rules.status_code, 200)
         self.assertNotIn(b"Create reminder rule", reminder_rules.data)
@@ -249,11 +251,13 @@ class RoleAndApprovalTests(unittest.TestCase):
             data={
                 "full_name": "New Customer",
                 "phone_number": "+254700000045",
+                "shop_name": "Main Street Grocery",
                 "preferred_channel": "sms",
             },
         )
         self.assertEqual(customer_response.status_code, 302)
         added_customer = Customer.query.filter_by(full_name="New Customer").one()
+        self.assertEqual(added_customer.shop_name, "Main Street Grocery")
 
         sale_response = self.client.post(
             "/transactions/new",

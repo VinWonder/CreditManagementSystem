@@ -11,6 +11,7 @@
       <h1>{{ customer.full_name }}</h1>
       <div class="customer-profile-meta">
         <span><i class="bi bi-telephone" aria-hidden="true"></i>{{ customer.phone_number }}</span>
+        {% if customer.shop_name %}<span><i class="bi bi-shop" aria-hidden="true"></i>{{ customer.shop_name }}</span>{% endif %}
         <span class="customer-channel-pill"><i class="bi {{ 'bi-chat-heart' if customer.preferred_channel == 'whatsapp' else 'bi-chat-dots' if customer.preferred_channel == 'sms' else 'bi-chat-square-heart' }}" aria-hidden="true"></i>{{ 'SMS + WhatsApp' if customer.preferred_channel == 'both' else customer.preferred_channel|capitalize }} preference</span>
       </div>
       {% if current_user.is_admin %}<a class="customer-profile-edit" href="{{ url_for('customers.edit_customer', customer_id=customer.customer_id) }}"><i class="bi bi-pencil" aria-hidden="true"></i> Edit customer details</a>{% endif %}

@@ -124,6 +124,21 @@ def _upgrade_local_auth_schema():
                     connection.execute(
                         text(f"ALTER TABLE payments ADD COLUMN {name} {definition}")
                     )
+        local_table_additions = {
+            "customers": {"shop_name": "VARCHAR(100)"},
+            "message_dispatch_log": {"failure_reason": "VARCHAR(500)"},
+        }
+        for table_name, table_additions in local_table_additions.items():
+            if table_name not in inspector.get_table_names():
+                continue
+            table_columns = {
+                column["name"] for column in inspector.get_columns(table_name)
+            }
+            for name, definition in table_additions.items():
+                if name not in table_columns:
+                    connection.execute(
+                        text(f"ALTER TABLE {table_name} ADD COLUMN {name} {definition}")
+                    )
         connection.execute(
             text("CREATE UNIQUE INDEX IF NOT EXISTS uq_retailers_email ON retailers (email)")
         )

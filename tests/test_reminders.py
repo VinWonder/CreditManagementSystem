@@ -5,6 +5,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from flask_login import login_user
+from cryptography.fernet import Fernet
 
 from app import create_app
 from app.extensions import db
@@ -13,6 +14,7 @@ from app.models import (
     Customer,
     Ledger,
     MessageDispatchLog,
+    MessagingSettings,
     ReminderRule,
     Retailer,
 )
@@ -20,6 +22,9 @@ from app.reminders.engine import (
     run_ageing_analysis_and_dispatch,
     select_matching_rule,
 )
+from app.reminders.credentials import encrypt_secret
+from app.reminders.dispatch_service import send_whatsapp
+from app.timezones import format_nairobi_datetime
 
 
 class TestConfig:
@@ -31,6 +36,7 @@ class TestConfig:
     AUTO_CREATE_DB = False
     SCHEDULER_ENABLED = False
     WTF_CSRF_ENABLED = True
+    MESSAGING_CREDENTIALS_ENCRYPTION_KEY = Fernet.generate_key().decode("ascii")
 
 
 class ReminderRulePageTests(unittest.TestCase):
@@ -73,7 +79,7 @@ class ReminderRulePageTests(unittest.TestCase):
         return rule
 
     def _add_dispatch(self, *, name, phone, status="sent", channel="sms", retailer_id=None,
-                      sent_at=None, rule=None):
+                      sent_at=None, rule=None, failure_reason=None):
         customer = Customer(
             retailer_id=retailer_id or self.retailer.retailer_id,
             full_name=name,
@@ -87,6 +93,7 @@ class ReminderRulePageTests(unittest.TestCase):
             channel=channel,
             message_content=f"Hello {name}, your balance is KES 500.",
             status=status,
+            failure_reason=failure_reason,
             sent_at=sent_at or datetime.utcnow(),
         )
         db.session.add(dispatch)
@@ -370,6 +377,84 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertIn(b"Total attempts", response.data)
         self.assertIn(b"2", response.data)
 
+    def test_dispatch_log_displays_provider_failure_detail(self):
+        self._add_dispatch(
+            name="Failed Customer",
+            phone="+254700000087",
+            status="failed",
+            failure_reason="WhatsApp rejected the request: recipient is not allowed",
+        )
+
+        response = self.client.get("/reminders/log")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Provider response:", response.data)
+        self.assertIn(b"recipient is not allowed", response.data)
+
+    def test_retailer_can_save_encrypted_sms_and_whatsapp_credentials(self):
+        response = self.client.post(
+            "/reminders/settings",
+            data={
+                "csrf_token": self._csrf_token(),
+                "sms_provider": "africastalking",
+                "at_username": "retailer-username",
+                "at_api_key": "retailer-at-key",
+                "whatsapp_phone_id": "retailer-phone-id",
+                "whatsapp_token": "retailer-wa-token",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        settings = MessagingSettings.query.filter_by(
+            retailer_id=self.retailer.retailer_id
+        ).one()
+        self.assertNotEqual(settings.at_api_key_encrypted, "retailer-at-key")
+        self.assertNotEqual(settings.whatsapp_token_encrypted, "retailer-wa-token")
+        self.assertEqual(
+            self.client.get("/reminders/api/providers/status").json["providers"]["sms"][
+                "configured"
+            ],
+            True,
+        )
+        page = self.client.get("/reminders/settings")
+        self.assertEqual(page.status_code, 200)
+        self.assertNotIn(b"retailer-at-key", page.data)
+        self.assertNotIn(b"retailer-wa-token", page.data)
+        self.assertIn(b"An API key is saved.", page.data)
+
+    @patch("app.reminders.dispatch_service.requests.post")
+    def test_whatsapp_send_uses_the_retailers_encrypted_account(self, post):
+        post.return_value.raise_for_status.return_value = None
+        self.app.config.update(
+            WHATSAPP_TOKEN="platform-token",
+            WHATSAPP_PHONE_ID="platform-phone-id",
+        )
+        db.session.add(
+            MessagingSettings(
+                retailer_id=self.retailer.retailer_id,
+                sms_provider="africastalking",
+                whatsapp_phone_id="retailer-phone-id",
+                whatsapp_token_encrypted=encrypt_secret("retailer-token"),
+            )
+        )
+        db.session.commit()
+
+        accepted, _info = send_whatsapp(
+            "+254700000000",
+            "Reminder",
+            retailer_id=self.retailer.retailer_id,
+        )
+
+        self.assertTrue(accepted)
+        self.assertIn(
+            "retailer-phone-id",
+            post.call_args.args[0],
+        )
+        self.assertEqual(
+            post.call_args.kwargs["headers"]["Authorization"],
+            "Bearer retailer-token",
+        )
+
     def test_dispatch_log_is_tenant_scoped_and_paginated(self):
         for index in range(27):
             self._add_dispatch(
@@ -414,17 +499,19 @@ class ReminderRulePageTests(unittest.TestCase):
             retailer_id=self.retailer.retailer_id,
             full_name="Amina Hassan",
             phone_number="+254700000091",
+            shop_name="Amina's Grocery",
             preferred_channel="whatsapp",
         )
         db.session.add(customer)
         db.session.flush()
+        sale_date = datetime.utcnow() - timedelta(days=12)
         db.session.add(
             CreditTransaction(
                 retailer_id=self.retailer.retailer_id,
                 customer_id=customer.customer_id,
                 item_description="Water pipe",
                 amount=Decimal("500.00"),
-                transaction_date=datetime.utcnow() - timedelta(days=12),
+                transaction_date=sale_date,
             )
         )
         db.session.add(
@@ -438,7 +525,7 @@ class ReminderRulePageTests(unittest.TestCase):
             retailer_id=self.retailer.retailer_id,
             trigger_days_overdue=7,
             message_template=(
-                "Hello {customer_name}, {business_name} balance: "
+                "Hello {customer_name} ({customer_shop}), {business_name} balance: "
                 "{balance}; overdue {days_overdue} days."
             ),
             channel="whatsapp",
@@ -461,10 +548,12 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertEqual(response.headers["Location"], "/reminders/log")
         send_whatsapp.assert_called_once()
         sent_message = send_whatsapp.call_args.args[1]
+        sale = customer.transactions.first()
         self.assertEqual(
             sent_message,
-            "Hello Amina Hassan, Test Shop balance: KES 500.00; "
-            "overdue 12 days.\n"
+            "Hello Amina Hassan (Amina's Grocery), Test Shop balance: KES 500.00; "
+            f"overdue 12 days.\nCredit purchases: Water pipe (taken "
+            f"{format_nairobi_datetime(sale.transaction_date, '%d %b %Y')}).\n"
             "If you have already paid, please ignore this message. Thank you.",
         )
         dispatch = MessageDispatchLog.query.one()
@@ -522,13 +611,14 @@ class ReminderRulePageTests(unittest.TestCase):
         )
         db.session.add(customer)
         db.session.flush()
+        sale_date = datetime.utcnow() - timedelta(days=12)
         db.session.add(
             CreditTransaction(
                 retailer_id=self.retailer.retailer_id,
                 customer_id=customer.customer_id,
                 item_description="Older purchase",
                 amount=Decimal("275.00"),
-                transaction_date=datetime.utcnow() - timedelta(days=12),
+                transaction_date=sale_date,
             )
         )
         db.session.add(
@@ -559,6 +649,8 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertEqual(
             dispatch.call_args.args[2],
             "Rule text for Scheduled Customer at Test Shop: KES 275.00, 12 days.\n"
+            f"Credit purchases: Older purchase (taken "
+            f"{format_nairobi_datetime(sale_date, '%d %b %Y')}).\n"
             "If you have already paid, please ignore this message. Thank you.",
         )
 
@@ -572,13 +664,14 @@ class ReminderRulePageTests(unittest.TestCase):
         )
         db.session.add(customer)
         db.session.flush()
+        sale_date = datetime.utcnow() - timedelta(days=12)
         db.session.add(
             CreditTransaction(
                 retailer_id=self.retailer.retailer_id,
                 customer_id=customer.customer_id,
                 item_description="Test item",
                 amount=Decimal("350.00"),
-                transaction_date=datetime.utcnow() - timedelta(days=12),
+                transaction_date=sale_date,
             )
         )
         db.session.add(
@@ -597,8 +690,14 @@ class ReminderRulePageTests(unittest.TestCase):
         )
         db.session.add(rule)
         db.session.commit()
-        self.app.config["WHATSAPP_TOKEN"] = "test-token"
-        self.app.config["WHATSAPP_PHONE_ID"] = "test-phone-id"
+        settings = MessagingSettings(
+            retailer_id=self.retailer.retailer_id,
+            sms_provider="africastalking",
+            whatsapp_phone_id="test-phone-id",
+            whatsapp_token_encrypted=encrypt_secret("test-token"),
+        )
+        db.session.add(settings)
+        db.session.commit()
 
         response = self.client.post(
             f"/reminders/api/customers/{customer.customer_id}/test",
@@ -613,6 +712,8 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertEqual(
             send_whatsapp.call_args.args[1],
             "Exact: Amina Hassan owes KES 350.00.\n"
+            f"Credit purchases: Test item (taken "
+            f"{format_nairobi_datetime(sale_date, '%d %b %Y')}).\n"
             "If you have already paid, please ignore this message. Thank you.",
         )
         dispatch = MessageDispatchLog.query.one()
@@ -664,8 +765,15 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertEqual(MessageDispatchLog.query.count(), 0)
 
     def test_provider_status_api_never_returns_credentials(self):
-        self.app.config["WHATSAPP_TOKEN"] = "do-not-expose"
-        self.app.config["WHATSAPP_PHONE_ID"] = "phone-id"
+        db.session.add(
+            MessagingSettings(
+                retailer_id=self.retailer.retailer_id,
+                sms_provider="africastalking",
+                whatsapp_token_encrypted=encrypt_secret("do-not-expose"),
+                whatsapp_phone_id="phone-id",
+            )
+        )
+        db.session.commit()
 
         response = self.client.get("/reminders/api/providers/status")
 

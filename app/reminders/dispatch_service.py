@@ -15,39 +15,74 @@ import requests
 from flask import current_app
 
 from app.extensions import db
-from app.models import MessageDispatchLog
+from app.models import MessageDispatchLog, MessagingSettings
+from app.reminders.credentials import (
+    MessagingCredentialError,
+    load_retailer_credentials,
+)
 
 
-def _credentials_present_sms():
-    provider = current_app.config.get("SMS_PROVIDER", "africastalking").lower()
+def _credentials_present_sms(credentials=None):
+    provider = (
+        credentials["sms_provider"]
+        if credentials is not None
+        else current_app.config.get("SMS_PROVIDER", "africastalking").lower()
+    )
     if provider == "twilio":
-        account_sid = current_app.config.get("TWILIO_ACCOUNT_SID")
-        auth_token = current_app.config.get("TWILIO_AUTH_TOKEN")
+        account_sid = (
+            credentials["twilio_account_sid"]
+            if credentials is not None
+            else current_app.config.get("TWILIO_ACCOUNT_SID")
+        )
+        auth_token = (
+            credentials["twilio_auth_token"]
+            if credentials is not None
+            else current_app.config.get("TWILIO_AUTH_TOKEN")
+        )
         sender = (
-            current_app.config.get("TWILIO_MESSAGING_SERVICE_SID")
+            (credentials["twilio_messaging_service_sid"] or credentials["twilio_from_number"])
+            if credentials is not None
+            else current_app.config.get("TWILIO_MESSAGING_SERVICE_SID")
             or current_app.config.get("TWILIO_FROM_NUMBER")
         )
         return bool(account_sid and auth_token and sender)
     if provider == "africastalking":
-        return bool(
-            current_app.config.get("AT_API_KEY")
-            and current_app.config.get("AT_USERNAME")
+        api_key = (
+            credentials["at_api_key"]
+            if credentials is not None
+            else current_app.config.get("AT_API_KEY")
         )
+        username = (
+            credentials["at_username"]
+            if credentials is not None
+            else current_app.config.get("AT_USERNAME")
+        )
+        return bool(api_key and username)
     return False
 
 
-def _send_sms_africas_talking(phone_number, message):
-    if not _credentials_present_sms():
+def _send_sms_africas_talking(phone_number, message, credentials=None):
+    if not _credentials_present_sms(credentials):
         return False, "Africa's Talking SMS is not configured"
 
+    api_key = (
+        credentials["at_api_key"]
+        if credentials is not None
+        else current_app.config["AT_API_KEY"]
+    )
+    username = (
+        credentials["at_username"]
+        if credentials is not None
+        else current_app.config["AT_USERNAME"]
+    )
     url = "https://api.africastalking.com/version1/messaging"
     headers = {
-        "apiKey": current_app.config["AT_API_KEY"],
+        "apiKey": api_key,
         "Content-Type": "application/x-www-form-urlencoded",
         "Accept": "application/json",
     }
     data = {
-        "username": current_app.config["AT_USERNAME"],
+        "username": username,
         "to": phone_number,
         "message": message,
     }
@@ -78,14 +113,30 @@ def _send_sms_africas_talking(phone_number, message):
             return False, f"Africa's Talking rejected the SMS: {error}"
         return False, "Africa's Talking response did not confirm a recipient"
     except requests.RequestException as exc:
-        return False, str(exc)
+        return False, _provider_request_error(exc, "Africa's Talking")
 
 
-def _send_sms_twilio(phone_number, message):
-    account_sid = current_app.config.get("TWILIO_ACCOUNT_SID")
-    auth_token = current_app.config.get("TWILIO_AUTH_TOKEN")
-    messaging_service_sid = current_app.config.get("TWILIO_MESSAGING_SERVICE_SID")
-    from_number = current_app.config.get("TWILIO_FROM_NUMBER")
+def _send_sms_twilio(phone_number, message, credentials=None):
+    account_sid = (
+        credentials["twilio_account_sid"]
+        if credentials is not None
+        else current_app.config.get("TWILIO_ACCOUNT_SID")
+    )
+    auth_token = (
+        credentials["twilio_auth_token"]
+        if credentials is not None
+        else current_app.config.get("TWILIO_AUTH_TOKEN")
+    )
+    messaging_service_sid = (
+        credentials["twilio_messaging_service_sid"]
+        if credentials is not None
+        else current_app.config.get("TWILIO_MESSAGING_SERVICE_SID")
+    )
+    from_number = (
+        credentials["twilio_from_number"]
+        if credentials is not None
+        else current_app.config.get("TWILIO_FROM_NUMBER")
+    )
     if not account_sid or not auth_token or not (messaging_service_sid or from_number):
         return False, "Twilio is selected but its account credentials or sender are missing"
 
@@ -103,36 +154,74 @@ def _send_sms_twilio(phone_number, message):
             timeout=10,
         )
         response.raise_for_status()
-        return True, response.text
+        return True, "Message accepted by Twilio"
     except requests.RequestException as exc:
+        return False, _provider_request_error(exc, "Twilio")
+
+
+def _credentials_present_whatsapp(credentials=None):
+    token = (
+        credentials["whatsapp_token"]
+        if credentials is not None
+        else current_app.config.get("WHATSAPP_TOKEN")
+    )
+    phone_id = (
+        credentials["whatsapp_phone_id"]
+        if credentials is not None
+        else current_app.config.get("WHATSAPP_PHONE_ID")
+    )
+    return bool(token and phone_id)
+
+
+def send_sms(phone_number, message, retailer_id=None):
+    """Send through the configured SMS provider."""
+    try:
+        credentials = (
+            load_retailer_credentials(retailer_id)
+            if retailer_id is not None
+            else None
+        )
+    except MessagingCredentialError as exc:
         return False, str(exc)
 
-
-def _credentials_present_whatsapp():
-    return bool(current_app.config.get("WHATSAPP_TOKEN")) and bool(
-        current_app.config.get("WHATSAPP_PHONE_ID")
+    provider = (
+        credentials["sms_provider"].lower()
+        if credentials is not None
+        else current_app.config.get("SMS_PROVIDER", "africastalking").lower()
     )
-
-
-def send_sms(phone_number, message):
-    """Send through the configured SMS provider."""
-    provider = current_app.config.get("SMS_PROVIDER", "africastalking").lower()
     if provider == "twilio":
-        return _send_sms_twilio(phone_number, message)
+        return _send_sms_twilio(phone_number, message, credentials)
     if provider == "africastalking":
-        return _send_sms_africas_talking(phone_number, message)
+        return _send_sms_africas_talking(phone_number, message, credentials)
     return False, f"Unsupported SMS_PROVIDER: {provider}"
 
 
-def send_whatsapp(phone_number, message):
+def send_whatsapp(phone_number, message, retailer_id=None):
     """Send via Meta WhatsApp Business Cloud API. Returns (success: bool, info: str)."""
-    if not _credentials_present_whatsapp():
+    try:
+        credentials = (
+            load_retailer_credentials(retailer_id)
+            if retailer_id is not None
+            else None
+        )
+    except MessagingCredentialError as exc:
+        return False, str(exc)
+    if not _credentials_present_whatsapp(credentials):
         return False, "WhatsApp is not configured"
 
-    phone_id = current_app.config["WHATSAPP_PHONE_ID"]
+    phone_id = (
+        credentials["whatsapp_phone_id"]
+        if credentials is not None
+        else current_app.config["WHATSAPP_PHONE_ID"]
+    )
+    token = (
+        credentials["whatsapp_token"]
+        if credentials is not None
+        else current_app.config["WHATSAPP_TOKEN"]
+    )
     url = f"https://graph.facebook.com/v19.0/{phone_id}/messages"
     headers = {
-        "Authorization": f"Bearer {current_app.config['WHATSAPP_TOKEN']}",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
     payload = {
@@ -144,9 +233,37 @@ def send_whatsapp(phone_number, message):
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=10)
         resp.raise_for_status()
-        return True, resp.text
+        return True, "Message accepted by WhatsApp"
     except requests.RequestException as exc:
-        return False, str(exc)
+        return False, _provider_request_error(exc, "WhatsApp")
+
+
+def _provider_request_error(exc, provider):
+    response = getattr(exc, "response", None)
+    if response is not None:
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = {}
+        if not isinstance(payload, dict):
+            payload = {}
+        if provider == "WhatsApp":
+            provider_error = payload.get("error")
+            detail = (
+                provider_error.get("message")
+                if isinstance(provider_error, dict)
+                else provider_error
+            )
+        elif provider == "Twilio":
+            detail = payload.get("message")
+        else:
+            detail = payload.get("errorMessage")
+
+        if detail:
+            return f"{provider} rejected the request: {str(detail)[:400]}"
+        return f"{provider} request failed with HTTP {response.status_code}"
+
+    return f"{provider} request failed: {type(exc).__name__}"
 
 
 def dispatch_reminder(customer, rule, message):
@@ -163,21 +280,39 @@ def dispatch_personal_reminder(customer, message, rule_id=None, channel=None):
     return _dispatch_channels(customer, rule_id, channels, message)
 
 
-def provider_configuration():
+def provider_configuration(retailer_id=None):
     """Expose provider readiness without returning any credential values."""
-    provider = current_app.config.get("SMS_PROVIDER", "africastalking").lower()
-    sms_ready = _credentials_present_sms()
+    if retailer_id is not None:
+        settings = MessagingSettings.query.filter_by(retailer_id=retailer_id).first()
+        provider = settings.sms_provider if settings else "africastalking"
+        try:
+            credentials = load_retailer_credentials(retailer_id)
+            sms_ready = _credentials_present_sms(credentials)
+            whatsapp_ready = _credentials_present_whatsapp(credentials)
+            error = None
+        except MessagingCredentialError as exc:
+            sms_ready = False
+            whatsapp_ready = False
+            error = str(exc)
+    else:
+        provider = current_app.config.get("SMS_PROVIDER", "africastalking").lower()
+        sms_ready = _credentials_present_sms()
+        whatsapp_ready = _credentials_present_whatsapp()
+        error = None
 
-    return {
+    providers = {
         "sms": {
             "provider": provider,
             "configured": sms_ready,
         },
         "whatsapp": {
             "provider": "meta_whatsapp_cloud",
-            "configured": _credentials_present_whatsapp(),
+            "configured": whatsapp_ready,
         },
     }
+    if error:
+        providers["configuration_error"] = error
+    return providers
 
 
 def _dispatch_channels(customer, rule_id, channels, message):
@@ -185,9 +320,13 @@ def _dispatch_channels(customer, rule_id, channels, message):
 
     for channel in channels:
         if channel == "whatsapp":
-            success, info = send_whatsapp(customer.phone_number, message)
+            success, info = send_whatsapp(
+                customer.phone_number, message, retailer_id=customer.retailer_id
+            )
         else:
-            success, info = send_sms(customer.phone_number, message)
+            success, info = send_sms(
+                customer.phone_number, message, retailer_id=customer.retailer_id
+            )
 
         results.append((success, info))
         db.session.add(
@@ -197,6 +336,7 @@ def _dispatch_channels(customer, rule_id, channels, message):
                 channel=channel,
                 message_content=message,
                 status="sent" if success else "failed",
+                failure_reason=None if success else info[:500],
                 sent_at=datetime.utcnow(),
             )
         )

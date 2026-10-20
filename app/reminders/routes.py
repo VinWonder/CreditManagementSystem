@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 from flask import (
     Blueprint,
@@ -16,7 +17,12 @@ from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models import ReminderRule, MessageDispatchLog, Customer
-from app.reminders.forms import ReminderActionForm, ReminderRuleForm
+from app.models import MessagingSettings
+from app.reminders.forms import (
+    MessagingSettingsForm,
+    ReminderActionForm,
+    ReminderRuleForm,
+)
 from app.reminders.engine import (
     render_personal_reminder_message,
     run_ageing_analysis_and_dispatch,
@@ -26,6 +32,7 @@ from app.reminders.dispatch_service import (
     dispatch_personal_reminder,
     provider_configuration,
 )
+from app.reminders.credentials import MessagingCredentialError, encrypt_secret
 from app.permissions import admin_required
 
 reminders_bp = Blueprint("reminders", __name__, url_prefix="/reminders")
@@ -39,6 +46,96 @@ def _has_duplicate_trigger_days(trigger_days, excluding_rule_id=None):
     if excluding_rule_id is not None:
         query = query.filter(ReminderRule.rule_id != excluding_rule_id)
     return query.first() is not None
+
+
+def _encrypted_secret_update(existing, submitted, clear):
+    if clear:
+        return None
+    return encrypt_secret(submitted) if submitted else existing
+
+
+def _form_value(field):
+    return (field.data or "").strip() or None
+
+
+@reminders_bp.route("/settings", methods=["GET", "POST"])
+@login_required
+@admin_required
+def messaging_settings():
+    settings = MessagingSettings.query.filter_by(
+        retailer_id=current_user.retailer_id
+    ).first()
+    form = MessagingSettingsForm()
+
+    if request.method == "GET":
+        if settings:
+            form.sms_provider.data = settings.sms_provider
+            form.at_username.data = settings.at_username or ""
+            form.twilio_account_sid.data = settings.twilio_account_sid or ""
+            form.twilio_from_number.data = settings.twilio_from_number or ""
+            form.twilio_messaging_service_sid.data = (
+                settings.twilio_messaging_service_sid or ""
+            )
+            form.whatsapp_phone_id.data = settings.whatsapp_phone_id or ""
+
+    if form.validate_on_submit():
+        if settings is None:
+            settings = MessagingSettings(retailer_id=current_user.retailer_id)
+
+        try:
+            at_api_key = _encrypted_secret_update(
+                settings.at_api_key_encrypted,
+                form.at_api_key.data,
+                form.clear_at_api_key.data,
+            )
+            twilio_auth_token = _encrypted_secret_update(
+                settings.twilio_auth_token_encrypted,
+                form.twilio_auth_token.data,
+                form.clear_twilio_auth_token.data,
+            )
+            whatsapp_token = _encrypted_secret_update(
+                settings.whatsapp_token_encrypted,
+                form.whatsapp_token.data,
+                form.clear_whatsapp_token.data,
+            )
+        except MessagingCredentialError as exc:
+            flash(str(exc), "danger")
+            return render_template(
+                "reminders/settings.html",
+                form=form,
+                providers=provider_configuration(current_user.retailer_id),
+                settings=settings,
+                encryption_key_configured=bool(
+                    current_app.config.get("MESSAGING_CREDENTIALS_ENCRYPTION_KEY")
+                ),
+            )
+
+        settings.sms_provider = form.sms_provider.data
+        settings.at_username = _form_value(form.at_username)
+        settings.at_api_key_encrypted = at_api_key
+        settings.twilio_account_sid = _form_value(form.twilio_account_sid)
+        settings.twilio_auth_token_encrypted = twilio_auth_token
+        settings.twilio_from_number = _form_value(form.twilio_from_number)
+        settings.twilio_messaging_service_sid = _form_value(
+            form.twilio_messaging_service_sid
+        )
+        settings.whatsapp_phone_id = _form_value(form.whatsapp_phone_id)
+        settings.whatsapp_token_encrypted = whatsapp_token
+        settings.updated_at = datetime.utcnow()
+        db.session.add(settings)
+        db.session.commit()
+        flash("Your provider settings were saved securely.", "success")
+        return redirect(url_for("reminders.messaging_settings"))
+
+    return render_template(
+        "reminders/settings.html",
+        form=form,
+        providers=provider_configuration(current_user.retailer_id),
+        settings=settings,
+        encryption_key_configured=bool(
+            current_app.config.get("MESSAGING_CREDENTIALS_ENCRYPTION_KEY")
+        ),
+    )
 
 
 @reminders_bp.route("/rules")
@@ -225,7 +322,7 @@ def send_personal_reminder(customer_id):
 @login_required
 def provider_status():
     """Return configured provider names and readiness, never credentials."""
-    return jsonify(providers=provider_configuration())
+    return jsonify(providers=provider_configuration(current_user.retailer_id))
 
 
 @reminders_bp.route("/api/customers/<int:customer_id>/test", methods=["POST"])
@@ -270,7 +367,7 @@ def test_customer_reminder_provider(customer_id):
             error="No active reminder rule matches this customer's overdue period."
         ), 409
 
-    channel_provider = provider_configuration()[channel]
+    channel_provider = provider_configuration(current_user.retailer_id)[channel]
     configured = channel_provider["configured"]
     if not configured:
         return jsonify(

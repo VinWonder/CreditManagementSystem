@@ -88,6 +88,9 @@
             <span class="dispatch-entry-phone"><i class="bi bi-telephone" aria-hidden="true"></i>{{ log.customer.phone_number }}</span>
           </div>
           <p class="dispatch-entry-message">{{ log.message_content }}</p>
+          {% if log.status == 'failed' and log.failure_reason %}
+          <p class="dispatch-entry-error"><strong>Provider response:</strong> {{ log.failure_reason }}</p>
+          {% endif %}
           <div class="dispatch-entry-meta">
             <span class="dispatch-channel-badge {{ 'dispatch-channel-whatsapp' if log.channel == 'whatsapp' else 'dispatch-channel-sms' }}">
               <i class="bi {{ 'bi-whatsapp' if log.channel == 'whatsapp' else 'bi-chat-left-text' }}" aria-hidden="true"></i>

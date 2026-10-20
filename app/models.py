@@ -43,6 +43,12 @@ class Retailer(UserMixin, db.Model):
     shopkeepers = db.relationship(
         "Shopkeeper", backref="retailer", lazy="dynamic", cascade="all, delete-orphan"
     )
+    messaging_settings = db.relationship(
+        "MessagingSettings",
+        backref="retailer",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     # Flask-Login expects get_id() -> str; UserMixin provides it using self.id,
     # so we alias the primary key.
@@ -184,6 +190,7 @@ class Customer(db.Model):
     retailer_id = db.Column(db.Integer, db.ForeignKey("retailers.retailer_id"), nullable=False)
     full_name = db.Column(db.String(100), nullable=False)
     phone_number = db.Column(db.String(20), nullable=False, index=True)
+    shop_name = db.Column(db.String(100), nullable=True)
     preferred_channel = db.Column(db.String(10), default="sms")  # sms | whatsapp | both
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -349,6 +356,33 @@ class ReminderRule(db.Model):
         return f"<ReminderRule {self.trigger_days_overdue}d {self.channel}>"
 
 
+class MessagingSettings(db.Model):
+    """Provider account details owned by one retailer."""
+
+    __tablename__ = "messaging_settings"
+
+    messaging_settings_id = db.Column(db.Integer, primary_key=True)
+    retailer_id = db.Column(
+        db.Integer,
+        db.ForeignKey("retailers.retailer_id"),
+        nullable=False,
+        unique=True,
+    )
+    sms_provider = db.Column(db.String(20), nullable=False, default="africastalking")
+    at_username = db.Column(db.String(100), nullable=True)
+    at_api_key_encrypted = db.Column(db.Text, nullable=True)
+    twilio_account_sid = db.Column(db.String(100), nullable=True)
+    twilio_auth_token_encrypted = db.Column(db.Text, nullable=True)
+    twilio_from_number = db.Column(db.String(30), nullable=True)
+    twilio_messaging_service_sid = db.Column(db.String(100), nullable=True)
+    whatsapp_phone_id = db.Column(db.String(100), nullable=True)
+    whatsapp_token_encrypted = db.Column(db.Text, nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<MessagingSettings retailer={self.retailer_id}>"
+
+
 class MessageDispatchLog(db.Model):
     """Audit trail of every reminder message sent (or attempted)."""
 
@@ -360,6 +394,7 @@ class MessageDispatchLog(db.Model):
     channel = db.Column(db.String(10), nullable=False)
     message_content = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(10), default="pending")  # pending | sent | failed
+    failure_reason = db.Column(db.String(500), nullable=True)
     sent_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     rule = db.relationship("ReminderRule")

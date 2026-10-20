@@ -63,6 +63,9 @@ class Config:
     TWILIO_MESSAGING_SERVICE_SID = os.environ.get("TWILIO_MESSAGING_SERVICE_SID", "")
     WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN", "")
     WHATSAPP_PHONE_ID = os.environ.get("WHATSAPP_PHONE_ID", "")
+    MESSAGING_CREDENTIALS_ENCRYPTION_KEY = os.environ.get(
+        "MESSAGING_CREDENTIALS_ENCRYPTION_KEY", ""
+    )
 
     # Reminder scheduler
     SCHEDULER_API_ENABLED = True

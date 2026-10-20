@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, SubmitField
-from wtforms.validators import DataRequired, Length, Regexp
+from wtforms.validators import DataRequired, Length, Optional, Regexp
 
 
 class CustomerForm(FlaskForm):
@@ -11,6 +11,10 @@ class CustomerForm(FlaskForm):
             DataRequired(),
             Regexp(r"^\+?\d{9,15}$", message="Enter a valid phone number, e.g. +254712345678"),
         ],
+    )
+    shop_name = StringField(
+        "Customer's Shop / Business (optional)",
+        validators=[Optional(), Length(max=100)],
     )
     preferred_channel = SelectField(
         "Preferred Reminder Channel",

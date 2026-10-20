@@ -41,7 +41,9 @@ def list_customers():
     base = Customer.query.filter_by(retailer_id=current_user.retailer_id)
     if query:
         base = base.filter(
-            (Customer.full_name.ilike(f"%{query}%")) | (Customer.phone_number.ilike(f"%{query}%"))
+            (Customer.full_name.ilike(f"%{query}%"))
+            | (Customer.phone_number.ilike(f"%{query}%"))
+            | (Customer.shop_name.ilike(f"%{query}%"))
         )
     customers = base.order_by(Customer.full_name.asc()).all()
     customers_with_purchases = _customer_ids_with_credit_sales(customers)
@@ -62,6 +64,7 @@ def new_customer():
             retailer_id=current_user.retailer_id,
             full_name=form.full_name.data,
             phone_number=form.phone_number.data,
+            shop_name=(form.shop_name.data or "").strip() or None,
             preferred_channel=form.preferred_channel.data,
         )
         db.session.add(customer)
@@ -94,6 +97,7 @@ def edit_customer(customer_id):
     if form.validate_on_submit():
         customer.full_name = form.full_name.data
         customer.phone_number = form.phone_number.data
+        customer.shop_name = (form.shop_name.data or "").strip() or None
         customer.preferred_channel = form.preferred_channel.data
         db.session.commit()
         flash("Customer updated.", "success")

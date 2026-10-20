@@ -41,6 +41,19 @@
         {% endif %}
       </div>
       <div class="customer-form-field">
+        {{ form.shop_name.label(class="form-label") }}
+        <span class="customer-input-wrap">
+          <i class="bi bi-shop" aria-hidden="true"></i>
+          {{ form.shop_name(class="form-control", placeholder="e.g. Amina's Grocery", autocomplete="organization", maxlength="100", **{"aria-describedby": "customer-shop-help" ~ (" customer-shop-errors" if form.shop_name.errors else ""), "aria-invalid": "true" if form.shop_name.errors else "false"}) }}
+        </span>
+        <small class="customer-field-help" id="customer-shop-help">Optional. Add the customer's shop or business name for easier identification.</small>
+        {% if form.shop_name.errors %}
+        <div class="customer-field-errors" id="customer-shop-errors" role="alert">
+          {% for e in form.shop_name.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ e }}</span>{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="customer-form-field">
         {{ form.preferred_channel.label(class="form-label") }}
         <span class="customer-input-wrap customer-select-wrap">
           <i class="bi bi-chat-dots" aria-hidden="true"></i>

@@ -71,7 +71,7 @@
           <small class="reminder-form-help" id="message-help">Keep it polite and easy to understand. The placeholders are replaced with each customer's actual details.</small>
           <div class="reminder-placeholders" id="message-placeholders">
             <span class="reminder-placeholders-label">Available placeholders</span>
-            <code>{customer_name}</code><code>{business_name}</code><code>{balance}</code><code>{days_overdue}</code>
+            <code>{customer_name}</code><code>{customer_shop}</code><code>{business_name}</code><code>{balance}</code><code>{days_overdue}</code><code>{item_details}</code>
           </div>
           <div class="reminder-live-preview" aria-live="polite">
             <span class="reminder-preview-heading"><i class="bi bi-eye" aria-hidden="true"></i> Example preview</span>
@@ -139,9 +139,11 @@
 
   const examples = {
     customer_name: "Amina",
+    customer_shop: "Amina's Grocery",
     business_name: "Your shop",
     balance: "KES 1,250.00",
     days_overdue: "7",
+    item_details: "Rice (taken 18 Oct 2026)",
   };
   function updatePreview() {
     characterCount.textContent = `${message.value.length} / 500`;

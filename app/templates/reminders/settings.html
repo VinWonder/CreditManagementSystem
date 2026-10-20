@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Message provider settings{% endblock %}
+{% block content %}
+<section class="container py-3 messaging-settings-page" aria-labelledby="messaging-settings-title">
+  <header class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <a class="text-decoration-none" href="{{ url_for('reminders.list_rules') }}">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i> Reminder rules
+      </a>
+      <p class="text-uppercase fw-semibold small mt-3 mb-1">Your provider accounts</p>
+      <h1 id="messaging-settings-title">SMS &amp; WhatsApp connections</h1>
+      <p class="text-secondary mb-0">Connect the provider accounts that belong to your shop.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2" aria-label="Provider readiness">
+      <span class="badge {{ 'text-bg-success' if providers.sms.configured else 'text-bg-secondary' }}">
+        SMS {{ 'ready' if providers.sms.configured else 'not configured' }}
+      </span>
+      <span class="badge {{ 'text-bg-success' if providers.whatsapp.configured else 'text-bg-secondary' }}">
+        WhatsApp {{ 'ready' if providers.whatsapp.configured else 'not configured' }}
+      </span>
+    </div>
+  </header>
+
+  {% if providers.configuration_error %}
+  <div class="alert alert-danger" role="alert">{{ providers.configuration_error }}</div>
+  {% endif %}
+  {% if not encryption_key_configured %}
+  <div class="alert alert-warning" role="alert">
+    Server setup is incomplete: an administrator must configure
+    <code>MESSAGING_CREDENTIALS_ENCRYPTION_KEY</code> before provider secrets can be saved.
+  </div>
+  {% endif %}
+  <div class="alert alert-info" role="note">
+    Provider credentials are encrypted before they are saved. Secret fields stay blank when you
+    reopen this page; leave them blank to keep saved credentials, or select the remove option.
+    Each retailer connects a separate account and sender.
+  </div>
+
+  <form method="POST" novalidate>
+    {{ form.hidden_tag() }}
+    <section class="card shadow-sm mb-4" aria-labelledby="sms-provider-title">
+      <div class="card-body p-4">
+        <h2 class="h4" id="sms-provider-title"><i class="bi bi-chat-left-text me-2" aria-hidden="true"></i>SMS provider</h2>
+        <p class="text-secondary">Choose one SMS provider for this shop. Enter account details exactly as shown in its dashboard.</p>
+        <div class="mb-3">
+          {{ form.sms_provider.label(class="form-label") }}
+          {{ form.sms_provider(class="form-select") }}
+          {% for error in form.sms_provider.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            {{ form.at_username.label(class="form-label") }}
+            {{ form.at_username(class="form-control", autocomplete="off") }}
+          </div>
+          <div class="col-md-6">
+            {{ form.at_api_key.label(class="form-label") }}
+            {{ form.at_api_key(class="form-control", autocomplete="new-password", placeholder="Leave blank to keep saved key") }}
+            {% if settings and settings.at_api_key_encrypted %}<small class="text-success">An API key is saved.</small>{% endif %}
+            <div class="form-check mt-2">{{ form.clear_at_api_key(class="form-check-input") }}{{ form.clear_at_api_key.label(class="form-check-label") }}</div>
+          </div>
+          <div class="col-md-6">
+            {{ form.twilio_account_sid.label(class="form-label") }}
+            {{ form.twilio_account_sid(class="form-control", autocomplete="off") }}
+          </div>
+          <div class="col-md-6">
+            {{ form.twilio_auth_token.label(class="form-label") }}
+            {{ form.twilio_auth_token(class="form-control", autocomplete="new-password", placeholder="Leave blank to keep saved token") }}
+            {% if settings and settings.twilio_auth_token_encrypted %}<small class="text-success">An auth token is saved.</small>{% endif %}
+            <div class="form-check mt-2">{{ form.clear_twilio_auth_token(class="form-check-input") }}{{ form.clear_twilio_auth_token.label(class="form-check-label") }}</div>
+          </div>
+          <div class="col-md-6">
+            {{ form.twilio_from_number.label(class="form-label") }}
+            {{ form.twilio_from_number(class="form-control", placeholder="+254700000000") }}
+          </div>
+          <div class="col-md-6">
+            {{ form.twilio_messaging_service_sid.label(class="form-label") }}
+            {{ form.twilio_messaging_service_sid(class="form-control", autocomplete="off") }}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card shadow-sm mb-4" aria-labelledby="whatsapp-provider-title">
+      <div class="card-body p-4">
+        <h2 class="h4" id="whatsapp-provider-title"><i class="bi bi-whatsapp me-2" aria-hidden="true"></i>WhatsApp Business</h2>
+        <p class="text-secondary">Use the Phone Number ID and access token from your Meta WhatsApp Business app.</p>
+        <div class="row g-3">
+          <div class="col-md-6">
+            {{ form.whatsapp_phone_id.label(class="form-label") }}
+            {{ form.whatsapp_phone_id(class="form-control", autocomplete="off") }}
+          </div>
+          <div class="col-md-6">
+            {{ form.whatsapp_token.label(class="form-label") }}
+            {{ form.whatsapp_token(class="form-control", autocomplete="new-password", placeholder="Leave blank to keep saved token") }}
+            {% if settings and settings.whatsapp_token_encrypted %}<small class="text-success">An access token is saved.</small>{% endif %}
+            <div class="form-check mt-2">{{ form.clear_whatsapp_token(class="form-check-input") }}{{ form.clear_whatsapp_token.label(class="form-check-label") }}</div>
+          </div>
+        </div>
+        <p class="small text-secondary mt-3 mb-0">
+          Recipients must opt in. Meta may require an approved message template for business-initiated
+          messages outside the 24-hour customer-service window. This integration currently sends
+          text messages; use SMS for scheduled reminders outside that window.
+        </p>
+      </div>
+    </section>
+
+    <button type="submit" class="btn btn-success">{{ form.submit.label.text }}</button>
+  </form>
+</section>
+{% endblock %}

@@ -23,9 +23,9 @@
 
   <div class="customer-directory-toolbar">
     <form class="customer-search" method="GET" role="search">
-      <label class="visually-hidden" for="customer-search-input">Search customers by name or phone</label>
+      <label class="visually-hidden" for="customer-search-input">Search customers by name, shop, or phone</label>
       <i class="bi bi-search customer-search-icon" aria-hidden="true"></i>
-      <input id="customer-search-input" type="search" name="q" placeholder="Search by name or phone..." value="{{ query }}">
+      <input id="customer-search-input" type="search" name="q" placeholder="Search by name, shop, or phone..." value="{{ query }}">
       {% if query %}
       <a class="customer-search-clear" href="{{ url_for('customers.list_customers') }}" aria-label="Clear customer search"><i class="bi bi-x-lg" aria-hidden="true"></i></a>
       {% endif %}
@@ -50,6 +50,7 @@
                 <span class="customer-identity-copy">
                   <a class="customer-name" href="{{ url_for('customers.view_customer', customer_id=c.customer_id) }}">{{ c.full_name }}</a>
                   <span class="customer-contact">
+                    {% if c.shop_name %}<span><i class="bi bi-shop" aria-hidden="true"></i>{{ c.shop_name }}</span>{% endif %}
                     <a href="tel:{{ c.phone_number }}"><i class="bi bi-telephone" aria-hidden="true"></i>{{ c.phone_number }}</a>
                     <a class="customer-portfolio-link" href="{{ url_for('customers.view_customer', customer_id=c.customer_id) }}"><i class="bi bi-journal-text" aria-hidden="true"></i>View portfolio</a>
                     <span class="customer-record-id">ID {{ c.customer_id }}</span>

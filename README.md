@@ -185,21 +185,46 @@ then apply it with `flask db upgrade`.
 
 ### Configure and test SMS/WhatsApp reminders
 
-The app calls the selected provider directly; no provider credentials are
-stored in the database or returned by the status API. Add credentials to the
-deployment environment (or a local, untracked `.env` file) and restart the
-web process:
+Each retailer connects their own SMS and WhatsApp provider accounts from the
+admin-only **Message providers** page in the application. Credentials are
+encrypted before being stored in the database and are never returned by the
+provider status API or rendered back into the page. Before deployment, set a
+stable encryption key in the web and scheduler environments:
 
-- **Africa's Talking SMS:** set `SMS_PROVIDER=africastalking`,
-  `AT_USERNAME` and `AT_API_KEY`. Use the sandbox account and its allowed
-  recipient numbers for initial testing.
-- **Twilio SMS:** set `SMS_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID`,
-  `TWILIO_AUTH_TOKEN`, and either `TWILIO_MESSAGING_SERVICE_SID` or
-  `TWILIO_FROM_NUMBER`.
-- **Meta WhatsApp Cloud API:** set `WHATSAPP_TOKEN` and `WHATSAPP_PHONE_ID`.
-  Configure an active WhatsApp Business sender and use an opted-in test
-  recipient. Meta may require an approved message template outside the
-  customer-service window; this integration currently sends text messages.
+```powershell
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Store the generated value as `MESSAGING_CREDENTIALS_ENCRYPTION_KEY` in your
+deployment secret manager (or a local, untracked `.env` file). Back it up
+securely and keep it unchanged: existing provider credentials cannot be
+decrypted if the key is lost or rotated. Install dependencies and apply
+database migrations with `flask --app run db upgrade` before using the new
+settings page.
+
+For each retailer, choose Africa's Talking or Twilio and enter that account's
+SMS credentials and sender. Add the retailer's Meta WhatsApp Phone Number ID
+and access token to enable WhatsApp. Customers can choose SMS, WhatsApp, or
+both, and reminder rules can target either channel. The account owner is the
+only role allowed to manage provider credentials; shopkeepers can send through
+their retailer's configured accounts.
+
+Account verification SMS uses the application's existing `SMS_PROVIDER` and
+SMS environment settings; reminder messages use the individual retailer
+credentials saved in **Message providers**.
+
+Meta may require an approved message template for business-initiated
+WhatsApp messages outside the 24-hour customer-service window. This
+integration currently sends text messages, so use SMS for scheduled reminders
+outside that window. Recipients must opt in.
+
+Reminder messages include the recorded credit-sale item descriptions and
+Nairobi sale dates. Existing rule templates receive those details
+automatically; new templates can place `{item_details}` where they belong.
+`{customer_shop}` is available when a customer has an optional shop/business
+name. Failed attempts show a sanitized provider reason in Dispatch history;
+check the failed entry there first, then verify credentials, sender approval,
+recipient opt-in/allow-list, and (for WhatsApp) template approval.
 
 Sign in and check provider readiness with:
 
@@ -246,13 +271,14 @@ For deployment:
   environment.
 - Run the web workers with `SCHEDULER_ENABLED=false`. Start one separate
   `scheduler_worker.py` process with `SCHEDULER_ENABLED=true` to avoid
-  duplicate reminders. Use the same database URL and secrets for both.
+  duplicate reminders. Use the same database URL and
+  `MESSAGING_CREDENTIALS_ENCRYPTION_KEY` for both.
 - Serve the app with Gunicorn rather than `python run.py`:
   ```bash
   gunicorn -w 4 -b 0.0.0.0:8000 run:app
   ```
-- Terminate HTTPS at your proxy or hosting platform, and configure SMS or
-   WhatsApp credentials in the host environment as needed.
+- Terminate HTTPS at your proxy or hosting platform. Retailers enter their
+  own SMS/WhatsApp credentials in **Message providers** after logging in.
 - Never commit `.env` or put production credentials in source control.
 
 ---
