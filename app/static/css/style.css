@@ -206,6 +206,20 @@ body {
 .activity-payment-table { min-width: 0; table-layout: fixed; width: 100%; }
 .activity-payment-table th:first-child, .activity-payment-table td:first-child { width: 6.2rem; }
 .activity-payment-table th:last-child, .activity-payment-table td:last-child { width: 8.4rem; }
+/* Dashboard "Recent payments": a wider Received column so amounts are never clipped. */
+.dashboard-payments-scroll { overflow-x: auto; }
+.dashboard-payments-table { min-width: 0; table-layout: fixed; width: 100%; }
+.dashboard-payments-table th:first-child,
+.dashboard-payments-table td:first-child { width: 6.6rem; }
+.dashboard-payments-table th:last-child,
+.dashboard-payments-table td:last-child { width: 9.5rem; }
+.dashboard-payments-table th:nth-child(2),
+.dashboard-payments-table td:nth-child(2) { min-width: 0; }
+.dashboard-payments-customer { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dashboard-payments-amount { color: #27785f; display: block; font-variant-numeric: tabular-nums; font-size: 0.82rem; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; }
+.dashboard-payments-status { display: inline-block; font-size: 0.6rem; font-weight: 750; letter-spacing: 0.04em; margin-top: 0.15rem; text-transform: uppercase; }
+.dashboard-payments-status.is-approved { color: #3f8a68; }
+.dashboard-payments-status.is-pending { color: #a07a2a; }
 .activity-payment-table .activity-customer-name { min-width: 0; overflow-wrap: anywhere; }
 .activity-payment-table .payment-amount { overflow-wrap: anywhere; white-space: normal; }
 .activity-table thead th { background: #f8faf9; border-bottom: 1px solid var(--line); color: #75878d; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.075em; padding: 0.65rem 0.7rem; text-transform: uppercase; }

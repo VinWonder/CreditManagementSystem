@@ -221,16 +221,18 @@
         <a class="panel-link" href="{{ url_for('payments.list_payments') }}">View all <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
       </div>
       {% if recent_payments %}
-      <div class="activity-count activity-count-payments"><i class="bi bi-wallet2" aria-hidden="true"></i> Latest {{ recent_payments|length }} payments</div>
-      <div class="table-responsive">
-        <table class="table activity-table align-middle mb-0">
+      <div class="table-responsive dashboard-payments-scroll">
+        <table class="table activity-table dashboard-payments-table align-middle mb-0">
           <thead><tr><th scope="col">Date</th><th scope="col">Customer</th><th scope="col" class="text-end">Received</th></tr></thead>
           <tbody>
             {% for p in recent_payments %}
             <tr>
               <td><span class="activity-date"><strong>{{ p.payment_date.strftime('%d') }}</strong><span>{{ p.payment_date.strftime('%b %Y') }}</span></span></td>
-              <td><span class="activity-customer-name"><i class="bi bi-person-circle" aria-hidden="true"></i>{{ p.customer.full_name }}</span></td>
-              <td class="text-end amount-cell payment-amount">{{ p.amount_paid | kes }}<small class="d-block text-muted">{{ p.approval_status|capitalize }}</small></td>
+              <td><span class="activity-customer-name dashboard-payments-customer"><i class="bi bi-person-circle" aria-hidden="true"></i>{{ p.customer.full_name }}</span></td>
+              <td class="text-end">
+                <span class="dashboard-payments-amount">{{ p.amount_paid | kes }}</span>
+                <span class="dashboard-payments-status{{ ' is-approved' if p.approval_status == 'approved' else ' is-pending' }}">{{ p.approval_status|capitalize }}</span>
+              </td>
             </tr>
             {% endfor %}
           </tbody>
