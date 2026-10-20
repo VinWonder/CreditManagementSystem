@@ -19,35 +19,21 @@
   <div class="reminder-summary">
     <article class="reminder-summary-card reminder-summary-active">
       <span class="reminder-summary-icon"><i class="bi bi-lightning-charge" aria-hidden="true"></i></span>
-      <div><span>Active rules</span><strong>{{ active_count }}</strong><small>Ready for the daily scan</small></div>
+      <div><span>Active rules</span><strong>{{ active_count }}</strong><small>Available to send</small></div>
     </article>
     <article class="reminder-summary-card">
       <span class="reminder-summary-icon"><i class="bi bi-pause-circle" aria-hidden="true"></i></span>
-      <div><span>Paused rules</span><strong>{{ inactive_count }}</strong><small>Saved but not sending</small></div>
+      <div><span>Paused rules</span><strong>{{ inactive_count }}</strong><small>Saved but not offered</small></div>
     </article>
     <article class="reminder-summary-card">
-      <span class="reminder-summary-icon"><i class="bi bi-calendar-check" aria-hidden="true"></i></span>
-      <div><span>Next automatic scan</span><strong>{{ daily_schedule }}</strong><small>Daily · server time</small></div>
+      <span class="reminder-summary-icon"><i class="bi bi-person-badge" aria-hidden="true"></i></span>
+      <div><span>Sending as</span><strong>{{ current_user.phone_number }}</strong><small>Your shop number</small></div>
     </article>
   </div>
 
-  <section class="reminder-run-panel" aria-labelledby="reminder-run-title">
-    <span class="reminder-run-icon"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></span>
-    <div class="reminder-run-copy">
-      <h2 id="reminder-run-title">Run an ageing scan</h2>
-      <p>Check outstanding accounts against your active rules. Matching customers may receive a real SMS or WhatsApp message.</p>
-    </div>
-    <form method="POST" action="{{ url_for('reminders.run_now') }}" class="reminder-run-form" onsubmit="return confirm('Run the scan now? Matching customers may receive reminder messages.');">
-      {{ action_form.hidden_tag() }}
-      <button class="reminder-run-button" type="submit" {% if not active_count %}disabled title="Create or activate a rule first"{% endif %}>
-        <i class="bi bi-play-fill" aria-hidden="true"></i><span>Run scan now</span>
-      </button>
-    </form>
-  </section>
-
   <section class="reminder-rules-card" aria-labelledby="reminder-table-title">
     <div class="reminder-rules-card-heading">
-      <div><h2 id="reminder-table-title">Your rules</h2><p>Active rules are checked during each scan.</p></div>
+      <div><h2 id="reminder-table-title">Your rules</h2><p>Each rule writes the message the retailer sends from their own WhatsApp or SMS app.</p></div>
       <span class="reminder-rules-count">{{ rules|length }} {{ 'rule' if rules|length == 1 else 'rules' }}</span>
     </div>
     {% if rules %}
