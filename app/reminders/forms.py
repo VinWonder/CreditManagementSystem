@@ -4,9 +4,7 @@ from flask_wtf import FlaskForm
 from wtforms import (
     BooleanField,
     IntegerField,
-    PasswordField,
     SelectField,
-    StringField,
     SubmitField,
     TextAreaField,
 )
@@ -74,46 +72,3 @@ class ReminderRuleForm(FlaskForm):
     submit = SubmitField("Save Rule")
 
 
-def validate_phone_number(form, field):
-    """Accept +254700000000 style numbers; keep it permissive for other regions."""
-    value = (field.data or "").strip()
-    if not value:
-        return
-    if not re.fullmatch(r"\+?\d{7,15}", value):
-        raise ValidationError(
-            "Enter a phone number with 7-15 digits, including the country code "
-            "(for example +254700000000)."
-        )
-
-
-class MessagingSettingsForm(FlaskForm):
-    reminder_sender_number = StringField(
-        "Shop reminder number (used for SMS and WhatsApp)",
-        validators=[Length(max=30), validate_phone_number],
-    )
-    sms_provider = SelectField(
-        "SMS provider",
-        choices=[
-            ("africastalking", "Africa's Talking"),
-            ("twilio", "Twilio"),
-        ],
-        validators=[DataRequired()],
-    )
-    at_username = StringField("Africa's Talking username", validators=[Length(max=100)])
-    at_api_key = PasswordField("Africa's Talking API key", validators=[Length(max=255)])
-    clear_at_api_key = BooleanField("Remove the saved Africa's Talking API key")
-    twilio_account_sid = StringField("Twilio Account SID", validators=[Length(max=100)])
-    twilio_auth_token = PasswordField("Twilio auth token", validators=[Length(max=255)])
-    clear_twilio_auth_token = BooleanField("Remove the saved Twilio auth token")
-    twilio_from_number = StringField(
-        "Twilio sender phone number (overrides the shop reminder number)",
-        validators=[Length(max=30), validate_phone_number],
-    )
-    twilio_messaging_service_sid = StringField(
-        "Twilio Messaging Service SID",
-        validators=[Length(max=100)],
-    )
-    whatsapp_phone_id = StringField("WhatsApp Phone Number ID", validators=[Length(max=100)])
-    whatsapp_token = PasswordField("WhatsApp access token", validators=[Length(max=4096)])
-    clear_whatsapp_token = BooleanField("Remove the saved WhatsApp access token")
-    submit = SubmitField("Save provider settings")
