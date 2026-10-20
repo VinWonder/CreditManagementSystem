@@ -173,17 +173,48 @@
   </div>
 </div>
 
-{% if current_user.is_admin and pending_approval_count %}
-<div class="dashboard-approval-alert" role="status">
-  <span class="dashboard-approval-icon"><i class="bi bi-shield-exclamation" aria-hidden="true"></i></span>
-  <div class="dashboard-approval-copy">
-    <strong>{{ pending_approval_count }} {{ 'payment is' if pending_approval_count == 1 else 'payments are' }} waiting for your approval</strong>
-    <span>Payments logged by shopkeepers do not reduce a balance until you verify them.</span>
+{% if current_user.is_admin and pending_payments %}
+<section class="dashboard-approvals" aria-labelledby="dashboard-approvals-title">
+  <header class="dashboard-approvals-header">
+    <div>
+      <p class="eyebrow mb-1">Action needed</p>
+      <h2 id="dashboard-approvals-title">Payments awaiting your approval</h2>
+      <span>Logged by shopkeepers. A balance only changes once you approve.</span>
+    </div>
+    <a class="panel-link" href="{{ url_for('payments.list_payments') }}">All payments <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+  </header>
+  <div class="table-responsive">
+    <table class="table dashboard-approvals-table align-middle mb-0">
+      <thead><tr><th scope="col">Logged</th><th scope="col">Customer</th><th scope="col" class="text-end">Amount</th><th scope="col" class="text-end">Decision</th></tr></thead>
+      <tbody>
+        {% for p in pending_payments %}
+        {% set decision_form = payment_decision_forms[p.payment_id] %}
+        <tr>
+          <td><span class="activity-date"><strong>{{ p.payment_date.strftime('%d') }}</strong><span>{{ p.payment_date.strftime('%b %Y') }}</span></span></td>
+          <td>
+            <span class="dashboard-payments-customer"><i class="bi bi-person-circle" aria-hidden="true"></i>{{ p.customer.full_name }}</span>
+            {% if p.submitted_by_shopkeeper %}<small class="d-block text-muted">by {{ p.submitted_by_shopkeeper.full_name }}</small>{% endif %}
+          </td>
+          <td class="text-end"><span class="dashboard-payments-amount">{{ p.amount_paid | kes }}</span></td>
+          <td class="text-end">
+            <div class="dashboard-approval-buttons">
+              <form method="POST" action="{{ url_for('payments.approve_payment', payment_id=p.payment_id) }}">
+                {{ decision_form.hidden_tag() }}
+                <button type="submit" class="dashboard-approve-button"><i class="bi bi-check2-circle" aria-hidden="true"></i> Approve</button>
+              </form>
+              <form method="POST" action="{{ url_for('payments.reject_payment', payment_id=p.payment_id) }}">
+                {{ decision_form.hidden_tag() }}
+                <input type="hidden" name="review_note" value="Rejected by retailer from dashboard">
+                <button type="submit" class="dashboard-reject-button"><i class="bi bi-x-circle" aria-hidden="true"></i> Reject</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
-  <a class="dashboard-approval-action" href="{{ url_for('payments.list_payments') }}">
-    Review and approve <i class="bi bi-arrow-right" aria-hidden="true"></i>
-  </a>
-</div>
+</section>
 {% endif %}
 
 <div class="row g-3 dashboard-grid">

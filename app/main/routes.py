@@ -4,6 +4,7 @@ from sqlalchemy import func
 
 from app.extensions import db
 from app.models import Customer, CreditTransaction, Payment, Ledger
+from app.payments.forms import PaymentDecisionForm
 
 main_bp = Blueprint("main", __name__)
 
@@ -47,11 +48,22 @@ def dashboard():
     )
 
     recent_payments = (
-        Payment.query.filter_by(retailer_id=retailer_id)
+        Payment.query.filter_by(retailer_id=retailer_id, approval_status="approved")
         .order_by(Payment.payment_date.desc())
         .limit(8)
         .all()
     )
+
+    # Shopkeeper payments the retailer must verify, newest first, with a form per
+    # row so the retailer can approve without leaving the dashboard.
+    pending_payments = []
+    if current_user.is_admin:
+        pending_payments = (
+            Payment.query.filter_by(retailer_id=retailer_id, approval_status="pending")
+            .order_by(Payment.payment_date.asc())
+            .limit(5)
+            .all()
+        )
 
     # Ageing buckets for the chart
     buckets = {"0-7": 0, "8-14": 0, "15-30": 0, "31-60": 0, "61+": 0}
@@ -79,5 +91,9 @@ def dashboard():
         overdue_customers=overdue_customers,
         recent_transactions=recent_transactions,
         recent_payments=recent_payments,
+        pending_payments=pending_payments,
+        payment_decision_forms={
+            payment.payment_id: PaymentDecisionForm() for payment in pending_payments
+        },
         buckets=buckets,
     )

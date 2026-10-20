@@ -199,14 +199,20 @@ body {
 .panel-link { align-items: center; color: var(--brand-dark); display: inline-flex; font-size: 0.75rem; font-weight: 750; gap: 0.35rem; text-decoration: none; white-space: nowrap; }
 .panel-link i { transition: transform 160ms ease; }
 .panel-link:hover i { transform: translateX(3px); }
-/* Admin alert for payments a shopkeeper logged and the retailer must approve. */
-.dashboard-approval-alert { align-items: center; background: #fff8e8; border: 1px solid #f0d9a4; border-radius: 0.9rem; display: flex; flex-wrap: wrap; gap: 0.85rem; margin-bottom: 1rem; padding: 0.9rem 1.1rem; }
-.dashboard-approval-icon { background: #f6e5bd; border-radius: 0.6rem; color: #8a6416; display: inline-flex; flex: none; font-size: 1.05rem; height: 2.3rem; justify-content: center; width: 2.3rem; }
-.dashboard-approval-copy { display: flex; flex: 1 1 16rem; flex-direction: column; gap: 0.15rem; min-width: 0; }
-.dashboard-approval-copy strong { color: #5f470f; font-size: 0.86rem; font-weight: 800; }
-.dashboard-approval-copy span { color: #7d6626; font-size: 0.74rem; }
-.dashboard-approval-action { align-items: center; background: #a97a13; border-radius: 0.55rem; color: #fff; display: inline-flex; flex: none; font-size: 0.78rem; font-weight: 750; gap: 0.35rem; padding: 0.5rem 0.85rem; text-decoration: none; white-space: nowrap; }
-.dashboard-approval-action:hover { background: #8f6710; color: #fff; }
+/* Dashboard panel for payments a shopkeeper logged that the retailer must approve. */
+.dashboard-approvals { background: #fffdf7; border: 1px solid #f0d9a4; border-radius: 0.9rem; margin-bottom: 1rem; overflow: hidden; }
+.dashboard-approvals-header { align-items: center; display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: space-between; padding: 0.9rem 1.1rem; }
+.dashboard-approvals-header h2 { color: #4a3a12; font-size: 0.95rem; font-weight: 800; margin: 0; }
+.dashboard-approvals-header span { color: #7d6626; display: block; font-size: 0.73rem; margin-top: 0.15rem; }
+.dashboard-approvals-table { font-size: 0.78rem; }
+.dashboard-approvals-table thead th { background: #fdf6e6; border-bottom: 1px solid #f0d9a4; color: #8a7024; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
+.dashboard-approvals-table td, .dashboard-approvals-table th { padding: 0.6rem 0.8rem; }
+.dashboard-approval-buttons { display: inline-flex; flex-wrap: wrap; gap: 0.35rem; justify-content: flex-end; }
+.dashboard-approve-button, .dashboard-reject-button { align-items: center; border-radius: 0.45rem; cursor: pointer; display: inline-flex; font-size: 0.72rem; font-weight: 750; gap: 0.28rem; padding: 0.38rem 0.6rem; white-space: nowrap; }
+.dashboard-approve-button { background: #1f7a4d; border: 1px solid #1f7a4d; color: #fff; }
+.dashboard-approve-button:hover { background: #186140; }
+.dashboard-reject-button { background: #fff; border: 1px solid #cf8b8b; color: #a33b3b; }
+.dashboard-reject-button:hover { background: #fdf1f1; }
 .nav-approval-badge { background: #d9534f; border-radius: 2rem; color: #fff; font-size: 0.62rem; font-weight: 800; line-height: 1; margin-left: 0.3rem; padding: 0.2rem 0.38rem; }
 .panel-link:focus-visible { border-radius: 0.25rem; outline: 2px solid var(--brand); outline-offset: 3px; }
 .activity-count { align-items: center; background: #edf5f2; border-radius: 2rem; color: #496c63; display: inline-flex; font-size: 0.64rem; font-weight: 700; gap: 0.35rem; margin-bottom: 0.35rem; padding: 0.32rem 0.55rem; }
