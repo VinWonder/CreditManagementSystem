@@ -20,7 +20,7 @@
   "transactions.new_transaction": ["transactions.new_transaction", "transactions.list_transactions"],
   "payments.new_payment": ["payments.new_payment", "payments.list_payments"],
   "ledger.receivables_report": ["ledger.receivables_report"],
-  "reminders.list_rules": ["reminders.list_rules", "reminders.new_rule", "reminders.edit_rule", "reminders.dispatch_log", "reminders.messaging_settings"]
+  "reminders.list_rules": ["reminders.list_rules", "reminders.new_rule", "reminders.edit_rule", "reminders.dispatch_log"]
 } %}
 <nav class="navbar navbar-expand-xl app-navbar sticky-top" aria-label="Main navigation">
   <div class="container-fluid app-navbar-inner">
@@ -78,12 +78,6 @@
           </a>
         </li>
         {% if current_user.is_admin %}
-        <li class="nav-item">
-          <a class="nav-link{% if request.endpoint == 'reminders.messaging_settings' %} active{% endif %}"
-            href="{{ url_for('reminders.messaging_settings') }}"{% if request.endpoint == 'reminders.messaging_settings' %} aria-current="page"{% endif %}>
-            <i class="bi bi-plug" aria-hidden="true"></i><span>Message providers</span>
-          </a>
-        </li>
         <li class="nav-item">
           <a class="nav-link{% if request.endpoint == 'auth.manage_shopkeepers' %} active{% endif %}"
             href="{{ url_for('auth.manage_shopkeepers') }}"{% if request.endpoint == 'auth.manage_shopkeepers' %} aria-current="page"{% endif %}>

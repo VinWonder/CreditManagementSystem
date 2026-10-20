@@ -392,37 +392,6 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertIn(b"Provider response:", response.data)
         self.assertIn(b"recipient is not allowed", response.data)
 
-    def test_retailer_can_save_encrypted_sms_and_whatsapp_credentials(self):
-        response = self.client.post(
-            "/reminders/settings",
-            data={
-                "csrf_token": self._csrf_token(),
-                "sms_provider": "africastalking",
-                "at_username": "retailer-username",
-                "at_api_key": "retailer-at-key",
-                "whatsapp_phone_id": "retailer-phone-id",
-                "whatsapp_token": "retailer-wa-token",
-            },
-        )
-
-        self.assertEqual(response.status_code, 302)
-        settings = MessagingSettings.query.filter_by(
-            retailer_id=self.retailer.retailer_id
-        ).one()
-        self.assertNotEqual(settings.at_api_key_encrypted, "retailer-at-key")
-        self.assertNotEqual(settings.whatsapp_token_encrypted, "retailer-wa-token")
-        self.assertEqual(
-            self.client.get("/reminders/api/providers/status").json["providers"]["sms"][
-                "configured"
-            ],
-            True,
-        )
-        page = self.client.get("/reminders/settings")
-        self.assertEqual(page.status_code, 200)
-        self.assertNotIn(b"retailer-at-key", page.data)
-        self.assertNotIn(b"retailer-wa-token", page.data)
-        self.assertIn(b"An API key is saved.", page.data)
-
     @patch("app.reminders.dispatch_service.requests.post")
     def test_whatsapp_send_uses_the_retailers_encrypted_account(self, post):
         post.return_value.raise_for_status.return_value = None

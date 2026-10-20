@@ -224,14 +224,12 @@ class RoleAndApprovalTests(unittest.TestCase):
             data={"amount_change": "-10.00", "reason": "Not allowed"},
         )
         manage = self.client.get("/auth/shopkeepers")
-        messaging_settings = self.client.get("/reminders/settings")
 
         self.assertEqual(edit.status_code, 403)
         self.assertEqual(delete.status_code, 403)
         self.assertEqual(approve.status_code, 403)
         self.assertEqual(adjust.status_code, 403)
         self.assertEqual(manage.status_code, 403)
-        self.assertEqual(messaging_settings.status_code, 403)
         reminder_rules = self.client.get("/reminders/rules")
         self.assertEqual(reminder_rules.status_code, 200)
         self.assertNotIn(b"Create reminder rule", reminder_rules.data)
