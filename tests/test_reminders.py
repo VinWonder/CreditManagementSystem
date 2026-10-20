@@ -117,9 +117,11 @@ class ReminderRulePageTests(unittest.TestCase):
         self.assertIn(b"Paused rules", response.data)
         self.assertIn(b"Hello {customer_name}, balance {balance}", response.data)
         self.assertIn(b"name=\"csrf_token\"", response.data)
-        self.assertIn(b"Matching customers may receive a real SMS or WhatsApp message", response.data)
-        self.assertIn(b"08:00", response.data)
         self.assertIn(b"Create reminder rule", response.data)
+        # Reminders are sent by the retailer, so there is no server-side scan.
+        self.assertNotIn(b"Run an ageing scan", response.data)
+        self.assertNotIn(b"Run scan now", response.data)
+        self.assertNotIn(b"Next automatic scan", response.data)
 
     def test_new_rule_form_shows_placeholder_guidance_and_preview(self):
         response = self.client.get("/reminders/rules/new")
