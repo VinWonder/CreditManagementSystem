@@ -269,16 +269,16 @@ For deployment:
 
 - Use a managed PostgreSQL instance and set `DATABASE_URL` in the host's
   environment.
-- Run the web workers with `SCHEDULER_ENABLED=false`. Start one separate
-  `scheduler_worker.py` process with `SCHEDULER_ENABLED=true` to avoid
-  duplicate reminders. Use the same database URL and
-  `MESSAGING_CREDENTIALS_ENCRYPTION_KEY` for both.
+- Run the web app against a managed PostgreSQL instance and set `DATABASE_URL`
+  in the host's environment. There is no background worker to start: reminders
+  are sent by the retailer from their own phone.
 - Serve the app with Gunicorn rather than `python run.py`:
   ```bash
   gunicorn -w 4 -b 0.0.0.0:8000 run:app
   ```
-- Terminate HTTPS at your proxy or hosting platform. Retailers enter their
-  own SMS/WhatsApp credentials in **Message providers** after logging in.
+- Terminate HTTPS at your proxy or hosting platform. Retailers send reminders
+  from the phone number on their own shop account, so no provider credentials
+  are entered in the app.
 - Never commit `.env` or put production credentials in source control.
 
 ---
