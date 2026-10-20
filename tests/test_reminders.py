@@ -831,41 +831,6 @@ class ReminderRulePageTests(unittest.TestCase):
         send_sms.assert_not_called()
         self.assertEqual(MessageDispatchLog.query.count(), 0)
 
-    @patch("app.reminders.routes.run_ageing_analysis_and_dispatch")
-    def test_manual_scan_without_active_rules_does_not_run(self, run_scan):
-        response = self.client.post(
-            "/reminders/run-now", data={"csrf_token": self._csrf_token()}
-        )
-
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers["Location"], "/reminders/rules")
-        run_scan.assert_not_called()
-
-    @patch("app.reminders.routes.run_ageing_analysis_and_dispatch")
-    def test_manual_scan_rejects_request_without_csrf_token(self, run_scan):
-        self._add_rule(active=True)
-
-        response = self.client.post("/reminders/run-now", data={})
-
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers["Location"], "/reminders/rules")
-        run_scan.assert_not_called()
-
-    @patch(
-        "app.reminders.routes.run_ageing_analysis_and_dispatch",
-        return_value={"scanned": 3, "sent": 2, "failed": 1},
-    )
-    def test_manual_scan_runs_for_signed_in_retailer_when_rule_active(self, run_scan):
-        self._add_rule(active=True)
-
-        response = self.client.post(
-            "/reminders/run-now", data={"csrf_token": self._csrf_token()}
-        )
-
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers["Location"], "/reminders/log")
-        run_scan.assert_called_once_with(retailer_id=self.retailer.retailer_id)
-
     def test_delete_rule_is_limited_to_the_signed_in_retailer(self):
         other_retailer = Retailer(
             business_name="Other Shop",

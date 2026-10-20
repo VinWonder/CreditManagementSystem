@@ -25,7 +25,6 @@ from app.reminders.forms import (
 )
 from app.reminders.engine import (
     render_personal_reminder_message,
-    run_ageing_analysis_and_dispatch,
     select_matching_rule,
 )
 from app.reminders.dispatch_service import (
@@ -233,30 +232,6 @@ def delete_rule(rule_id):
     db.session.commit()
     flash("Reminder rule deleted.", "info")
     return redirect(url_for("reminders.list_rules"))
-
-
-@reminders_bp.route("/run-now", methods=["POST"])
-@login_required
-def run_now():
-    form = ReminderActionForm()
-    if not form.validate_on_submit():
-        flash("The scan request could not be verified. Please try again.", "danger")
-        return redirect(url_for("reminders.list_rules"))
-
-    active_rules = ReminderRule.query.filter_by(
-        retailer_id=current_user.retailer_id, active=True
-    ).count()
-    if not active_rules:
-        flash("There are no active reminder rules to run. Activate or create a rule first.", "warning")
-        return redirect(url_for("reminders.list_rules"))
-
-    summary = run_ageing_analysis_and_dispatch(retailer_id=current_user.retailer_id)
-    flash(
-        f"Ageing analysis complete: {summary['scanned']} accounts scanned, "
-        f"{summary['sent']} reminders sent, {summary['failed']} failed.",
-        "info",
-    )
-    return redirect(url_for("reminders.dispatch_log"))
 
 
 @reminders_bp.route("/customers/<int:customer_id>/send-personal", methods=["POST"])
