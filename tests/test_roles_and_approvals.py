@@ -188,19 +188,39 @@ class RoleAndApprovalTests(unittest.TestCase):
             data={"customer_id": str(self.customer.customer_id), "amount_paid": "40.00"},
         )
         shopkeeper_dashboard = self.client.get("/dashboard")
-        self.assertNotIn(b"waiting for your approval", shopkeeper_dashboard.data)
+        self.assertNotIn(b"Payments awaiting your approval", shopkeeper_dashboard.data)
 
         self._login(self.retailer)
         dashboard = self.client.get("/dashboard")
-        self.assertIn(b"1 payment is", dashboard.data)
-        self.assertIn(b"Review and approve", dashboard.data)
+        self.assertIn(b"Payments awaiting your approval", dashboard.data)
         self.assertIn(b"nav-approval-badge", dashboard.data)
+        # An unverified payment must not appear among money actually received.
+        received_table = dashboard.data.split(b"Recent payments")[1]
+        self.assertNotIn(b"40.00", received_table)
 
         payment = Payment.query.one()
         self.client.post(f"/payments/{payment.payment_id}/approve")
 
         cleared = self.client.get("/dashboard")
-        self.assertNotIn(b"waiting for your approval", cleared.data)
+        self.assertNotIn(b"Payments awaiting your approval", cleared.data)
+        self.assertIn(b"40.00", cleared.data.split(b"Recent payments")[1])
+
+    def test_retailer_can_approve_a_payment_from_the_dashboard(self):
+        self._login(self.shopkeeper)
+        self.client.post(
+            "/payments/new",
+            data={"customer_id": str(self.customer.customer_id), "amount_paid": "40.00"},
+        )
+        self._login(self.retailer)
+        dashboard = self.client.get("/dashboard")
+        self.assertIn(b"dashboard-approve-button", dashboard.data)
+
+        payment = Payment.query.one()
+        response = self.client.post(f"/payments/{payment.payment_id}/approve")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(payment.approval_status, "approved")
+        self.assertEqual(Ledger.query.one().outstanding_balance, Decimal("60.00"))
 
     def test_rejection_requires_reason_and_does_not_change_balance(self):
         payment = Payment(
