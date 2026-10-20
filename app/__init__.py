@@ -2,7 +2,7 @@ from flask import Flask, render_template
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import ProgrammingError
 from config import Config
-from app.extensions import db, login_manager, migrate, scheduler
+from app.extensions import db, login_manager, migrate
 from app.timezones import format_nairobi_datetime
 
 
@@ -61,13 +61,8 @@ def create_app(config_class=Config):
     def inject_logout_form():
         return {"logout_form": LogoutForm()}
 
-    # ---- Scheduler: daily automated reminder scan ----
-    if app.config["SCHEDULER_ENABLED"] and not scheduler.running:
-        scheduler.init_app(app)
-        from app.reminders.scheduler_jobs import register_jobs
-
-        register_jobs(app, scheduler)
-        scheduler.start()
+    # The reminder scan scheduler was removed: retailers send reminders
+    # themselves from their own WhatsApp or SMS app.
 
     # ---- Template filters ----
     @app.template_filter("kes")
