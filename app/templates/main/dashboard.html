@@ -173,6 +173,19 @@
   </div>
 </div>
 
+{% if current_user.is_admin and pending_approval_count %}
+<div class="dashboard-approval-alert" role="status">
+  <span class="dashboard-approval-icon"><i class="bi bi-shield-exclamation" aria-hidden="true"></i></span>
+  <div class="dashboard-approval-copy">
+    <strong>{{ pending_approval_count }} {{ 'payment is' if pending_approval_count == 1 else 'payments are' }} waiting for your approval</strong>
+    <span>Payments logged by shopkeepers do not reduce a balance until you verify them.</span>
+  </div>
+  <a class="dashboard-approval-action" href="{{ url_for('payments.list_payments') }}">
+    Review and approve <i class="bi bi-arrow-right" aria-hidden="true"></i>
+  </a>
+</div>
+{% endif %}
+
 <div class="row g-3 dashboard-grid">
   <div class="col-xl-7">
     <div class="dashboard-panel table-panel">

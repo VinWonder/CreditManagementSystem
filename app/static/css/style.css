@@ -199,6 +199,15 @@ body {
 .panel-link { align-items: center; color: var(--brand-dark); display: inline-flex; font-size: 0.75rem; font-weight: 750; gap: 0.35rem; text-decoration: none; white-space: nowrap; }
 .panel-link i { transition: transform 160ms ease; }
 .panel-link:hover i { transform: translateX(3px); }
+/* Admin alert for payments a shopkeeper logged and the retailer must approve. */
+.dashboard-approval-alert { align-items: center; background: #fff8e8; border: 1px solid #f0d9a4; border-radius: 0.9rem; display: flex; flex-wrap: wrap; gap: 0.85rem; margin-bottom: 1rem; padding: 0.9rem 1.1rem; }
+.dashboard-approval-icon { background: #f6e5bd; border-radius: 0.6rem; color: #8a6416; display: inline-flex; flex: none; font-size: 1.05rem; height: 2.3rem; justify-content: center; width: 2.3rem; }
+.dashboard-approval-copy { display: flex; flex: 1 1 16rem; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.dashboard-approval-copy strong { color: #5f470f; font-size: 0.86rem; font-weight: 800; }
+.dashboard-approval-copy span { color: #7d6626; font-size: 0.74rem; }
+.dashboard-approval-action { align-items: center; background: #a97a13; border-radius: 0.55rem; color: #fff; display: inline-flex; flex: none; font-size: 0.78rem; font-weight: 750; gap: 0.35rem; padding: 0.5rem 0.85rem; text-decoration: none; white-space: nowrap; }
+.dashboard-approval-action:hover { background: #8f6710; color: #fff; }
+.nav-approval-badge { background: #d9534f; border-radius: 2rem; color: #fff; font-size: 0.62rem; font-weight: 800; line-height: 1; margin-left: 0.3rem; padding: 0.2rem 0.38rem; }
 .panel-link:focus-visible { border-radius: 0.25rem; outline: 2px solid var(--brand); outline-offset: 3px; }
 .activity-count { align-items: center; background: #edf5f2; border-radius: 2rem; color: #496c63; display: inline-flex; font-size: 0.64rem; font-weight: 700; gap: 0.35rem; margin-bottom: 0.35rem; padding: 0.32rem 0.55rem; }
 .activity-count-payments { background: #eff3fb; color: #526b93; }

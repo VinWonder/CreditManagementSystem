@@ -181,6 +181,27 @@ class RoleAndApprovalTests(unittest.TestCase):
         self.assertEqual(payment.reviewed_by_retailer_id, self.retailer.retailer_id)
         self.assertEqual(Ledger.query.one().outstanding_balance, Decimal("60.00"))
 
+    def test_pending_payments_are_flagged_for_the_retailer_only(self):
+        self._login(self.shopkeeper)
+        self.client.post(
+            "/payments/new",
+            data={"customer_id": str(self.customer.customer_id), "amount_paid": "40.00"},
+        )
+        shopkeeper_dashboard = self.client.get("/dashboard")
+        self.assertNotIn(b"waiting for your approval", shopkeeper_dashboard.data)
+
+        self._login(self.retailer)
+        dashboard = self.client.get("/dashboard")
+        self.assertIn(b"1 payment is", dashboard.data)
+        self.assertIn(b"Review and approve", dashboard.data)
+        self.assertIn(b"nav-approval-badge", dashboard.data)
+
+        payment = Payment.query.one()
+        self.client.post(f"/payments/{payment.payment_id}/approve")
+
+        cleared = self.client.get("/dashboard")
+        self.assertNotIn(b"waiting for your approval", cleared.data)
+
     def test_rejection_requires_reason_and_does_not_change_balance(self):
         payment = Payment(
             retailer_id=self.retailer.retailer_id,
