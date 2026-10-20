@@ -789,6 +789,13 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .customer-reminder-card-copy > p { color: #56685d; font-size: 0.87rem; line-height: 1.55; margin: 0.35rem 0 0; }
 .customer-reminder-card-copy > p strong { color: #294d38; }
 .customer-personal-reminder-button { margin-top: 0.75rem; }
+.customer-reminder-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+.customer-reminder-channel { align-items: center; border: 1px solid; border-radius: 0.58rem; display: inline-flex; font-size: 0.86rem; font-weight: 750; gap: 0.45rem; justify-content: center; min-height: 2.65rem; padding: 0.6rem 0.9rem; text-decoration: none; transition: background 0.15s ease, color 0.15s ease; }
+.customer-reminder-channel.is-whatsapp { background: #1f9d55; border-color: #1f9d55; color: #fff; }
+.customer-reminder-channel.is-whatsapp:hover { background: #178046; color: #fff; }
+.customer-reminder-channel.is-sms { background: #fff; border-color: #246847; color: #246847; }
+.customer-reminder-channel.is-sms:hover { background: #edf7ef; color: #194f36; }
+.customer-reminder-channel.is-disabled { background: #f1f3f2; border-color: #dfe4e1; color: #96a29b; cursor: not-allowed; pointer-events: none; }
 .customer-reminder-config-link { align-items: center; background: #fff; border: 1px solid #e1d2a9; border-radius: 0.6rem; color: #735719; display: inline-flex; font-size: 0.8rem; font-weight: 750; gap: 0.4rem; margin-top: 0.7rem; min-height: 2.4rem; padding: 0.5rem 0.7rem; text-decoration: none; }
 .customer-reminder-config-link:hover { background: #fffdf7; border-color: #cdb779; color: #5c4514; }
 .customer-reminder-admin-note { color: #785f2a !important; }
@@ -827,6 +834,8 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
   .customer-personal-reminder-copy { flex-basis: calc(100% - 3.3rem); }
   .customer-personal-reminder form { flex: 1 1 100%; }
   .customer-personal-reminder-button { width: 100%; }
+  .customer-reminder-actions { flex-direction: column; }
+  .customer-reminder-channel { width: 100%; }
   .customer-profile-hero { align-items: stretch; flex-direction: column; }
   .customer-balance-card { text-align: left; }
   .customer-reminder-card { padding: 0.85rem; }

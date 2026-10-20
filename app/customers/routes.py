@@ -6,7 +6,8 @@ from app.models import CreditTransaction, Customer, Ledger, ReminderRule
 from app.customers.forms import CustomerForm
 from app.payments.forms import BalanceAdjustmentForm
 from app.reminders.forms import ReminderActionForm
-from app.reminders.engine import select_matching_rule
+from app.reminders.engine import select_matching_rule, render_personal_reminder_message
+from app.reminders.links import reminder_links
 from app.permissions import admin_required
 
 customers_bp = Blueprint("customers", __name__, url_prefix="/customers")
@@ -132,6 +133,7 @@ def view_customer(customer_id):
     adjustments = customer.balance_adjustments.order_by(db.desc("created_at")).all()
     matching_rule = None
     active_rules = []
+    links = {"whatsapp": None, "sms": None}
     if customer.ledger:
         customer.ledger.recalculate()
         active_rules = ReminderRule.query.filter_by(
@@ -141,6 +143,13 @@ def view_customer(customer_id):
         matching_rule = select_matching_rule(
             active_rules, customer.ledger.days_overdue
         )
+        # The retailer opens their own WhatsApp or SMS app and sends the message
+        # from their registered number; nothing is sent by the server.
+        if matching_rule:
+            message = render_personal_reminder_message(
+                matching_rule, customer, current_user, customer.ledger
+            )
+            links = reminder_links(customer, message)
     return render_template(
         "customers/view.html",
         customer=customer,
@@ -149,6 +158,7 @@ def view_customer(customer_id):
         adjustments=adjustments,
         matching_rule=matching_rule,
         active_rules=active_rules,
+        reminder_links=links,
         adjustment_form=BalanceAdjustmentForm(),
         reminder_form=ReminderActionForm(),
     )

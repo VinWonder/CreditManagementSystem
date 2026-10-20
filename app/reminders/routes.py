@@ -261,6 +261,7 @@ def run_now():
 
 @reminders_bp.route("/customers/<int:customer_id>/send-personal", methods=["POST"])
 @login_required
+@admin_required
 def send_personal_reminder(customer_id):
     form = ReminderActionForm()
     if not form.validate_on_submit():
