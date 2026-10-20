@@ -63,6 +63,7 @@
           <a class="nav-link{% if request.endpoint in active_endpoints['payments.new_payment'] %} active{% endif %}"
             href="{{ url_for('payments.new_payment') }}"{% if request.endpoint in active_endpoints['payments.new_payment'] %} aria-current="page"{% endif %}>
             <i class="bi bi-cash-coin" aria-hidden="true"></i><span>Log payment</span>
+            {% if pending_approval_count %}<span class="nav-approval-badge" title="{{ pending_approval_count }} payment(s) awaiting your approval">{{ pending_approval_count }}</span>{% endif %}
           </a>
         </li>
         <li class="nav-item">

@@ -69,6 +69,20 @@ def create_app(config_class=Config):
     def inject_logout_form():
         return {"logout_form": LogoutForm()}
 
+    @app.context_processor
+    def inject_pending_payments():
+        """Surface payments a shopkeeper logged that the retailer still needs to verify."""
+        from flask_login import current_user
+
+        from app.models import Payment
+
+        if not current_user.is_authenticated or not getattr(current_user, "is_admin", False):
+            return {"pending_approval_count": 0}
+        count = Payment.query.filter_by(
+            retailer_id=current_user.retailer_id, approval_status="pending"
+        ).count()
+        return {"pending_approval_count": count}
+
     # The reminder scan scheduler was removed: retailers send reminders
     # themselves from their own WhatsApp or SMS app.
 
