@@ -35,7 +35,7 @@
             {{ form.trigger_days_overdue(class="form-control", min="0", max="365", step="1", inputmode="numeric", placeholder="e.g. 0", required=true, **{"aria-describedby": "trigger-help" ~ (" trigger-errors" if form.trigger_days_overdue.errors else ""), "aria-invalid": "true" if form.trigger_days_overdue.errors else "false"}) }}
             <span>days after sale</span>
           </span>
-          <small class="reminder-form-help" id="trigger-help">Choose 0 to send on the credit-sale calendar day, or 1 to start on the following day (Nairobi time). The daily scan sends once an account reaches the selected day. Choose 0–365 days.</small>
+          <small class="reminder-form-help" id="trigger-help">Choose 0 to remind on the credit-sale calendar day, or 1 to start on the following day (Nairobi time). This rule becomes available once an account reaches the selected day. Choose 0–365 days.</small>
           {% if form.trigger_days_overdue.errors %}
           <div class="reminder-form-errors" id="trigger-errors" role="alert">
             {% for error in form.trigger_days_overdue.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
@@ -101,9 +101,9 @@
       <ul>
         <li><i class="bi bi-check2" aria-hidden="true"></i><span>Choose an overdue threshold that gives customers time to repay.</span></li>
         <li><i class="bi bi-check2" aria-hidden="true"></i><span>Use a friendly tone and check the example preview.</span></li>
-        <li><i class="bi bi-check2" aria-hidden="true"></i><span>Confirm your SMS or WhatsApp delivery setup before activating.</span></li>
+        <li><i class="bi bi-check2" aria-hidden="true"></i><span>Send it from your own WhatsApp or SMS app when you are ready.</span></li>
       </ul>
-      <div class="reminder-aside-note"><i class="bi bi-info-circle" aria-hidden="true"></i> The daily scan checks active rules against customers' overdue balances.</div>
+      <div class="reminder-aside-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Active rules appear on a customer's page as WhatsApp and SMS buttons once their balance is due.</div>
     </aside>
   </div>
 </section>
