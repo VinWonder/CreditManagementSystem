@@ -69,6 +69,7 @@ def messaging_settings():
 
     if request.method == "GET":
         if settings:
+            form.reminder_sender_number.data = settings.reminder_sender_number or ""
             form.sms_provider.data = settings.sms_provider
             form.at_username.data = settings.at_username or ""
             form.twilio_account_sid.data = settings.twilio_account_sid or ""
@@ -111,6 +112,7 @@ def messaging_settings():
             )
 
         settings.sms_provider = form.sms_provider.data
+        settings.reminder_sender_number = _form_value(form.reminder_sender_number)
         settings.at_username = _form_value(form.at_username)
         settings.at_api_key_encrypted = at_api_key
         settings.twilio_account_sid = _form_value(form.twilio_account_sid)

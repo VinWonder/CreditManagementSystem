@@ -86,6 +86,15 @@ def _send_sms_africas_talking(phone_number, message, credentials=None):
         "to": phone_number,
         "message": message,
     }
+    # Africa's Talking uses `from` as an alphanumeric sender ID, so only pass it
+    # when the retailer set one. Recipients still see the shop's own identity.
+    from_number = (
+        credentials.get("reminder_sender_number", "")
+        if credentials is not None
+        else ""
+    )
+    if from_number:
+        data["from"] = from_number
     try:
         response = requests.post(url, headers=headers, data=data, timeout=10)
         response.raise_for_status()
@@ -137,8 +146,15 @@ def _send_sms_twilio(phone_number, message, credentials=None):
         if credentials is not None
         else current_app.config.get("TWILIO_FROM_NUMBER")
     )
+    # A retailer's own reminder number is the preferred sender for this shop;
+    # an explicitly configured Twilio sender number still wins.
+    if credentials is not None:
+        from_number = from_number or credentials.get("reminder_sender_number")
     if not account_sid or not auth_token or not (messaging_service_sid or from_number):
-        return False, "Twilio is selected but its account credentials or sender are missing"
+        return False, (
+            "Twilio is selected but its account credentials or sender are missing. "
+            "Set the shop reminder number in messaging settings."
+        )
 
     url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
     data = {"To": phone_number, "Body": message}
@@ -230,6 +246,15 @@ def send_whatsapp(phone_number, message, retailer_id=None):
         "type": "text",
         "text": {"body": message},
     }
+    # The Cloud API accepts a business phone number ID as `from` when a retailer
+    # registered their own number; without one Meta uses the default sender.
+    sender_number = (
+        credentials.get("reminder_sender_number", "")
+        if credentials is not None
+        else ""
+    )
+    if sender_number:
+        payload["from"] = re.sub(r"\D", "", sender_number)
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=10)
         resp.raise_for_status()
@@ -282,9 +307,11 @@ def dispatch_personal_reminder(customer, message, rule_id=None, channel=None):
 
 def provider_configuration(retailer_id=None):
     """Expose provider readiness without returning any credential values."""
+    sender_number = ""
     if retailer_id is not None:
         settings = MessagingSettings.query.filter_by(retailer_id=retailer_id).first()
         provider = settings.sms_provider if settings else "africastalking"
+        sender_number = (settings.reminder_sender_number or "") if settings else ""
         try:
             credentials = load_retailer_credentials(retailer_id)
             sms_ready = _credentials_present_sms(credentials)
@@ -304,10 +331,12 @@ def provider_configuration(retailer_id=None):
         "sms": {
             "provider": provider,
             "configured": sms_ready,
+            "sender_number": sender_number,
         },
         "whatsapp": {
             "provider": "meta_whatsapp_cloud",
             "configured": whatsapp_ready,
+            "sender_number": sender_number,
         },
     }
     if error:

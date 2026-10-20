@@ -54,6 +54,7 @@ def load_retailer_credentials(retailer_id):
             "twilio_messaging_service_sid": "",
             "whatsapp_phone_id": "",
             "whatsapp_token": "",
+            "reminder_sender_number": "",
         }
 
     return {
@@ -66,4 +67,5 @@ def load_retailer_credentials(retailer_id):
         "twilio_messaging_service_sid": settings.twilio_messaging_service_sid or "",
         "whatsapp_phone_id": settings.whatsapp_phone_id or "",
         "whatsapp_token": decrypt_secret(settings.whatsapp_token_encrypted),
+        "reminder_sender_number": settings.reminder_sender_number or "",
     }

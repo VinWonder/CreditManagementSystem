@@ -377,6 +377,9 @@ class MessagingSettings(db.Model):
     twilio_messaging_service_sid = db.Column(db.String(100), nullable=True)
     whatsapp_phone_id = db.Column(db.String(100), nullable=True)
     whatsapp_token_encrypted = db.Column(db.Text, nullable=True)
+    # The shop's own number that customers see as the sender on both SMS and
+    # WhatsApp. This is the number shown to recipients, not the provider ID.
+    reminder_sender_number = db.Column(db.String(30), nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     def __repr__(self):

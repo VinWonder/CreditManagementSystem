@@ -38,6 +38,27 @@
 
   <form method="POST" novalidate>
     {{ form.hidden_tag() }}
+    <section class="card shadow-sm mb-4" aria-labelledby="shop-sender-title">
+      <div class="card-body p-4">
+        <h2 class="h4" id="shop-sender-title"><i class="bi bi-person-badge me-2" aria-hidden="true"></i>Your reminder number</h2>
+        <p class="text-secondary mb-3">
+          This is your own shop number. Customers see it as the sender on both SMS and WhatsApp
+          reminders. Each retailer has their own number.
+        </p>
+        <div class="row g-3">
+          <div class="col-md-6">
+            {{ form.reminder_sender_number.label(class="form-label") }}
+            {{ form.reminder_sender_number(class="form-control", placeholder="+254700000000") }}
+            {% for error in form.reminder_sender_number.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            {% if not providers.sms.sender_number %}
+            <small class="text-warning">No reminder number set: reminders will use the provider's default sender.</small>
+            {% else %}
+            <small class="text-success">Reminders are sent from {{ providers.sms.sender_number }}.</small>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
     <section class="card shadow-sm mb-4" aria-labelledby="sms-provider-title">
       <div class="card-body p-4">
         <h2 class="h4" id="sms-provider-title"><i class="bi bi-chat-left-text me-2" aria-hidden="true"></i>SMS provider</h2>
@@ -71,6 +92,7 @@
           <div class="col-md-6">
             {{ form.twilio_from_number.label(class="form-label") }}
             {{ form.twilio_from_number(class="form-control", placeholder="+254700000000") }}
+            {% for error in form.twilio_from_number.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
           </div>
           <div class="col-md-6">
             {{ form.twilio_messaging_service_sid.label(class="form-label") }}
