@@ -42,6 +42,7 @@ def _has_duplicate_trigger_days(trigger_days, excluding_rule_id=None):
 
 @reminders_bp.route("/rules")
 @login_required
+@admin_required
 def list_rules():
     rules = ReminderRule.query.filter_by(retailer_id=current_user.retailer_id).order_by(
         ReminderRule.trigger_days_overdue
@@ -195,6 +196,7 @@ def send_personal_reminder(customer_id):
 
 @reminders_bp.route("/api/providers/status")
 @login_required
+@admin_required
 def provider_status():
     """Return configured provider names and readiness, never credentials."""
     return jsonify(providers=provider_configuration(current_user.retailer_id))
@@ -202,6 +204,7 @@ def provider_status():
 
 @reminders_bp.route("/api/customers/<int:customer_id>/test", methods=["POST"])
 @login_required
+@admin_required
 def test_customer_reminder_provider(customer_id):
     """Send a confirmed, real provider test using the applicable rule template."""
     payload = request.get_json(silent=True)
@@ -269,6 +272,7 @@ def test_customer_reminder_provider(customer_id):
 
 @reminders_bp.route("/log")
 @login_required
+@admin_required
 def dispatch_log():
     base_query = MessageDispatchLog.query.join(Customer).filter(
         Customer.retailer_id == current_user.retailer_id
