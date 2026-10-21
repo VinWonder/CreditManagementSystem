@@ -8,6 +8,9 @@ from app.payments.forms import PaymentDecisionForm
 
 main_bp = Blueprint("main", __name__)
 
+# Keep the dashboard short on phones; 'View all' opens the full history.
+RECENT_ACTIVITY_LIMIT = 2
+
 
 @main_bp.route("/")
 def index():
@@ -43,14 +46,14 @@ def dashboard():
     recent_transactions = (
         CreditTransaction.query.filter_by(retailer_id=retailer_id)
         .order_by(CreditTransaction.transaction_date.desc())
-        .limit(8)
+        .limit(RECENT_ACTIVITY_LIMIT)
         .all()
     )
 
     recent_payments = (
         Payment.query.filter_by(retailer_id=retailer_id, approval_status="approved")
         .order_by(Payment.payment_date.desc())
-        .limit(8)
+        .limit(RECENT_ACTIVITY_LIMIT)
         .all()
     )
 
