@@ -6,6 +6,7 @@ from wtforms import SelectField, DecimalField, SubmitField, StringField
 from wtforms.validators import DataRequired, Length, ValidationError
 
 from app.models import PAYMENT_METHODS
+from app.mpesa.daraja import safaricom_msisdn
 
 # Methods that leave an M-Pesa confirmation code the admin can check, if given.
 MPESA_CODE_METHODS = {"agent", "mpesa_send", "mpesa_till", "mpesa_paybill"}
@@ -69,7 +70,25 @@ class PaymentForm(FlaskForm):
         validators=[DataRequired(message="Choose how the customer paid.")],
     )
     payment_reference = StringField("Reference", validators=[Length(max=40)])
+    stk_phone = StringField("Customer's M-Pesa number", validators=[Length(max=20)])
     submit = SubmitField("Log Payment")
+
+    def validate_stk_phone(self, field):
+        if self.payment_method.data != "mpesa_stk":
+            field.data = None
+            return
+        phone = safaricom_msisdn(field.data)
+        if not phone:
+            raise ValidationError("Enter the customer's Safaricom number, e.g. 0712 345 678.")
+        field.data = phone
+
+    def validate_amount_paid(self, field):
+        if (
+            self.payment_method.data == "mpesa_stk"
+            and field.data is not None
+            and field.data != field.data.to_integral_value()
+        ):
+            raise ValidationError("M-Pesa prompts take whole shillings, e.g. 500 not 500.50.")
 
     def validate_payment_reference(self, field):
         method = self.payment_method.data
@@ -88,7 +107,7 @@ class PaymentForm(FlaskForm):
             if reference and not re.fullmatch(r"[A-Z0-9/-]{3,40}", reference):
                 raise ValidationError("Bank references use letters, numbers, / and - only.")
         else:
-            # Cash leaves no reference to record.
+            # Cash has no reference, and a prompt gets its receipt from Safaricom.
             field.data = None
 
 
