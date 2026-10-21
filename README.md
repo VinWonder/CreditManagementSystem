@@ -111,8 +111,8 @@ IndexedDB and synced when the connection comes back.
 
 Retailer owners are shop admins. Admins create and deactivate shopkeeper
 accounts from **Shopkeepers**; shopkeepers can add customers, record sales,
-submit payments for admin approval, view balances, and run configured
-reminders. Customer edits/deletion, reminder rule changes, payment approvals,
+submit payments for admin approval, and view balances. Customer
+edits/deletion, sending reminders, reminder rule changes, payment approvals,
 and balance corrections are admin-only. A shopkeeper payment does not reduce
 the customer's outstanding balance until approved. Partial approved payments
 reduce the balance; a zero balance is shown as cleared. Manual corrections
