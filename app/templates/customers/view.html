@@ -30,7 +30,7 @@
   {% endif %}
 </header>
 
-{% if customer.ledger and customer.ledger.outstanding_balance > 0 %}
+{% if current_user.is_admin and customer.ledger and customer.ledger.outstanding_balance > 0 %}
 <section class="customer-reminder-card {{ 'is-ready' if matching_rule else 'is-waiting' }}" aria-labelledby="customer-personal-reminder-title">
   <div class="customer-reminder-card-icon"><i class="bi {{ 'bi-send-check' if matching_rule else 'bi-calendar2-event' }}" aria-hidden="true"></i></div>
   <div class="customer-reminder-card-copy">
