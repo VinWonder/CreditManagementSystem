@@ -35,6 +35,18 @@ if (window.intlTelInput) {
     }
 
     input.form.addEventListener('submit', (event) => {
+      if (!window.intlTelInput.utils) {
+        // The number-checking library is still downloading (slow mobile data).
+        // Don't block the form: send the number with its country code and let
+        // the server validate it.
+        input.setCustomValidity('');
+        const typed = input.value.trim();
+        if (!typed.startsWith('+')) {
+          const { dialCode } = phoneInput.getSelectedCountryData();
+          input.value = `+${dialCode}${typed.replace(/\D/g, '').replace(/^0+/, '')}`;
+        }
+        return;
+      }
       if (!phoneInput.isValidNumber()) {
         event.preventDefault();
         input.setCustomValidity('Enter a valid number for the selected country.');
