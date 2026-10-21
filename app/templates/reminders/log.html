@@ -108,7 +108,7 @@
           <span class="dispatch-result-badge dispatch-result-pending"><i class="bi bi-clock-fill" aria-hidden="true"></i>{{ log.status|capitalize }}</span>
           {% endif %}
           <time datetime="{{ log.sent_at.isoformat() if log.sent_at else '' }}">
-            {{ log.sent_at.strftime('%d %b %Y · %H:%M') if log.sent_at else 'Time unavailable' }}
+            {{ (log.sent_at|nairobi('%d %b %Y · %H:%M') ~ ' EAT') if log.sent_at else 'Time unavailable' }}
           </time>
         </div>
       </article>

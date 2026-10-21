@@ -195,7 +195,7 @@
         {% for p in pending_payments %}
         {% set decision_form = payment_decision_forms[p.payment_id] %}
         <tr>
-          <td><span class="activity-date"><strong>{{ p.payment_date.strftime('%d') }}</strong><span>{{ p.payment_date.strftime('%b %Y') }}</span></span></td>
+          <td><span class="activity-date"><strong>{{ p.payment_date|nairobi('%d') }}</strong><span>{{ p.payment_date|nairobi('%b %Y') }}</span></span></td>
           <td class="stack-primary">
             <span class="dashboard-payments-customer"><i class="bi bi-person-circle" aria-hidden="true"></i>{{ p.customer.full_name }}</span>
             {% if p.submitted_by_shopkeeper %}<small class="d-block text-muted">by {{ p.submitted_by_shopkeeper.full_name }}</small>{% endif %}
@@ -277,7 +277,7 @@
           <tbody>
             {% for p in recent_payments %}
             <tr>
-              <td><span class="activity-date"><strong>{{ p.payment_date.strftime('%d') }}</strong><span>{{ p.payment_date.strftime('%b %Y') }}</span></span></td>
+              <td><span class="activity-date"><strong>{{ p.payment_date|nairobi('%d') }}</strong><span>{{ p.payment_date|nairobi('%b %Y') }}</span></span></td>
               <td class="stack-primary"><span class="activity-customer-name dashboard-payments-customer"><i class="bi bi-person-circle" aria-hidden="true"></i>{{ p.customer.full_name }}</span></td>
               <td class="text-end">
                 <span class="dashboard-payments-amount">{{ p.amount_paid | kes }}</span>

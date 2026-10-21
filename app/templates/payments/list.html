@@ -57,10 +57,10 @@
             <td>
               <span class="payment-history-date">
                 <i class="bi bi-calendar3" aria-hidden="true"></i>
-                {{ payment.payment_date.strftime('%d %b %Y') if payment.payment_date else 'Date unavailable' }}
+                {{ payment.payment_date|nairobi('%d %b %Y') if payment.payment_date else 'Date unavailable' }}
               </span>
               {% if payment.payment_date %}
-              <small class="payment-history-time">{{ payment.payment_date.strftime('%H:%M') }}</small>
+              <small class="payment-history-time">{{ payment.payment_date|nairobi('%H:%M') }} EAT</small>
               {% endif %}
             </td>
             <td class="stack-primary">
@@ -96,7 +96,7 @@
                 <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
               </form>
               {% else %}
-              <span class="small text-muted">{% if payment.reviewed_at %}Reviewed {{ payment.reviewed_at.strftime('%d %b %Y') }}{% else %}—{% endif %}</span>
+              <span class="small text-muted">{% if payment.reviewed_at %}Reviewed {{ payment.reviewed_at|nairobi('%d %b %Y · %H:%M') }} EAT{% else %}—{% endif %}</span>
               {% endif %}
             </td>
             {% endif %}
