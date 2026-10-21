@@ -13,6 +13,7 @@ from app.mpesa.daraja import (
     DarajaClient,
     DarajaError,
     account_reference_for,
+    mpesa_account_for,
 )
 
 mpesa_bp = Blueprint("mpesa", __name__, url_prefix="/mpesa")
@@ -46,7 +47,8 @@ def send_stk_prompt(customer, amount, phone):
         "mpesa.callback", token=token
     )
     reference = account_reference_for(current_user.business_name)
-    response = DarajaClient().stk_push(phone, amount, reference, reference, callback_url)
+    client = DarajaClient.for_account(mpesa_account_for(current_user.retailer_id))
+    response = client.stk_push(phone, amount, reference, reference, callback_url)
     stk = StkPushRequest(
         retailer_id=current_user.retailer_id,
         customer_id=customer.customer_id,
@@ -150,7 +152,8 @@ def prompt_status_json(stk_request_id):
         return jsonify(_status_payload(stk))
 
     try:
-        result_code, result_desc = DarajaClient().stk_query(stk.checkout_request_id)
+        client = DarajaClient.for_account(mpesa_account_for(stk.retailer_id))
+        result_code, result_desc = client.stk_query(stk.checkout_request_id)
     except DarajaError as exc:
         return jsonify(_status_payload(stk, message=str(exc)))
     if result_code is not None:

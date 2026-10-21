@@ -13,7 +13,7 @@ from app.models import (
     Ledger,
     Payment,
 )
-from app.mpesa.daraja import DarajaError, stk_push_enabled
+from app.mpesa.daraja import DarajaError, mpesa_account_for
 from app.mpesa.routes import recent_pending_prompt, send_stk_prompt
 from app.payments.forms import BalanceAdjustmentForm, PaymentDecisionForm, PaymentForm
 from app.permissions import admin_required
@@ -126,7 +126,7 @@ def new_payment():
         )
         for customer in owing_customers
     ]
-    stk_enabled = stk_push_enabled()
+    stk_enabled = mpesa_account_for(current_user.retailer_id) is not None
     if not stk_enabled:
         form.payment_method.choices = [
             choice for choice in form.payment_method.choices if choice[0] != "mpesa_stk"
