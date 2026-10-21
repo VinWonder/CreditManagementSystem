@@ -1704,3 +1704,30 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .mpesa-wait-status.is-paid .mpesa-wait-paid { display: inline-block; }
 .mpesa-wait-status.is-cancelled, .mpesa-wait-status.is-failed { background: #fff2ef; border-color: #efd3cd; color: #783b32; }
 .mpesa-wait-status.is-cancelled .mpesa-wait-stopped, .mpesa-wait-status.is-failed .mpesa-wait-stopped { display: inline-block; }
+/* Tables marked .table-stack become one card per row on phones and tablets.
+   responsive-tables.js copies each column heading into the cell's data-label. */
+@media (max-width: 991.98px) {
+  .table-responsive:has(> .table-stack) { overflow: visible; }
+  table.table-stack { min-width: 0 !important; width: 100%; }
+  table.table-stack thead { display: none; }
+  table.table-stack, table.table-stack tbody, table.table-stack tfoot { display: block; }
+  table.table-stack tr { border-bottom: 1px solid #e6ece9; display: block; padding: 0.7rem 0.9rem; }
+  table.table-stack tbody tr:last-child { border-bottom: 0; }
+  table.table-stack td, table.table-stack tfoot th { align-items: center; background: transparent; border: 0 !important; display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; justify-content: space-between; min-width: 0; padding: 0.3rem 0 !important; text-align: right !important; white-space: normal; }
+  table.table-stack td::before { color: #77898d; content: attr(data-label); flex: 0 0 auto; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.06em; margin-right: auto; text-align: left; text-transform: uppercase; }
+  table.table-stack td[data-label=""]::before { display: none; }
+  table.table-stack td > * { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+  /* The row's main cell (who or what it is) spans the card without a label. */
+  table.table-stack td.stack-primary { display: block; padding-bottom: 0.5rem !important; text-align: left !important; }
+  table.table-stack td.stack-primary::before { display: none; }
+  /* Cells holding buttons or forms take the full width under their label. */
+  table.table-stack td.stack-actions { justify-content: flex-start; }
+  table.table-stack td.stack-actions::before { flex-basis: 100%; }
+  table.table-stack td.stack-actions { text-align: left !important; }
+  table.table-stack td.stack-actions > * { margin-left: 0; }
+  table.table-stack td.stack-actions > form { width: 100%; }
+  table.table-stack td.stack-actions .form-control { width: 100%; }
+  table.table-stack td:empty, table.table-stack td.stack-empty-hidden:empty { display: none; }
+  table.table-stack tfoot tr { align-items: center; display: flex; flex-wrap: wrap; justify-content: space-between; }
+  table.table-stack tfoot td:empty { display: none; }
+}
