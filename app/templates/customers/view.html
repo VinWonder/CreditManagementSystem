@@ -134,7 +134,7 @@
           <tbody>
           {% for p in payments %}
             <tr>
-              <td>{{ p.payment_date|nairobi('%d %b %Y') }}</td>
+              <td>{{ p.payment_date|nairobi('%d %b %Y · %H:%M') }} EAT</td>
               <td>{{ payment_method_badge(p) }}</td>
               <td><span class="customer-payment-status {{ 'is-approved' if p.approval_status == 'approved' else 'is-pending' if p.approval_status == 'pending' else 'is-rejected' }}">{{ p.approval_status|capitalize }}</span>{% if p.review_note %}<small class="customer-payment-note">{{ p.review_note }}</small>{% endif %}</td>
               <td class="text-end"><strong>{{ p.amount_paid | kes }}</strong></td>
