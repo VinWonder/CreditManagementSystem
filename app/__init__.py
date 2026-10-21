@@ -159,6 +159,7 @@ def _upgrade_local_auth_schema():
         "phone_verified_at": "DATETIME",
         "logo_filename": "VARCHAR(255)",
         "email_verified_at": "DATETIME",
+        "email_canonical": "VARCHAR(255)",
     }
     with db.engine.begin() as connection:
         for name, definition in additions.items():
@@ -207,6 +208,28 @@ def _upgrade_local_auth_schema():
                     )
         connection.execute(
             text("CREATE UNIQUE INDEX IF NOT EXISTS uq_retailers_email ON retailers (email)")
+        )
+        if "email_canonical" not in columns:
+            from app.auth.identity import canonical_email
+
+            for retailer_id, email in connection.execute(
+                text("SELECT retailer_id, email FROM retailers WHERE email IS NOT NULL")
+            ).all():
+                connection.execute(
+                    text("UPDATE retailers SET email_canonical = :canonical WHERE retailer_id = :id"),
+                    {"canonical": canonical_email(email), "id": retailer_id},
+                )
+        connection.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_retailers_email_canonical "
+                "ON retailers (email_canonical)"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_retailers_business_name_lower "
+                "ON retailers (lower(business_name))"
+            )
         )
         connection.execute(
             text(
