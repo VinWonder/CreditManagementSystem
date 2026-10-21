@@ -166,6 +166,13 @@ shop for `owner@gmail.com`. The database enforces the same rules. Passwords may
 not contain the shop's phone number or email name. Logging out returns to the
 home page.
 
+A sign-up whose email stays unverified for 24 hours (`UNVERIFIED_SIGNUP_HOURS`)
+is treated as abandoned: if someone registers with its shop name, phone number
+or email, the abandoned sign-up is deleted so it cannot block the real owner.
+Verified accounts and accounts with any customers, sales, payments or
+shopkeepers are never removed. To clear all abandoned sign-ups at once:
+`flask --app run accounts purge-unverified` (add `--dry-run` to list them first).
+
 New retailers must verify the email they register with: a 6-digit code is
 emailed at sign-up and must be entered before the first sign-in. Codes are
 stored hashed, expire after 15 minutes, allow 5 attempts, and can be resent
