@@ -1701,3 +1701,10 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .mpesa-status.is-missing { background: #fff2ef; border-color: #efd3cd; color: #783b32; }
 .mpesa-status.is-warning { background: #fff9eb; border-color: #f1e1b9; color: #74531b; }
 .mpesa-secret-note { color: #63777a; font-size: 0.74rem; margin: 0.25rem 0 0.75rem; }
+.mpesa-prompt-card { margin-top: 1rem; }
+.mpesa-prompt-note, .mpesa-prompt-help { color: #5d6f6a; font-size: 0.8rem; margin: 0.6rem 0 0; }
+.mpesa-prompt-history { margin-top: 0.9rem; }
+.mpesa-prompt-status { border-radius: 2rem; display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 0.2rem 0.55rem; }
+.mpesa-prompt-status.is-pending { background: #fff4dc; color: #8a5a12; }
+.mpesa-prompt-status.is-paid { background: #e6f5ec; color: #23704a; }
+.mpesa-prompt-status.is-cancelled, .mpesa-prompt-status.is-failed { background: #fbeceb; color: #9a3d33; }
