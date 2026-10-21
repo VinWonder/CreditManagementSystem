@@ -34,9 +34,9 @@ class TransactionValidationTests(unittest.TestCase):
             formdata=MultiDict(
                 {
                     "customer_id": customer_id,
-                    "item_description": description,
-                    "item_size_inches": size_inches,
-                    "amount": amount,
+                    "items-0-item_description": description,
+                    "items-0-item_size_inches": size_inches,
+                    "items-0-amount": amount,
                 }
             )
         )
@@ -48,8 +48,7 @@ class TransactionValidationTests(unittest.TestCase):
             form = self._form()
 
             self.assertTrue(form.validate(), form.errors)
-            self.assertEqual(form.amount.data, Decimal("0.01"))
-            self.assertEqual(form.item_description.data, "Rice")
+            self.assertEqual(form.sale_items, [("Rice", Decimal("0.01"))])
 
     def test_form_rejects_zero_amount_and_missing_customer(self):
         with self.app.test_request_context():
@@ -57,21 +56,21 @@ class TransactionValidationTests(unittest.TestCase):
 
             self.assertFalse(form.validate())
             self.assertIn("customer_id", form.errors)
-            self.assertIn("amount", form.errors)
+            self.assertIn("amount", form.items[0].form.errors)
 
     def test_form_rejects_amounts_with_more_than_two_decimal_places(self):
         with self.app.test_request_context():
             form = self._form(amount="1.001")
 
             self.assertFalse(form.validate())
-            self.assertIn("2 decimal places", form.amount.errors[0])
+            self.assertIn("2 decimal places", form.items[0].form.amount.errors[0])
 
     def test_item_size_options_include_requested_fractional_and_whole_inches(self):
         with self.app.test_request_context():
             form = self._form()
 
             self.assertEqual(
-                [value for value, _label in form.item_size_inches.choices[1:]],
+                [value for value, _label in form.items[0].form.item_size_inches.choices[1:]],
                 [
                     "1/2", "1/4", "3/4", "1", "1 1/4", "1 1/2", "2", "2 1/2",
                     "3", "4", "6", "8", "12", "16", "18",
@@ -86,7 +85,7 @@ class TransactionValidationTests(unittest.TestCase):
 
             self.assertTrue(sized_form.validate(), sized_form.errors)
             self.assertFalse(oversized_form.validate())
-            self.assertIn("item_size_inches", oversized_form.errors)
+            self.assertIn("item_size_inches", oversized_form.items[0].form.errors)
 
     def test_offline_transaction_normalizes_valid_values(self):
         transaction, error = _normalize_offline_transaction(
@@ -210,9 +209,9 @@ class TransactionHistoryPageTests(unittest.TestCase):
             "/transactions/new",
             data={
                 "customer_id": str(self.customer.customer_id),
-                "item_description": "PVC pipe",
-                "item_size_inches": "1/2",
-                "amount": "125.00",
+                "items-0-item_description": "PVC pipe",
+                "items-0-item_size_inches": "1/2",
+                "items-0-amount": "125.00",
             },
         )
 

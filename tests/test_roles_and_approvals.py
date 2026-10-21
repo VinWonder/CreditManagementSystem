@@ -339,8 +339,8 @@ class RoleAndApprovalTests(unittest.TestCase):
             "/transactions/new",
             data={
                 "customer_id": str(added_customer.customer_id),
-                "item_description": "Cooking oil",
-                "amount": "25.00",
+                "items-0-item_description": "Cooking oil",
+                "items-0-amount": "25.00",
             },
         )
         self.assertEqual(sale_response.status_code, 302)
