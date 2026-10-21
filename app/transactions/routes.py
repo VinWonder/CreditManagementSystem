@@ -7,36 +7,30 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_, func
 
 from app.extensions import db
-from app.models import Customer, CreditTransaction, Ledger
+from app.models import Customer, CreditTransaction, Ledger, SaleItem
 from app.transactions.forms import (
+    ITEM_SIZE_CHOICES,
     ITEM_SIZES_INCHES,
+    MAX_SALE_ITEMS,
     TransactionForm,
     format_item_description,
 )
+from app.transactions.items import summarize_items
 
 transactions_bp = Blueprint("transactions", __name__, url_prefix="/transactions")
 
 
-def _normalize_offline_transaction(item):
-    """Validate and normalize one locally queued transaction before saving it."""
+def _normalize_offline_item(item):
+    """Validate one product from a locally queued sale. Returns ((description, amount), error)."""
     if not isinstance(item, dict):
-        return None, "invalid transaction data"
-
-    raw_customer_id = item.get("customer_id")
-    if isinstance(raw_customer_id, bool) or not str(raw_customer_id or "").isdigit():
-        return None, "choose a valid customer"
-    customer_id = int(raw_customer_id)
-    if customer_id < 1:
-        return None, "choose a valid customer"
-
+        return None, "invalid item"
     description = item.get("item_description")
     if not isinstance(description, str) or not description.strip():
         return None, "enter an item description"
-    description = description.strip()
     size_inches = item.get("item_size_inches", "")
     if not isinstance(size_inches, str) or size_inches not in ITEM_SIZES_INCHES | {""}:
         return None, "choose a valid item size"
-    description = format_item_description(description, size_inches)
+    description = format_item_description(description.strip(), size_inches)
     if len(description) > 150:
         return None, "item description and size must be 150 characters or fewer"
 
@@ -51,11 +45,45 @@ def _normalize_offline_transaction(item):
         return None, "amount must be at least KES 0.01"
     if amount > Decimal("99999999.99") or amount.as_tuple().exponent < -2:
         return None, "amount must be no more than KES 99,999,999.99 with up to 2 decimal places"
+    return (description, amount), None
+
+
+def _normalize_offline_transaction(item):
+    """Validate and normalize one locally queued sale before saving it.
+
+    New devices send {"customer_id", "items": [...]}; sales queued by older
+    versions of the page send one item_description / amount at the top level.
+    """
+    if not isinstance(item, dict):
+        return None, "invalid transaction data"
+
+    raw_customer_id = item.get("customer_id")
+    if isinstance(raw_customer_id, bool) or not str(raw_customer_id or "").isdigit():
+        return None, "choose a valid customer"
+    customer_id = int(raw_customer_id)
+    if customer_id < 1:
+        return None, "choose a valid customer"
+
+    raw_items = item.get("items") if "items" in item else [item]
+    if not isinstance(raw_items, list) or not raw_items:
+        return None, "add at least one item"
+    if len(raw_items) > MAX_SALE_ITEMS:
+        return None, f"a sale can have at most {MAX_SALE_ITEMS} items"
+    items = []
+    for raw_item in raw_items:
+        normalized, error = _normalize_offline_item(raw_item)
+        if error:
+            return None, error
+        items.append(normalized)
+    total = sum((amount for _description, amount in items), Decimal("0"))
+    if total > Decimal("99999999.99"):
+        return None, "the sale total must be KES 99,999,999.99 or less"
 
     return {
         "customer_id": customer_id,
-        "item_description": description,
-        "amount": amount,
+        "items": items,
+        "item_description": summarize_items([description for description, _amount in items]),
+        "amount": total,
     }, None
 
 
@@ -68,14 +96,21 @@ def _populate_customer_choices(form):
     ]
 
 
-def _apply_transaction(retailer_id, customer_id, item_description, amount, sync_status="synced"):
-    """Shared logic used by the normal form AND the offline-sync API."""
+def _apply_transaction(retailer_id, customer_id, items, sync_status="synced"):
+    """Save one sale of one or more (description, amount) items.
+
+    Shared by the normal form AND the offline-sync API.
+    """
     txn = CreditTransaction(
         retailer_id=retailer_id,
         customer_id=customer_id,
-        item_description=item_description,
-        amount=amount,
+        item_description=summarize_items([description for description, _amount in items]),
+        amount=sum((Decimal(amount) for _description, amount in items), Decimal("0")),
         sync_status=sync_status,
+        items=[
+            SaleItem(position=position, description=description, amount=amount)
+            for position, (description, amount) in enumerate(items)
+        ],
     )
     db.session.add(txn)
 
@@ -170,20 +205,20 @@ def new_transaction():
     customers_available = len(form.customer_id.choices) > 1
 
     if customers_available and form.validate_on_submit():
-        _apply_transaction(
-            current_user.retailer_id,
-            form.customer_id.data,
-            format_item_description(
-                form.item_description.data,
-                form.item_size_inches.data,
-            ),
-            form.amount.data,
+        txn = _apply_transaction(current_user.retailer_id, form.customer_id.data, form.sale_items)
+        item_count = len(txn.items)
+        flash(
+            f"Credit sale of {item_count} item{'s' if item_count != 1 else ''} "
+            f"(KES {txn.amount:,.2f}) recorded and ledger updated.",
+            "success",
         )
-        flash("Credit sale recorded and ledger updated.", "success")
         return redirect(url_for("transactions.list_transactions"))
 
     return render_template(
-        "transactions/form.html", form=form, customers_available=customers_available
+        "transactions/form.html",
+        form=form,
+        customers_available=customers_available,
+        size_choices=[("", "No size")] + ITEM_SIZE_CHOICES,
     )
 
 
@@ -224,8 +259,7 @@ def sync_offline_transactions():
             txn = _apply_transaction(
                 current_user.retailer_id,
                 customer.customer_id,
-                transaction["item_description"],
-                transaction["amount"],
+                transaction["items"],
                 sync_status="synced",
             )
         except SQLAlchemyError:
