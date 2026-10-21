@@ -8,7 +8,7 @@ from flask import Blueprint, current_app, jsonify, render_template, request, url
 from flask_login import current_user, login_required
 
 from app.extensions import db
-from app.models import Ledger, Payment, StkPushRequest
+from app.models import Customer, Ledger, Payment, StkPushRequest
 from app.mpesa.daraja import (
     CANCELLED_CODES,
     RESULT_MESSAGES,
@@ -17,6 +17,7 @@ from app.mpesa.daraja import (
     account_reference_for,
     mpesa_account_for,
 )
+from app.transactions.items import allocate_payment
 
 mpesa_bp = Blueprint("mpesa", __name__, url_prefix="/mpesa")
 
@@ -52,8 +53,12 @@ def recent_pending_prompt(customer_id):
     ).first()
 
 
-def send_stk_prompt(customer, amount, phone):
-    """Ask Safaricom to prompt the customer's phone. Raises DarajaError with a showable reason."""
+def send_stk_prompt(customer, amount, phone, sale_item_ids=()):
+    """Ask Safaricom to prompt the customer's phone. Raises DarajaError with a showable reason.
+
+    sale_item_ids are the items the payment is for; they are applied once M-Pesa
+    confirms the payment.
+    """
     token = secrets.token_urlsafe(32)
     callback_url = (callback_base_url() or UNREACHABLE_CALLBACK_BASE) + url_for(
         "mpesa.callback", token=token
@@ -71,6 +76,7 @@ def send_stk_prompt(customer, amount, phone):
         callback_token=token,
         merchant_request_id=response.get("MerchantRequestID"),
         checkout_request_id=response.get("CheckoutRequestID"),
+        sale_item_ids=",".join(str(item_id) for item_id in sale_item_ids) or None,
     )
     db.session.add(stk)
     db.session.commit()
@@ -108,6 +114,14 @@ def finish_stk_request(stk, result_code, result_desc, receipt=None, paid_amount=
         reviewed_at=now,
         review_note="Confirmed by M-Pesa",
     )
+    if stk.sale_item_ids:
+        item_ids = [int(item_id) for item_id in stk.sale_item_ids.split(",")]
+        try:
+            allocate_payment(payment, db.session.get(Customer, stk.customer_id), item_ids)
+        except ValueError as exc:
+            # The money arrived either way; it pays the oldest items instead.
+            current_app.logger.warning("Prompt %s paid without its item choice: %s", stk.stk_request_id, exc)
+            payment.allocations = []
     db.session.add(payment)
     db.session.flush()
     stk.payment_id = payment.payment_id
