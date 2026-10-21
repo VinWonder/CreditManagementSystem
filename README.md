@@ -126,6 +126,10 @@ Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` and `MAIL_FROM`
 in `.env` to send real email (for Gmail, use an App Password). Without
 `SMTP_HOST`, development prints the code in the Flask terminal.
 
+Sessions end after 12 idle hours (`SESSION_IDLE_HOURS`). In development,
+restarting the server also signs everyone out (`SESSION_ENDS_ON_RESTART`);
+saving a code file and letting the auto-reloader restart does not.
+
 Passwords must be 8-128 characters with an uppercase letter, a lowercase
 letter, a number and a symbol, and no spaces. The forms show a live checklist.
 
