@@ -142,8 +142,10 @@ saving a code file and letting the auto-reloader restart does not.
 Passwords must be 8-128 characters with an uppercase letter, a lowercase
 letter, a number and a symbol, and no spaces. The forms show a live checklist.
 
-Phone verification and SMS sign-in codes are currently disabled. Password
-reset codes are supported.
+Forgotten passwords: the retailer enters their phone number or email and a
+6-digit reset code is emailed to the address on the account, usually within
+seconds (accounts without an email get it by SMS). A new code can be requested
+once a minute. Phone verification and SMS sign-in codes are currently disabled.
 
 ---
 
