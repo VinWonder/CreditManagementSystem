@@ -79,6 +79,34 @@
           {% endif %}
         </div>
 
+        <div class="payment-field">
+          {{ form.payment_method.label(class="form-label") }}
+          <span class="payment-input-wrap">
+            <i class="bi bi-credit-card-2-front" aria-hidden="true"></i>
+            {{ form.payment_method(class="form-select", required=true, **{"aria-describedby": "payment-method-help" ~ (" payment-method-errors" if form.payment_method.errors else ""), "aria-invalid": "true" if form.payment_method.errors else "false"}) }}
+          </span>
+          <small class="payment-field-help" id="payment-method-help">How the customer paid: cash, bank, agent, M-Pesa or cheque.</small>
+          {% if form.payment_method.errors %}
+          <div class="payment-field-errors" id="payment-method-errors" role="alert">
+            {% for error in form.payment_method.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="payment-field" id="payment-reference-field">
+          <label class="form-label" for="payment_reference" id="payment-reference-label">Reference</label>
+          <span class="payment-input-wrap">
+            <i class="bi bi-hash" aria-hidden="true"></i>
+            {{ form.payment_reference(class="form-control payment-reference-input", maxlength="40", autocomplete="off", autocapitalize="characters", spellcheck="false", **{"aria-describedby": "payment-reference-help" ~ (" payment-reference-errors" if form.payment_reference.errors else ""), "aria-invalid": "true" if form.payment_reference.errors else "false"}) }}
+          </span>
+          <small class="payment-field-help" id="payment-reference-help">Choose a payment method first.</small>
+          {% if form.payment_reference.errors %}
+          <div class="payment-field-errors" id="payment-reference-errors" role="alert">
+            {% for error in form.payment_reference.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
         <div id="payment-remaining-preview" class="payment-remaining-preview d-none" aria-live="polite"></div>
         <div class="payment-form-actions">
           <button type="submit" class="payment-submit-button">
@@ -146,6 +174,43 @@
   customer.addEventListener("change", updateBalance);
   amount.addEventListener("input", updateBalance);
   updateBalance();
+
+  // Mirrors PaymentForm.validate_payment_reference; the server stays the authority.
+  const mpesaCode = { label: "M-Pesa transaction code", placeholder: "e.g. QFT4ABC123", required: true, help: "From the customer's M-Pesa confirmation SMS." };
+  const referenceHints = {
+    cash: null,
+    bank: { label: "Bank reference (optional)", placeholder: "e.g. FT2629401234", required: false, help: "The deposit slip or transfer reference, if the customer has one." },
+    agent: { ...mpesaCode, help: "From the M-Pesa SMS for the agent withdrawal." },
+    mpesa_send: { ...mpesaCode, help: "From the M-Pesa SMS the customer received after sending money to your number." },
+    mpesa_till: { ...mpesaCode, help: "From the M-Pesa SMS for the Till (Buy Goods) payment." },
+    mpesa_paybill: { ...mpesaCode, help: "From the M-Pesa SMS for the Paybill payment." },
+    cheque: { label: "Cheque number", placeholder: "e.g. 000123", required: true, help: "Printed at the bottom of the cheque." },
+  };
+  const method = document.getElementById("payment_method");
+  const referenceField = document.getElementById("payment-reference-field");
+  const reference = document.getElementById("payment_reference");
+  const referenceLabel = document.getElementById("payment-reference-label");
+  const referenceHelp = document.getElementById("payment-reference-help");
+
+  function updateReference() {
+    const hint = referenceHints[method.value];
+    referenceField.hidden = !hint;
+    reference.required = Boolean(hint && hint.required);
+    if (!hint) {
+      return;
+    }
+    referenceLabel.textContent = hint.label;
+    reference.placeholder = hint.placeholder;
+    referenceHelp.textContent = hint.help;
+  }
+
+  method.addEventListener("change", updateReference);
+  reference.addEventListener("input", () => {
+    const caret = reference.selectionStart;
+    reference.value = reference.value.toUpperCase();
+    reference.setSelectionRange(caret, caret);
+  });
+  updateReference();
 })();
 </script>
 {% endif %}
