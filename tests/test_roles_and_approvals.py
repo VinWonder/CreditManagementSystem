@@ -182,6 +182,43 @@ class RoleAndApprovalTests(unittest.TestCase):
         self.assertEqual(payment.reviewed_by_retailer_id, self.retailer.retailer_id)
         self.assertEqual(Ledger.query.one().outstanding_balance, Decimal("60.00"))
 
+    def test_dashboard_shows_only_the_two_latest_sales_and_payments(self):
+        for day in range(1, 5):
+            db.session.add(
+                CreditTransaction(
+                    retailer_id=self.retailer.retailer_id,
+                    customer_id=self.customer.customer_id,
+                    item_description=f"Sale item {day}",
+                    amount=Decimal("10.00"),
+                    transaction_date=datetime(2026, 10, 10 + day),
+                )
+            )
+            db.session.add(
+                Payment(
+                    retailer_id=self.retailer.retailer_id,
+                    customer_id=self.customer.customer_id,
+                    amount_paid=Decimal(f"{day}.11"),
+                    payment_date=datetime(2026, 10, 10 + day),
+                    approval_status="approved",
+                )
+            )
+        db.session.commit()
+        self._login(self.retailer)
+
+        page = self.client.get("/dashboard").get_data(as_text=True)
+        sales = page.split("Recent credit sales")[1].split("Recent payments")[0]
+        payments = page.split("Recent payments")[1]
+
+        self.assertIn("Sale item 4", sales)
+        self.assertIn("Sale item 3", sales)
+        self.assertNotIn("Sale item 2", sales)
+        self.assertNotIn("Groceries", sales)
+        self.assertIn("4.11", payments)
+        self.assertIn("3.11", payments)
+        self.assertNotIn("2.11", payments)
+        self.assertIn("/transactions/", sales)
+        self.assertIn("/payments/", payments)
+
     def test_pending_payments_are_flagged_for_the_retailer_only(self):
         self._login(self.shopkeeper)
         self.client.post(
