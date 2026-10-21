@@ -13,6 +13,7 @@ from app.models import (
     Customer,
     Ledger,
     Payment,
+    ReminderRule,
     Retailer,
     Shopkeeper,
 )
@@ -386,6 +387,47 @@ class RoleAndApprovalTests(unittest.TestCase):
         customer_response = self.client.get(f"/customers/{self.customer.customer_id}")
         self.assertIn(b"All clear", customer_response.data)
 
+
+    def _add_sale_day_rule(self):
+        db.session.add(
+            ReminderRule(
+                retailer_id=self.retailer.retailer_id,
+                trigger_days_overdue=0,
+                message_template="Dear {customer_name}, you owe {balance}.",
+                channel="both",
+                active=True,
+            )
+        )
+        db.session.commit()
+
+    def test_shopkeeper_customer_page_has_no_reminder_send_options(self):
+        self._add_sale_day_rule()
+        self._login(self.shopkeeper)
+
+        response = self.client.get(f"/customers/{self.customer.customer_id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(b"Send a personal reminder", response.data)
+        self.assertNotIn(b"https://wa.me/", response.data)
+        self.assertNotIn(b"sms:+", response.data)
+
+    def test_retailer_customer_page_keeps_reminder_send_options(self):
+        self._add_sale_day_rule()
+        self._login(self.retailer)
+
+        response = self.client.get(f"/customers/{self.customer.customer_id}")
+
+        self.assertIn(b"Send a personal reminder", response.data)
+        self.assertIn(b"https://wa.me/254700000042", response.data)
+
+    def test_dashboard_reminder_shortcuts_are_for_the_retailer_only(self):
+        self._login(self.shopkeeper)
+        shopkeeper_dashboard = self.client.get("/dashboard")
+        self.assertNotIn(b"/reminders/rules", shopkeeper_dashboard.data)
+
+        self._login(self.retailer)
+        dashboard = self.client.get("/dashboard")
+        self.assertIn(b"/reminders/rules", dashboard.data)
 
 if __name__ == "__main__":
     unittest.main()
