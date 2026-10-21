@@ -118,6 +118,14 @@ the customer's outstanding balance until approved. Partial approved payments
 reduce the balance; a zero balance is shown as cleared. Manual corrections
 require a reason and are retained in the customer balance audit history.
 
+Every payment records how the customer paid: cash, bank transfer/deposit,
+agent withdrawal, M-Pesa Send Money, M-Pesa Till, M-Pesa Paybill, or cheque.
+M-Pesa and agent payments need the M-Pesa transaction code and cheques need
+the cheque number, so the admin can check them before approving a
+shopkeeper's submission; bank references are optional. The method and
+reference appear in payment history, dashboard approvals, and the customer's
+page. Payments recorded before this feature show "Not recorded".
+
 New retailers must verify the email they register with: a 6-digit code is
 emailed at sign-up and must be entered before the first sign-in. Codes are
 stored hashed, expire after 15 minutes, allow 5 attempts, and can be resent
