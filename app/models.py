@@ -17,6 +17,7 @@ class Retailer(UserMixin, db.Model):
     phone_number = db.Column(db.String(20), unique=True, nullable=False, index=True)
     email = db.Column(db.String(255), unique=True, nullable=True, index=True)
     phone_verified_at = db.Column(db.DateTime, nullable=True)
+    email_verified_at = db.Column(db.DateTime, nullable=True)
     logo_filename = db.Column(db.String(255), nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -58,6 +59,11 @@ class Retailer(UserMixin, db.Model):
     @property
     def is_admin(self):
         return True
+
+    @property
+    def needs_email_verification(self):
+        """A retailer who signed up with an email must confirm it before signing in."""
+        return bool(self.email) and self.email_verified_at is None
 
     def set_password(self, raw_password):
         self.password_hash = generate_password_hash(raw_password)
@@ -160,6 +166,31 @@ class PhoneVerificationCode(db.Model):
         ),
     )
 
+
+class EmailVerificationCode(db.Model):
+    """A short-lived, one-time code emailed to confirm a retailer's address."""
+
+    __tablename__ = "email_verification_codes"
+
+    verification_id = db.Column(db.Integer, primary_key=True)
+    retailer_id = db.Column(
+        db.Integer, db.ForeignKey("retailers.retailer_id"), nullable=False, index=True
+    )
+    code_hash = db.Column(db.String(255), nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    attempts = db.Column(db.Integer, default=0, nullable=False)
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    used_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    retailer = db.relationship(
+        "Retailer",
+        backref=db.backref(
+            "email_verification_codes",
+            lazy=True,
+            cascade="all, delete-orphan",
+        ),
+    )
 
 class LoginChallenge(db.Model):
     """One-time SMS second factor issued after valid retailer credentials."""

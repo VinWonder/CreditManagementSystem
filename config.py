@@ -32,6 +32,9 @@ class Config:
     LOGIN_OTP_CODE_MINUTES = int(os.environ.get("LOGIN_OTP_CODE_MINUTES", 5))
     LOGIN_OTP_MAX_ATTEMPTS = int(os.environ.get("LOGIN_OTP_MAX_ATTEMPTS", 5))
     LOGIN_OTP_RESEND_SECONDS = int(os.environ.get("LOGIN_OTP_RESEND_SECONDS", 60))
+    EMAIL_VERIFICATION_CODE_MINUTES = int(os.environ.get("EMAIL_VERIFICATION_CODE_MINUTES", 15))
+    EMAIL_VERIFICATION_MAX_ATTEMPTS = int(os.environ.get("EMAIL_VERIFICATION_MAX_ATTEMPTS", 5))
+    EMAIL_VERIFICATION_RESEND_SECONDS = int(os.environ.get("EMAIL_VERIFICATION_RESEND_SECONDS", 60))
     DEFAULT_PHONE_REGION = os.environ.get("DEFAULT_PHONE_REGION", "KE").upper()
     MAX_CONTENT_LENGTH = 3 * 1024 * 1024
     SHOP_LOGO_UPLOAD_FOLDER = os.path.join(basedir, "app", "static", "uploads", "logos")
