@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
+from cryptography.fernet import Fernet
 from flask import g
 from flask_login import login_user
 
@@ -13,13 +14,15 @@ from app.models import (
     CreditTransaction,
     Customer,
     Ledger,
+    MpesaAccount,
     Payment,
     Retailer,
     Shopkeeper,
     StkPushRequest,
 )
 from app.mpesa import daraja
-from app.mpesa.daraja import account_reference_for, missing_mpesa_settings, safaricom_msisdn
+from app.mpesa.daraja import account_reference_for, safaricom_msisdn
+from app.reminders.credentials import decrypt_secret, encrypt_secret
 
 
 class MpesaConfig:
@@ -31,13 +34,7 @@ class MpesaConfig:
     AUTO_CREATE_DB = False
     WTF_CSRF_ENABLED = False
     DEFAULT_PHONE_REGION = "KE"
-    MPESA_ENVIRONMENT = "sandbox"
-    MPESA_ACCOUNT_TYPE = "paybill"
-    MPESA_SHORTCODE = "174379"
-    MPESA_TILL_NUMBER = ""
-    MPESA_CONSUMER_KEY = "key"
-    MPESA_CONSUMER_SECRET = "secret"
-    MPESA_PASSKEY = "passkey"
+    MESSAGING_CREDENTIALS_ENCRYPTION_KEY = Fernet.generate_key().decode()
     MPESA_REQUEST_TIMEOUT_SECONDS = 5
     PUBLIC_BASE_URL = "https://duka.example.com"
 
@@ -66,6 +63,36 @@ QUERY_PAID = fake_response(
 )
 
 
+def connect_shop(retailer, account_type="paybill", shortcode="174379", till_number=None, active=True):
+    account = MpesaAccount(
+        retailer_id=retailer.retailer_id,
+        environment="sandbox",
+        account_type=account_type,
+        shortcode=shortcode,
+        till_number=till_number,
+        consumer_key_encrypted=encrypt_secret("key"),
+        consumer_secret_encrypted=encrypt_secret("secret"),
+        passkey_encrypted=encrypt_secret("passkey"),
+        active=active,
+    )
+    db.session.add(account)
+    db.session.commit()
+    return account
+
+
+def patch_safaricom(test):
+    """Fake Safaricom for a test case; returns the mocked requests module."""
+    daraja._token_cache.clear()
+    test.addCleanup(daraja._token_cache.clear)
+    patcher = patch("app.mpesa.daraja.requests")
+    fake = patcher.start()
+    test.addCleanup(patcher.stop)
+    fake.RequestException = Exception
+    fake.get.return_value = TOKEN
+    fake.post.return_value = STK_ACCEPTED
+    return fake
+
+
 class HelperTests(unittest.TestCase):
     def test_safaricom_numbers_are_normalised(self):
         for raw in ("+254712345678", "0712345678", "712345678", "254 712 345 678"):
@@ -78,20 +105,12 @@ class HelperTests(unittest.TestCase):
         self.assertEqual(account_reference_for("Mama Njeri Shop"), "MAMA NJERI S")
         self.assertEqual(account_reference_for("!!!"), "DUKA CREDIT")
 
-    def test_missing_settings_are_named(self):
-        config = {k: getattr(MpesaConfig, k) for k in dir(MpesaConfig) if k.startswith("MPESA_")}
-        self.assertEqual(missing_mpesa_settings(config), [])
-        self.assertEqual(
-            missing_mpesa_settings(dict(config, MPESA_PASSKEY="", MPESA_ACCOUNT_TYPE="till")),
-            ["MPESA_PASSKEY", "MPESA_TILL_NUMBER"],
-        )
-
 
 class StkPushPaymentTests(unittest.TestCase):
-    config = MpesaConfig
+    connected = True
 
     def setUp(self):
-        self.app = create_app(self.config)
+        self.app = create_app(MpesaConfig)
         self.app_context = self.app.app_context()
         self.app_context.push()
         db.create_all()
@@ -136,6 +155,8 @@ class StkPushPaymentTests(unittest.TestCase):
             ]
         )
         db.session.commit()
+        if self.connected:
+            connect_shop(self.retailer)
         self.user = self.retailer
 
         @self.app.before_request
@@ -143,25 +164,18 @@ class StkPushPaymentTests(unittest.TestCase):
             g.pop("_login_user", None)
             login_user(self.user)
 
-        daraja._token_cache.clear()
-        self.addCleanup(daraja._token_cache.clear)
-        patcher = patch("app.mpesa.daraja.requests")
-        self.requests = patcher.start()
-        self.requests.RequestException = Exception
-        self.addCleanup(patcher.stop)
-        self.requests.get.return_value = TOKEN
-        self.requests.post.return_value = STK_ACCEPTED
+        self.requests = patch_safaricom(self)
 
     def tearDown(self):
         db.session.remove()
         db.drop_all()
         self.app_context.pop()
 
-    def _prompt(self, amount="500", phone="0712345678"):
+    def _prompt(self, amount="500", phone="0712345678", customer=None):
         return self.client.post(
             "/payments/new",
             data={
-                "customer_id": str(self.customer.customer_id),
+                "customer_id": str((customer or self.customer).customer_id),
                 "amount_paid": amount,
                 "payment_method": "mpesa_stk",
                 "stk_phone": phone,
@@ -187,9 +201,34 @@ class StkPushPaymentTests(unittest.TestCase):
             f"/mpesa/callback/{stk.callback_token}", json={"Body": {"stkCallback": callback}}
         )
 
+    def _other_shop(self, name, phone):
+        shop = Retailer(business_name=name, owner_name="Owner", phone_number=phone, password_hash="x")
+        db.session.add(shop)
+        db.session.flush()
+        customer = Customer(retailer_id=shop.retailer_id, full_name="Jane", phone_number="+254722000000")
+        db.session.add(customer)
+        db.session.flush()
+        db.session.add_all(
+            [
+                CreditTransaction(
+                    retailer_id=shop.retailer_id,
+                    customer_id=customer.customer_id,
+                    item_description="Rice",
+                    amount=Decimal("300.00"),
+                ),
+                Ledger(
+                    retailer_id=shop.retailer_id,
+                    customer_id=customer.customer_id,
+                    outstanding_balance=Decimal("300.00"),
+                ),
+            ]
+        )
+        db.session.commit()
+        return shop, customer
+
     # Sending from Log payment
 
-    def test_payment_form_offers_the_prompt_when_m_pesa_is_set_up(self):
+    def test_payment_form_offers_the_prompt_for_a_connected_shop(self):
         html = self.client.get("/payments/new").get_data(as_text=True)
 
         self.assertIn('value="mpesa_stk"', html)
@@ -251,7 +290,15 @@ class StkPushPaymentTests(unittest.TestCase):
 
         response = self._prompt()
 
-        self.assertIn(b"refused the consumer key and secret", response.data)
+        self.assertIn(b"refused this shop&#39;s M-Pesa consumer key and secret", response.data)
+
+    def test_rate_limited_sign_in_is_not_reported_as_wrong_keys(self):
+        self.requests.get.return_value = fake_response(429, {})
+
+        response = self._prompt()
+
+        self.assertIn(b"Safaricom is busy right now", response.data)
+        self.assertNotIn(b"refused this shop", response.data)
 
     def test_access_token_is_reused_between_calls(self):
         self._prompt("100")
@@ -261,14 +308,6 @@ class StkPushPaymentTests(unittest.TestCase):
         self.client.get(f"/mpesa/requests/{stk.stk_request_id}/status")
 
         self.assertEqual(self.requests.get.call_count, 1)
-
-    def test_rate_limited_sign_in_is_not_reported_as_wrong_keys(self):
-        self.requests.get.return_value = fake_response(429, {})
-
-        response = self._prompt()
-
-        self.assertIn(b"Safaricom is busy right now", response.data)
-        self.assertNotIn(b"refused the consumer key", response.data)
 
     # Results
 
@@ -377,13 +416,45 @@ class StkPushPaymentTests(unittest.TestCase):
     def test_other_shops_cannot_see_a_prompt(self):
         self._prompt("500")
         stk = StkPushRequest.query.one()
-        other = Retailer(business_name="Other", owner_name="O", phone_number="+254700000039", password_hash="x")
-        db.session.add(other)
-        db.session.commit()
+        other, _ = self._other_shop("Other", "+254700000039")
         self.user = other
 
         self.assertEqual(self.client.get(f"/mpesa/requests/{stk.stk_request_id}").status_code, 404)
         self.assertEqual(self.client.get(f"/mpesa/requests/{stk.stk_request_id}/status").status_code, 404)
+
+    # Independent shops
+
+    def test_each_shop_is_paid_into_its_own_number(self):
+        other, other_customer = self._other_shop("Duka Two", "+254700000038")
+        connect_shop(other, account_type="till", shortcode="600111", till_number="888222")
+        self.user = other
+
+        self._prompt("300", "0722000000", customer=other_customer)
+
+        payload = self.requests.post.call_args.kwargs["json"]
+        self.assertEqual(payload["BusinessShortCode"], "600111")
+        self.assertEqual(payload["PartyB"], "888222")
+        self.assertEqual(payload["TransactionType"], "CustomerBuyGoodsOnline")
+        self.assertEqual(payload["AccountReference"], "DUKA TWO")
+
+    def test_unconnected_shop_never_uses_another_shops_number(self):
+        other, other_customer = self._other_shop("Not Connected", "+254700000037")
+        self.user = other
+
+        html = self.client.get("/payments/new").get_data(as_text=True)
+        response = self._prompt("300", "0722000000", customer=other_customer)
+
+        self.assertNotIn('value="mpesa_stk"', html)
+        self.assertIn(b"Not a valid choice", response.data)
+        self.requests.post.assert_not_called()
+
+    def test_disabled_account_hides_the_prompt(self):
+        self.retailer.mpesa_account.active = False
+        db.session.commit()
+
+        html = self.client.get("/payments/new").get_data(as_text=True)
+
+        self.assertNotIn('value="mpesa_stk"', html)
 
     # Removed pieces
 
@@ -395,13 +466,12 @@ class StkPushPaymentTests(unittest.TestCase):
         self.assertNotIn("M-Pesa payment prompts", form)
 
 
-class StkPushNotConfiguredTests(StkPushPaymentTests):
-    """Without MPESA_* settings the option is hidden and cannot be forced."""
+class StkPushNotConnectedTests(StkPushPaymentTests):
+    """A shop without an M-Pesa account cannot see or force the prompt option."""
 
-    class config(MpesaConfig):
-        MPESA_CONSUMER_KEY = ""
+    connected = False
 
-    def test_payment_form_offers_the_prompt_when_m_pesa_is_set_up(self):
+    def test_payment_form_offers_the_prompt_for_a_connected_shop(self):
         html = self.client.get("/payments/new").get_data(as_text=True)
         self.assertNotIn('value="mpesa_stk"', html)
 
@@ -412,10 +482,99 @@ class StkPushNotConfiguredTests(StkPushPaymentTests):
         self.requests.post.assert_not_called()
 
 
-# Only the two overrides above apply to the unconfigured case.
+# Only the two overrides above apply to the unconnected case.
 for _name in list(vars(StkPushPaymentTests)):
-    if _name.startswith("test_") and _name not in vars(StkPushNotConfiguredTests):
-        setattr(StkPushNotConfiguredTests, _name, None)
+    if _name.startswith("test_") and _name not in vars(StkPushNotConnectedTests):
+        setattr(StkPushNotConnectedTests, _name, None)
+
+
+class MpesaCliTests(unittest.TestCase):
+    def setUp(self):
+        self.app = create_app(MpesaConfig)
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+        db.session.add(
+            Retailer(
+                business_name="Mama Njeri Shop",
+                owner_name="Njeri",
+                phone_number="+254700000031",
+                email="njeri@example.com",
+                password_hash="x",
+            )
+        )
+        db.session.commit()
+        self.runner = self.app.test_cli_runner()
+        self.requests = patch_safaricom(self)
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def _set(self, shop="1", account_type="paybill", extra=()):
+        return self.runner.invoke(
+            args=["mpesa", "set", shop, "--environment", "production", "--type", account_type,
+                  "--shortcode", "600100", *extra],
+            input="the-key\nthe-secret\nthe-passkey\n",
+        )
+
+    def test_set_checks_the_keys_then_saves_them_encrypted(self):
+        result = self._set()
+
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertIn("Safaricom production accepted", result.output)
+        account = MpesaAccount.query.one()
+        self.assertEqual((account.environment, account.shortcode), ("production", "600100"))
+        self.assertNotIn("the-secret", account.consumer_secret_encrypted)
+        self.assertEqual(decrypt_secret(account.passkey_encrypted), "the-passkey")
+        self.assertNotIn("the-secret", result.output)
+        self.assertNotIn("the-passkey", result.output)
+
+    def test_shop_can_be_found_by_id_phone_or_email(self):
+        for shop in ("1", "0700000031", "+254700000031", "njeri@example.com"):
+            with self.subTest(shop=shop):
+                self.assertEqual(self._set(shop).exit_code, 0)
+        self.assertEqual(MpesaAccount.query.count(), 1)
+
+    def test_refused_keys_are_not_saved(self):
+        self.requests.get.return_value = fake_response(400, {})
+
+        result = self._set()
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("Not saved", result.output)
+        self.assertEqual(MpesaAccount.query.count(), 0)
+
+    def test_till_needs_a_till_number(self):
+        missing = self._set(account_type="till")
+        saved = self._set(account_type="till", extra=("--till-number", "888222"))
+
+        self.assertIn("till number", missing.output)
+        self.assertEqual(saved.exit_code, 0, saved.output)
+        self.assertEqual(MpesaAccount.query.one().receiving_number, "888222")
+
+    def test_unknown_shop_is_reported(self):
+        self.assertIn("No shop matches '99'", self._set("99").output)
+
+    def test_list_disable_enable_and_remove(self):
+        self._set()
+
+        self.assertIn("production, Paybill 600100", self.runner.invoke(args=["mpesa", "list"]).output)
+        self.runner.invoke(args=["mpesa", "disable", "1"])
+        self.assertFalse(MpesaAccount.query.one().active)
+        self.runner.invoke(args=["mpesa", "enable", "1"])
+        self.assertTrue(MpesaAccount.query.one().active)
+        self.runner.invoke(args=["mpesa", "remove", "1", "--yes"])
+        self.assertEqual(MpesaAccount.query.count(), 0)
+
+    def test_test_command_checks_saved_keys(self):
+        self._set()
+
+        result = self.runner.invoke(args=["mpesa", "test", "1"])
+
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertIn("Safaricom accepted the keys", result.output)
 
 
 if __name__ == "__main__":
