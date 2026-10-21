@@ -94,6 +94,10 @@ def create_app(config_class=Config):
     app.register_blueprint(ledger_bp)
     app.register_blueprint(reminders_bp)
 
+    from app.auth.email import send_test_email_command
+
+    app.cli.add_command(send_test_email_command)
+
     @app.context_processor
     def inject_logout_form():
         return {"logout_form": LogoutForm()}
