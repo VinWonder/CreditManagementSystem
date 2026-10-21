@@ -86,7 +86,10 @@ class AuthSessionTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers["Location"], "/auth/login")
+        self.assertEqual(response.headers["Location"], "/")
+        home = self.client.get("/")
+        self.assertEqual(home.status_code, 200)
+        self.assertIn(b"You have been logged out.", home.data)
         with self.client.session_transaction() as user_session:
             self.assertNotIn("_user_id", user_session)
         protected = self.client.get("/dashboard")
