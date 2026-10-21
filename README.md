@@ -149,76 +149,75 @@ reset codes are supported.
 
 ### Set up M-Pesa payment prompts (STK Push)
 
-On **Log payment**, choose the customer, enter the amount, pick
-**M-Pesa prompt (STK Push)** and type the customer's Safaricom number (it fills
-in from the customer). The customer's phone shows a prompt to pay the shop and
-they enter their M-Pesa PIN. A waiting page follows the result; when M-Pesa
-confirms it, the payment is recorded as approved with the M-Pesa receipt
-number. Shopkeepers can send prompts too: M-Pesa's confirmation is the proof,
-so no admin approval is needed. Prompts take whole shillings, up to what the
-customer owes. The option only appears once the `MPESA_*` settings are filled in.
+**For shops:** on **Log payment**, choose the customer, enter the amount, pick
+**M-Pesa prompt (STK Push)** and confirm the customer's Safaricom number (it
+fills in from the customer). The customer's phone shows a prompt to pay the
+shop and they enter their M-Pesa PIN. A waiting page follows the result; when
+M-Pesa confirms it, the payment is recorded as approved with the M-Pesa
+receipt number. Shopkeepers can send prompts too: M-Pesa's confirmation is the
+proof, so no admin approval is needed. Prompts take whole shillings, up to what
+the customer owes.
+
+**For the developer:** every shop is paid into **its own** Paybill or Till.
+Shops never see M-Pesa setup; you connect each one from the server terminal.
+The prompt option only appears for a shop once you have connected it, so a
+prompt can never pay into another shop's number.
 
 The text on the customer's phone comes from Safaricom, for example
 *"Do you want to pay KES 500 to MAMA NJERI SHOP account no. MAMA NJERI S?"*:
-the business name is the one registered on the Paybill/Till, and the app puts
-the shop name (first 12 letters) in the account field.
+the business name is the one registered on the shop's Paybill/Till, and the app
+puts the shop name (first 12 letters) in the account field.
 
-#### Test in the sandbox (no real money)
+#### Onboard a shop
 
-1. At https://developer.safaricom.co.ke, open **My Apps**, create an app with
-   **M-Pesa Express**, and copy its **Consumer Key** and **Consumer Secret**.
-2. Fill in `.env` and restart the app:
-   ```env
-   MPESA_ENVIRONMENT=sandbox
-   MPESA_ACCOUNT_TYPE=paybill
-   MPESA_SHORTCODE=174379
-   MPESA_CONSUMER_KEY=your-sandbox-consumer-key
-   MPESA_CONSUMER_SECRET=your-sandbox-consumer-secret
-   MPESA_PASSKEY=bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919
+1. The shop needs its own Safaricom **Paybill** or **Till (Lipa Na M-Pesa)**
+   number and a business administrator on the M-Pesa business (org) portal.
+2. On https://developer.safaricom.co.ke, choose **Go Live** for that
+   Paybill/Till with the **M-Pesa Express** API. The shop's administrator
+   confirms it. Safaricom issues production consumer keys for the app and
+   emails the production passkey.
+3. Find the shop and connect it (you are asked for the key, secret and passkey
+   without them being shown):
+   ```powershell
+   flask --app run mpesa list
+   flask --app run mpesa set <shop> --environment production --type paybill --shortcode 123456
+   flask --app run mpesa set <shop> --environment production --type till --shortcode <store-number> --till-number <till-number>
    ```
-   The passkey above is Safaricom's public sandbox passkey for 174379 (also on
-   **APIs → M-Pesa Express → Simulate**). It is 64 characters; a wrong passkey
-   gives "Wrong credentials".
-3. Log a payment with **M-Pesa prompt (STK Push)** and your own Safaricom
-   number, for KES 1. The waiting page shows the result. Safaricom's sandbox
-   limits how often it can be called; if it says it is busy, wait a minute.
+   `<shop>` is the retailer id from `list`, the shop's phone number or email.
+   The keys are checked with Safaricom before they are saved, then stored
+   encrypted with `MESSAGING_CREDENTIALS_ENCRYPTION_KEY` (back it up and never
+   change it, or saved keys can no longer be read).
+4. Send a KES 1 prompt from that shop's **Log payment** page to your own phone
+   to confirm the passkey.
 
-Optional: for instant results instead of the waiting page asking Safaricom,
-expose the app with `ngrok http 5000` and set `PUBLIC_BASE_URL` to the
-`https://` address.
+Manage shops later with:
 
-#### Go live (real money)
+```powershell
+flask --app run mpesa test <shop>      # check the saved keys with Safaricom
+flask --app run mpesa disable <shop>   # hide prompts, keep the keys
+flask --app run mpesa enable <shop>
+flask --app run mpesa remove <shop>    # delete the keys
+```
 
-Real prompts need **production** credentials for the **Paybill or Till that
-receives the money**. Safaricom ties the passkey to that Paybill/Till, so the
-app can only prompt payments into a number you have taken live:
+Production needs the app on a public `https://` address with
+`PUBLIC_BASE_URL` set to it, so Safaricom can report results instantly. Without
+it (for example on your own computer) the waiting page asks Safaricom for the
+result instead.
 
-1. Get a Paybill or Till (Lipa Na M-Pesa) number from Safaricom for the
-   business, with a business administrator on the M-Pesa business (org) portal.
-2. On the Daraja portal choose **Go Live**, select that Paybill/Till and the
-   M-Pesa Express API, and confirm with the administrator's details. Safaricom
-   issues production consumer keys and emails the production passkey.
-3. Deploy the app on a public `https://` address.
-4. Set in the server's environment and restart:
-   ```env
-   MPESA_ENVIRONMENT=production
-   MPESA_ACCOUNT_TYPE=paybill            # or till
-   MPESA_SHORTCODE=your-paybill-number   # for a Till: the store (head office) number
-   MPESA_TILL_NUMBER=                    # for a Till: the till number customers pay to
-   MPESA_CONSUMER_KEY=production-key
-   MPESA_CONSUMER_SECRET=production-secret
-   MPESA_PASSKEY=production-passkey
-   PUBLIC_BASE_URL=https://your-domain
-   ```
+#### Try it in the sandbox
 
-**One deployment = one Paybill/Till.** Every prompt sent from this server pays
-into the number in `.env`. That fits one shop (or several branches of one
-business) running its own copy. If many independent shops share one server
-and each must be paid into its own Paybill/Till, each shop has to go live with
-Safaricom for its own number and the app would need to store each shop's
-credentials; alternatively a licensed payment aggregator can collect on behalf
-of many merchants. Collecting other shops' money into your own Paybill and
-paying them later is handling customer funds and needs the right licensing.
+Use your sandbox app's consumer key and secret, the test Paybill **174379**,
+and Safaricom's public sandbox passkey
+`bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919`
+(also on **APIs → M-Pesa Express → Simulate**):
+
+```powershell
+flask --app run mpesa set <shop> --environment sandbox --type paybill --shortcode 174379
+```
+
+A wrong passkey gives "Wrong credentials" when a prompt is sent. The sandbox
+limits how often it can be called; if the app says Safaricom is busy, wait a
+minute.
 
 ### Set up verification emails
 
