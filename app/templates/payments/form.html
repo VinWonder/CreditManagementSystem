@@ -219,6 +219,9 @@
     const isStk = method.value === "mpesa_stk";
     stkField.hidden = !isStk;
     stkPhone.required = isStk;
+    // The browser only accepts values that step evenly from min, so whole-shilling
+    // prompts need min 1 as well as step 1 (min 0.01 would allow only 1.01, 2.01, ...).
+    amount.min = isStk ? "1" : "0.01";
     amount.step = isStk ? "1" : "0.01";
     submitLabel.textContent = isStk ? "Send M-Pesa prompt" : defaultSubmitLabel;
     if (isStk && !phoneTyped) {
