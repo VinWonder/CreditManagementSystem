@@ -93,6 +93,20 @@
           {% endif %}
         </div>
 
+        <div class="payment-field" id="payment-stk-field" hidden>
+          {{ form.stk_phone.label(class="form-label") }}
+          <span class="payment-input-wrap">
+            <i class="bi bi-phone" aria-hidden="true"></i>
+            {{ form.stk_phone(class="form-control", inputmode="tel", autocomplete="off", placeholder="e.g. 0712 345 678", **{"aria-describedby": "payment-stk-help" ~ (" payment-stk-errors" if form.stk_phone.errors else ""), "aria-invalid": "true" if form.stk_phone.errors else "false"}) }}
+          </span>
+          <small class="payment-field-help" id="payment-stk-help">The customer gets a prompt on this phone to pay {{ current_user.business_name }} and enters their M-Pesa PIN. The payment is recorded when M-Pesa confirms it.</small>
+          {% if form.stk_phone.errors %}
+          <div class="payment-field-errors" id="payment-stk-errors" role="alert">
+            {% for error in form.stk_phone.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
         <div class="payment-field" id="payment-reference-field">
           <label class="form-label" for="payment_reference" id="payment-reference-label">Reference</label>
           <span class="payment-input-wrap">
@@ -109,8 +123,8 @@
 
         <div id="payment-remaining-preview" class="payment-remaining-preview d-none" aria-live="polite"></div>
         <div class="payment-form-actions">
-          <button type="submit" class="payment-submit-button">
-            <i class="bi bi-check2-circle" aria-hidden="true"></i> {{ 'Submit for approval' if not current_user.is_admin else 'Log payment' }}
+          <button type="submit" class="payment-submit-button" id="payment-submit-button">
+            <i class="bi bi-check2-circle" aria-hidden="true"></i> <span id="payment-submit-label">{{ 'Submit for approval' if not current_user.is_admin else 'Log payment' }}</span>
           </button>
           <a href="{{ url_for('payments.list_payments') }}" class="payment-cancel-link">Cancel</a>
         </div>
@@ -186,14 +200,34 @@
     mpesa_till: { ...mpesaCode, help: "From the M-Pesa SMS for the Till (Buy Goods) payment." },
     mpesa_paybill: { ...mpesaCode, help: "From the M-Pesa SMS for the Paybill payment." },
     cheque: { label: "Cheque number", placeholder: "e.g. 000123", required: true, help: "Printed at the bottom of the cheque." },
+    mpesa_stk: null,
   };
+  const customerPhones = {{ customer_phones | tojson }};
+  const stkField = document.getElementById("payment-stk-field");
+  const stkPhone = document.getElementById("stk_phone");
+  const submitLabel = document.getElementById("payment-submit-label");
+  const defaultSubmitLabel = submitLabel.textContent;
+  let phoneTyped = stkPhone.value !== "";
+  stkPhone.addEventListener("input", () => { phoneTyped = true; });
   const method = document.getElementById("payment_method");
   const referenceField = document.getElementById("payment-reference-field");
   const reference = document.getElementById("payment_reference");
   const referenceLabel = document.getElementById("payment-reference-label");
   const referenceHelp = document.getElementById("payment-reference-help");
 
+  function updateStk() {
+    const isStk = method.value === "mpesa_stk";
+    stkField.hidden = !isStk;
+    stkPhone.required = isStk;
+    amount.step = isStk ? "1" : "0.01";
+    submitLabel.textContent = isStk ? "Send M-Pesa prompt" : defaultSubmitLabel;
+    if (isStk && !phoneTyped) {
+      stkPhone.value = customerPhones[customer.value] || "";
+    }
+  }
+
   function updateReference() {
+    updateStk();
     const hint = referenceHints[method.value];
     referenceField.hidden = !hint;
     reference.required = Boolean(hint && hint.required);
@@ -206,6 +240,7 @@
   }
 
   method.addEventListener("change", updateReference);
+  customer.addEventListener("change", updateStk);
   reference.addEventListener("input", () => {
     const caret = reference.selectionStart;
     reference.value = reference.value.toUpperCase();
