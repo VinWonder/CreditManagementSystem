@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "auth/_password_rules.html" import password_rules %}
 {% block title %}Register{% endblock %}
 {% block body_class %}auth-page{% endblock %}
 {% block page_head %}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/css/intlTelInput.css">{% endblock %}
@@ -33,7 +34,7 @@
         </div>
         <div class="auth-field">{{ form.logo.label(class="form-label") }}{{ form.logo(class="form-control", accept=".jpg,.jpeg,.png,.webp") }}<div class="field-help">Optional. JPG, PNG, or WEBP up to 3 MB.</div>{% for e in form.logo.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
         <div class="auth-form-grid">
-          <div class="auth-field"><label class="form-label" for="password">Password</label><div class="password-input">{{ form.password(class="form-control", autocomplete="new-password", data_password_strength="true") }}<button type="button" class="password-toggle" data-toggle-password aria-label="Show password"><i class="bi bi-eye"></i></button></div><div class="password-meter"><span></span></div><div class="field-help">At least 8 characters with a letter and a number.</div>{% for e in form.password.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
+          <div class="auth-field"><label class="form-label" for="password">Password</label><div class="password-input">{{ form.password(class="form-control", autocomplete="new-password", data_password_strength="true") }}<button type="button" class="password-toggle" data-toggle-password aria-label="Show password"><i class="bi bi-eye"></i></button></div><div class="password-meter"><span></span></div>{{ password_rules() }}{% for e in form.password.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
           <div class="auth-field"><label class="form-label" for="confirm_password">Confirm Password</label>{{ form.confirm_password(class="form-control", autocomplete="new-password") }}{% for e in form.confirm_password.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
         </div>
         {{ form.submit(class="btn auth-submit w-100") }}
