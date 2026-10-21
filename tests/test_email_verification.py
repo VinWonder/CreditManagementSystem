@@ -253,6 +253,17 @@ class SendEmailTests(unittest.TestCase):
         self.assertIn("app password", reason)
         self.assertNotIn("app-password", reason)
 
+    def test_disconnect_during_login_is_reported_as_a_refused_login(self):
+        with self._smtp_app().app_context(), patch("app.auth.email.smtplib.SMTP") as smtp:
+            smtp.return_value.login.side_effect = smtplib.SMTPServerDisconnected(
+                "Connection unexpectedly closed"
+            )
+            sent, reason = send_email("owner@example.com", "Code", "Body")
+
+        self.assertFalse(sent)
+        self.assertIn("login as shop@example.com was refused", reason)
+        self.assertIn("account the app password was created for", reason)
+
     def test_connection_failure_names_the_server(self):
         with self._smtp_app().app_context(), patch(
             "app.auth.email.smtplib.SMTP", side_effect=OSError("timed out")
