@@ -125,7 +125,7 @@
       <ul class="payment-checklist">
         <li><i class="bi bi-check2" aria-hidden="true"></i><span>Confirm the customer who made the payment.</span></li>
         <li><i class="bi bi-check2" aria-hidden="true"></i><span>Enter the amount actually received.</span></li>
-        <li><i class="bi bi-check2" aria-hidden="true"></i><span>Choose how they paid and add the M-Pesa code or cheque number so it can be checked.</span></li>
+        <li><i class="bi bi-check2" aria-hidden="true"></i><span>Choose how they paid. Add the M-Pesa code if the customer has it, and the cheque number for cheques.</span></li>
         <li><i class="bi bi-check2" aria-hidden="true"></i><span>The balance is recalculated from sales and payments.</span></li>
       </ul>
       <div class="payment-side-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Payments reduce the balance owed; they do not create a new credit sale. {% if not current_user.is_admin %}Your submission will update the balance after admin approval.{% endif %}</div>
@@ -177,7 +177,7 @@
   updateBalance();
 
   // Mirrors PaymentForm.validate_payment_reference; the server stays the authority.
-  const mpesaCode = { label: "M-Pesa transaction code", placeholder: "e.g. QFT4ABC123", required: true, help: "From the customer's M-Pesa confirmation SMS." };
+  const mpesaCode = { label: "M-Pesa transaction code (optional)", placeholder: "e.g. QFT4ABC123", required: false, help: "From the customer's M-Pesa confirmation SMS, if they have it." };
   const referenceHints = {
     cash: null,
     bank: { label: "Bank reference (optional)", placeholder: "e.g. FT2629401234", required: false, help: "The deposit slip or transfer reference, if the customer has one." },
