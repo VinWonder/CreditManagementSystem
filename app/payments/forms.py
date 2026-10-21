@@ -7,7 +7,7 @@ from wtforms.validators import DataRequired, Length, ValidationError
 
 from app.models import PAYMENT_METHODS
 
-# Methods that leave an M-Pesa confirmation code the admin can check.
+# Methods that leave an M-Pesa confirmation code the admin can check, if given.
 MPESA_CODE_METHODS = {"agent", "mpesa_send", "mpesa_till", "mpesa_paybill"}
 
 
@@ -76,9 +76,8 @@ class PaymentForm(FlaskForm):
         reference = re.sub(r"\s+", "", field.data or "").upper()
         field.data = reference or None
         if method in MPESA_CODE_METHODS:
-            if not reference:
-                raise ValidationError("Enter the M-Pesa transaction code from the confirmation SMS.")
-            if not re.fullmatch(r"[A-Z0-9]{8,12}", reference):
+            # Optional: the customer may not have the SMS at hand.
+            if reference and not re.fullmatch(r"[A-Z0-9]{8,12}", reference):
                 raise ValidationError("M-Pesa codes are 8-12 letters and numbers, e.g. QFT4ABC123.")
         elif method == "cheque":
             if not reference:
