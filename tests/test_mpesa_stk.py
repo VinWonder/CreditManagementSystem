@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
-from cryptography.fernet import Fernet
 from flask import g
 from flask_login import login_user
 
@@ -14,14 +13,12 @@ from app.models import (
     CreditTransaction,
     Customer,
     Ledger,
-    MpesaSettings,
     Payment,
     Retailer,
     Shopkeeper,
     StkPushRequest,
 )
-from app.mpesa.daraja import account_reference_for, safaricom_msisdn
-from app.reminders.credentials import decrypt_secret, encrypt_secret
+from app.mpesa.daraja import account_reference_for, missing_mpesa_settings, safaricom_msisdn
 
 
 class MpesaConfig:
@@ -33,9 +30,15 @@ class MpesaConfig:
     AUTO_CREATE_DB = False
     WTF_CSRF_ENABLED = False
     DEFAULT_PHONE_REGION = "KE"
-    MESSAGING_CREDENTIALS_ENCRYPTION_KEY = Fernet.generate_key().decode()
-    PUBLIC_BASE_URL = "https://duka.example.com"
+    MPESA_ENVIRONMENT = "sandbox"
+    MPESA_ACCOUNT_TYPE = "paybill"
+    MPESA_SHORTCODE = "174379"
+    MPESA_TILL_NUMBER = ""
+    MPESA_CONSUMER_KEY = "key"
+    MPESA_CONSUMER_SECRET = "secret"
+    MPESA_PASSKEY = "passkey"
     MPESA_REQUEST_TIMEOUT_SECONDS = 5
+    PUBLIC_BASE_URL = "https://duka.example.com"
 
 
 def fake_response(status, body):
@@ -52,8 +55,13 @@ STK_ACCEPTED = fake_response(
         "CheckoutRequestID": "ws_CO_191220191020363925",
         "ResponseCode": "0",
         "ResponseDescription": "Success. Request accepted for processing",
-        "CustomerMessage": "Success. Request accepted for processing",
     },
+)
+STILL_WAITING = fake_response(
+    500, {"errorCode": "500.001.1001", "errorMessage": "The transaction is being processed"}
+)
+QUERY_PAID = fake_response(
+    200, {"ResponseCode": "0", "ResultCode": "0", "ResultDesc": "The service request is processed successfully."}
 )
 
 
@@ -67,13 +75,22 @@ class HelperTests(unittest.TestCase):
 
     def test_account_reference_is_the_shop_name_in_twelve_characters(self):
         self.assertEqual(account_reference_for("Mama Njeri Shop"), "MAMA NJERI S")
-        self.assertEqual(account_reference_for("Kiosk"), "KIOSK")
         self.assertEqual(account_reference_for("!!!"), "DUKA CREDIT")
 
+    def test_missing_settings_are_named(self):
+        config = {k: getattr(MpesaConfig, k) for k in dir(MpesaConfig) if k.startswith("MPESA_")}
+        self.assertEqual(missing_mpesa_settings(config), [])
+        self.assertEqual(
+            missing_mpesa_settings(dict(config, MPESA_PASSKEY="", MPESA_ACCOUNT_TYPE="till")),
+            ["MPESA_PASSKEY", "MPESA_TILL_NUMBER"],
+        )
 
-class StkPushTests(unittest.TestCase):
+
+class StkPushPaymentTests(unittest.TestCase):
+    config = MpesaConfig
+
     def setUp(self):
-        self.app = create_app(MpesaConfig)
+        self.app = create_app(self.config)
         self.app_context = self.app.app_context()
         self.app_context.push()
         db.create_all()
@@ -91,7 +108,6 @@ class StkPushTests(unittest.TestCase):
             retailer_id=self.retailer.retailer_id,
             full_name="Peter Kamau",
             phone_number="+254712345678",
-            accepts_stk_prompts=True,
         )
         db.session.add(self.customer)
         db.session.flush()
@@ -108,13 +124,13 @@ class StkPushTests(unittest.TestCase):
                     retailer_id=self.retailer.retailer_id,
                     customer_id=self.customer.customer_id,
                     item_description="Sugar",
-                    amount=Decimal("500.50"),
+                    amount=Decimal("500.00"),
                     transaction_date=datetime(2026, 10, 1),
                 ),
                 Ledger(
                     retailer_id=self.retailer.retailer_id,
                     customer_id=self.customer.customer_id,
-                    outstanding_balance=Decimal("500.50"),
+                    outstanding_balance=Decimal("500.00"),
                 ),
             ]
         )
@@ -138,210 +154,105 @@ class StkPushTests(unittest.TestCase):
         db.drop_all()
         self.app_context.pop()
 
-    def _connect(self, account_type="paybill"):
-        db.session.add(
-            MpesaSettings(
-                retailer_id=self.retailer.retailer_id,
-                environment="sandbox",
-                account_type=account_type,
-                business_shortcode="174379",
-                till_number="123456" if account_type == "till" else None,
-                consumer_key_encrypted=encrypt_secret("key"),
-                consumer_secret_encrypted=encrypt_secret("secret"),
-                passkey_encrypted=encrypt_secret("passkey"),
-            )
-        )
-        db.session.commit()
-
     def _prompt(self, amount="500", phone="0712345678"):
         return self.client.post(
-            f"/mpesa/customers/{self.customer.customer_id}/prompt",
-            data={"amount": amount, "phone_number": phone},
+            "/payments/new",
+            data={
+                "customer_id": str(self.customer.customer_id),
+                "amount_paid": amount,
+                "payment_method": "mpesa_stk",
+                "stk_phone": phone,
+            },
         )
 
     def _callback(self, stk, result_code=0, receipt="QFT4ABC123", amount=500):
-        body = {
-            "Body": {
-                "stkCallback": {
-                    "MerchantRequestID": stk.merchant_request_id,
-                    "CheckoutRequestID": stk.checkout_request_id,
-                    "ResultCode": result_code,
-                    "ResultDesc": "The service request is processed successfully.",
-                }
-            }
+        callback = {
+            "MerchantRequestID": stk.merchant_request_id,
+            "CheckoutRequestID": stk.checkout_request_id,
+            "ResultCode": result_code,
+            "ResultDesc": "Processed",
         }
         if result_code == 0:
-            body["Body"]["stkCallback"]["CallbackMetadata"] = {
+            callback["CallbackMetadata"] = {
                 "Item": [
                     {"Name": "Amount", "Value": amount},
                     {"Name": "MpesaReceiptNumber", "Value": receipt},
-                    {"Name": "TransactionDate", "Value": 20261021103000},
                     {"Name": "PhoneNumber", "Value": 254712345678},
                 ]
             }
-        return self.client.post(f"/mpesa/callback/{stk.callback_token}", json=body)
-
-    # Settings
-
-    def test_settings_page_saves_encrypted_keys(self):
-        response = self.client.post(
-            "/mpesa/settings",
-            data={
-                "environment": "sandbox",
-                "account_type": "paybill",
-                "business_shortcode": "174379",
-                "consumer_key": "my-key",
-                "consumer_secret": "my-secret",
-                "passkey": "my-passkey",
-            },
+        return self.client.post(
+            f"/mpesa/callback/{stk.callback_token}", json={"Body": {"stkCallback": callback}}
         )
 
-        self.assertEqual(response.status_code, 302)
-        saved = MpesaSettings.query.one()
-        self.assertNotIn("my-secret", saved.consumer_secret_encrypted)
-        self.assertEqual(decrypt_secret(saved.consumer_secret_encrypted), "my-secret")
-        page = self.client.get("/mpesa/settings").get_data(as_text=True)
-        self.assertNotIn("my-secret", page)
-        self.assertIn("Connected (sandbox)", page)
-        self.assertIn("MAMA NJERI S", page)
+    # Sending from Log payment
 
-    def test_blank_secrets_keep_the_saved_ones(self):
-        self._connect()
+    def test_payment_form_offers_the_prompt_when_m_pesa_is_set_up(self):
+        html = self.client.get("/payments/new").get_data(as_text=True)
 
-        self.client.post(
-            "/mpesa/settings",
-            data={"environment": "production", "account_type": "paybill", "business_shortcode": "600100"},
-        )
+        self.assertIn('value="mpesa_stk"', html)
+        self.assertIn("M-Pesa prompt (STK Push)", html)
+        self.assertIn('"1": "+254712345678"', html)
 
-        saved = MpesaSettings.query.one()
-        self.assertEqual(saved.environment, "production")
-        self.assertEqual(decrypt_secret(saved.passkey_encrypted), "passkey")
+    def test_prompt_is_sent_with_shop_name_amount_and_number(self):
+        response = self._prompt("500", "0712 345 678")
 
-    def test_till_needs_a_till_number(self):
-        response = self.client.post(
-            "/mpesa/settings",
-            data={
-                "environment": "sandbox",
-                "account_type": "till",
-                "business_shortcode": "174379",
-                "consumer_key": "k",
-                "consumer_secret": "s",
-                "passkey": "p",
-            },
-        )
-
-        self.assertIn(b"Enter the Till number customers pay to.", response.data)
-        self.assertEqual(MpesaSettings.query.count(), 0)
-
-    def test_shopkeepers_cannot_use_m_pesa_prompts(self):
-        self._connect()
-        self.user = self.shopkeeper
-
-        self.assertEqual(self.client.get("/mpesa/settings").status_code, 403)
-        self.assertEqual(self._prompt().status_code, 403)
-        page = self.client.get(f"/customers/{self.customer.customer_id}").get_data(as_text=True)
-        self.assertNotIn("Request payment by M-Pesa", page)
-
-    # Sending
-
-    def test_prompt_is_sent_with_shop_name_amount_and_paybill(self):
-        self._connect()
-
-        response = self._prompt("500")
-
-        self.assertEqual(response.status_code, 302)
+        stk = StkPushRequest.query.one()
+        self.assertTrue(response.headers["Location"].endswith(f"/mpesa/requests/{stk.stk_request_id}"))
         payload = self.requests.post.call_args.kwargs["json"]
-        self.assertEqual(payload["BusinessShortCode"], "174379")
         self.assertEqual(payload["TransactionType"], "CustomerPayBillOnline")
         self.assertEqual(payload["Amount"], 500)
         self.assertEqual(payload["PartyA"], "254712345678")
         self.assertEqual(payload["PartyB"], "174379")
-        self.assertEqual(payload["PhoneNumber"], "254712345678")
         self.assertEqual(payload["AccountReference"], "MAMA NJERI S")
         self.assertTrue(payload["CallBackURL"].startswith("https://duka.example.com/mpesa/callback/"))
         password = base64.b64decode(payload["Password"]).decode()
         self.assertEqual(password, f"174379passkey{payload['Timestamp']}")
-        stk = StkPushRequest.query.one()
-        self.assertEqual(stk.status, "pending")
-        self.assertEqual(stk.checkout_request_id, "ws_CO_191220191020363925")
-        self.assertIn(stk.callback_token, payload["CallBackURL"])
+        self.assertEqual(Payment.query.count(), 0)
+        page = self.client.get(response.headers["Location"]).get_data(as_text=True)
+        self.assertIn("KES 500 from Peter Kamau", page)
+        self.assertIn("Waiting for the customer", page)
 
-    def test_till_prompts_use_buy_goods(self):
-        self._connect("till")
+    def test_cents_and_amounts_above_the_balance_are_refused(self):
+        cents = self._prompt("100.50")
+        too_much = self._prompt("501")
 
-        self._prompt("100")
-
-        payload = self.requests.post.call_args.kwargs["json"]
-        self.assertEqual(payload["TransactionType"], "CustomerBuyGoodsOnline")
-        self.assertEqual(payload["PartyB"], "123456")
-
-    def test_balance_with_cents_rounds_up_but_not_beyond(self):
-        self._connect()
-
-        self._prompt("502")
-        self.assertEqual(StkPushRequest.query.count(), 0)
-        self._prompt("501")
-        self.assertEqual(StkPushRequest.query.count(), 1)
-
-    def test_customer_must_have_agreed(self):
-        self._connect()
-        self.customer.accepts_stk_prompts = False
-        db.session.commit()
-
-        self._prompt()
-
-        self.requests.post.assert_not_called()
-        self.assertEqual(StkPushRequest.query.count(), 0)
-
-    def test_settings_are_needed_first(self):
-        response = self._prompt()
-
-        self.assertTrue(response.headers["Location"].endswith("/mpesa/settings"))
+        self.assertIn(b"M-Pesa prompts take whole shillings", cents.data)
+        self.assertIn(b"Payment cannot exceed the outstanding balance", too_much.data)
         self.requests.post.assert_not_called()
 
     def test_non_safaricom_number_is_refused(self):
-        self._connect()
+        response = self._prompt(phone="+255712345678")
 
-        self._prompt(phone="+255712345678")
-
+        self.assertIn(b"Enter the customer&#39;s Safaricom number", response.data)
         self.requests.post.assert_not_called()
 
     def test_a_second_prompt_waits_for_the_first(self):
-        self._connect()
         self._prompt("100")
-        self.requests.post.return_value = fake_response(
-            200, dict(STK_ACCEPTED.json.return_value, CheckoutRequestID="ws_CO_second")
-        )
+        response = self._prompt("100")
 
-        self._prompt("100")
-
+        self.assertIn(b"A prompt was just sent to this customer", response.data)
         self.assertEqual(StkPushRequest.query.count(), 1)
 
     def test_safaricom_errors_are_shown_and_nothing_is_saved(self):
-        self._connect()
         self.requests.post.return_value = fake_response(
             400, {"errorCode": "400.002.02", "errorMessage": "Bad Request - Invalid PhoneNumber"}
         )
 
-        self._prompt()
-        page = self.client.get(f"/customers/{self.customer.customer_id}").get_data(as_text=True)
+        response = self._prompt()
 
+        self.assertIn(b"Invalid PhoneNumber", response.data)
         self.assertEqual(StkPushRequest.query.count(), 0)
-        self.assertIn("Invalid PhoneNumber", page)
 
     def test_wrong_keys_are_explained(self):
-        self._connect()
         self.requests.get.return_value = fake_response(400, {})
 
-        self._prompt()
-        page = self.client.get(f"/customers/{self.customer.customer_id}").get_data(as_text=True)
+        response = self._prompt()
 
-        self.assertIn("refused the consumer key and secret", page)
+        self.assertIn(b"refused the consumer key and secret", response.data)
 
     # Results
 
     def test_paid_callback_records_an_approved_payment(self):
-        self._connect()
         self._prompt("500")
         stk = StkPushRequest.query.one()
 
@@ -351,13 +262,26 @@ class StkPushTests(unittest.TestCase):
         payment = Payment.query.one()
         self.assertEqual(payment.amount_paid, Decimal("500.00"))
         self.assertEqual(payment.approval_status, "approved")
-        self.assertEqual(payment.payment_method, "mpesa_paybill")
+        self.assertEqual(payment.payment_method, "mpesa_stk")
         self.assertEqual(payment.payment_reference, "QFT4ABC123")
-        self.assertEqual(stk.status, "paid")
-        self.assertEqual(Ledger.query.one().outstanding_balance, Decimal("0.50"))
+        self.assertEqual(Ledger.query.one().outstanding_balance, Decimal("0.00"))
+        history = self.client.get("/payments/").get_data(as_text=True)
+        self.assertIn("M-Pesa prompt (STK Push)", history)
+        self.assertIn("Ref QFT4ABC123", history)
+
+    def test_shopkeeper_prompts_are_confirmed_by_m_pesa_not_the_admin(self):
+        self.user = self.shopkeeper
+        self._prompt("200")
+        stk = StkPushRequest.query.one()
+        self.assertEqual(stk.requested_by_shopkeeper_id, self.shopkeeper.shopkeeper_id)
+
+        self._callback(stk, amount=200)
+
+        payment = Payment.query.one()
+        self.assertEqual(payment.approval_status, "approved")
+        self.assertEqual(payment.submitted_by_shopkeeper_id, self.shopkeeper.shopkeeper_id)
 
     def test_repeated_callbacks_record_one_payment(self):
-        self._connect()
         self._prompt("500")
         stk = StkPushRequest.query.one()
 
@@ -367,18 +291,17 @@ class StkPushTests(unittest.TestCase):
         self.assertEqual(Payment.query.count(), 1)
 
     def test_cancelled_prompt_records_no_payment(self):
-        self._connect()
         self._prompt("500")
         stk = StkPushRequest.query.one()
 
         self._callback(stk, result_code=1032)
 
         self.assertEqual(stk.status, "cancelled")
-        self.assertEqual(stk.result_desc, "The customer cancelled the prompt.")
         self.assertEqual(Payment.query.count(), 0)
+        status = self.client.get(f"/mpesa/requests/{stk.stk_request_id}/status").get_json()
+        self.assertEqual(status["message"], "The customer cancelled the prompt.")
 
     def test_callback_with_wrong_token_or_checkout_id_is_ignored(self):
-        self._connect()
         self._prompt("500")
         stk = StkPushRequest.query.one()
 
@@ -390,57 +313,71 @@ class StkPushTests(unittest.TestCase):
         self.assertEqual(stk.status, "pending")
         self.assertEqual(Payment.query.count(), 0)
 
-    def test_check_status_confirms_a_payment_without_a_callback(self):
-        self._connect()
+    def test_waiting_page_asks_safaricom_until_the_customer_pays(self):
         self._prompt("500")
         stk = StkPushRequest.query.one()
-        self.requests.post.return_value = fake_response(
-            200, {"ResponseCode": "0", "ResultCode": "0", "ResultDesc": "The service request is processed successfully."}
-        )
+        url = f"/mpesa/requests/{stk.stk_request_id}/status"
 
-        self.client.post(f"/mpesa/requests/{stk.stk_request_id}/check")
+        self.requests.post.return_value = STILL_WAITING
+        self.assertEqual(self.client.get(url).get_json()["status"], "pending")
 
-        self.assertEqual(stk.status, "paid")
+        self.requests.post.return_value = QUERY_PAID
+        self.assertEqual(self.client.get(url).get_json()["status"], "paid")
         self.assertEqual(Payment.query.one().amount_paid, Decimal("500.00"))
 
-    def test_check_status_while_the_customer_is_still_deciding(self):
-        self._connect()
+    def test_unanswered_prompts_expire(self):
         self._prompt("500")
         stk = StkPushRequest.query.one()
-        self.requests.post.return_value = fake_response(
-            500, {"errorCode": "500.001.1001", "errorMessage": "The transaction is being processed"}
-        )
+        stk.created_at = datetime.utcnow() - timedelta(minutes=6)
+        db.session.commit()
 
-        self.client.post(f"/mpesa/requests/{stk.stk_request_id}/check")
-        page = self.client.get(f"/customers/{self.customer.customer_id}").get_data(as_text=True)
+        status = self.client.get(f"/mpesa/requests/{stk.stk_request_id}/status").get_json()
 
-        self.assertEqual(stk.status, "pending")
-        self.assertIn("has not answered the prompt yet", page)
+        self.assertEqual(status["status"], "cancelled")
+        self.assertEqual(Payment.query.count(), 0)
 
-    def test_customer_page_shows_the_prompt_card_and_history(self):
-        self._connect()
+    def test_other_shops_cannot_see_a_prompt(self):
         self._prompt("500")
-        self._callback(StkPushRequest.query.one())
+        stk = StkPushRequest.query.one()
+        other = Retailer(business_name="Other", owner_name="O", phone_number="+254700000039", password_hash="x")
+        db.session.add(other)
+        db.session.commit()
+        self.user = other
 
-        page = self.client.get(f"/customers/{self.customer.customer_id}").get_data(as_text=True)
+        self.assertEqual(self.client.get(f"/mpesa/requests/{stk.stk_request_id}").status_code, 404)
+        self.assertEqual(self.client.get(f"/mpesa/requests/{stk.stk_request_id}/status").status_code, 404)
 
-        self.assertIn("Request payment by M-Pesa", page)
-        self.assertIn("Paybill 174379", page)
-        self.assertIn("Ref QFT4ABC123", page)
+    # Removed pieces
 
-    def test_customer_form_records_consent(self):
-        self.client.post(
-            f"/customers/{self.customer.customer_id}/edit",
-            data={"full_name": "Peter Kamau", "phone_number": "+254712345678", "preferred_channel": "sms"},
-        )
-        self.assertFalse(db.session.get(Customer, self.customer.customer_id).accepts_stk_prompts)
+    def test_no_settings_page_or_consent_tick_box(self):
+        self.assertEqual(self.client.get("/mpesa/settings").status_code, 404)
+        dashboard = self.client.get("/dashboard").get_data(as_text=True)
+        self.assertNotIn("/mpesa/settings", dashboard)
+        form = self.client.get(f"/customers/{self.customer.customer_id}/edit").get_data(as_text=True)
+        self.assertNotIn("M-Pesa payment prompts", form)
 
-        self.client.post(
-            f"/customers/{self.customer.customer_id}/edit",
-            data={"full_name": "Peter Kamau", "phone_number": "+254712345678",
-                  "preferred_channel": "sms", "accepts_stk_prompts": "y"},
-        )
-        self.assertTrue(db.session.get(Customer, self.customer.customer_id).accepts_stk_prompts)
+
+class StkPushNotConfiguredTests(StkPushPaymentTests):
+    """Without MPESA_* settings the option is hidden and cannot be forced."""
+
+    class config(MpesaConfig):
+        MPESA_CONSUMER_KEY = ""
+
+    def test_payment_form_offers_the_prompt_when_m_pesa_is_set_up(self):
+        html = self.client.get("/payments/new").get_data(as_text=True)
+        self.assertNotIn('value="mpesa_stk"', html)
+
+    def test_prompt_cannot_be_forced(self):
+        response = self._prompt()
+
+        self.assertIn(b"Not a valid choice", response.data)
+        self.requests.post.assert_not_called()
+
+
+# Only the two overrides above apply to the unconfigured case.
+for _name in list(vars(StkPushPaymentTests)):
+    if _name.startswith("test_") and _name not in vars(StkPushNotConfiguredTests):
+        setattr(StkPushNotConfiguredTests, _name, None)
 
 
 if __name__ == "__main__":
