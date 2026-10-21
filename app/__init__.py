@@ -176,6 +176,8 @@ def _upgrade_local_auth_schema():
                 "reviewed_by_retailer_id": "INTEGER",
                 "reviewed_at": "DATETIME",
                 "review_note": "VARCHAR(255)",
+                "payment_method": "VARCHAR(20)",
+                "payment_reference": "VARCHAR(40)",
             }
             for name, definition in payment_additions.items():
                 if name not in payment_columns:
