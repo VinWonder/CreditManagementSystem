@@ -268,6 +268,17 @@ class CreditTransaction(db.Model):
         return f"<CreditTransaction {self.transaction_id} KES {self.amount}>"
 
 
+# How a customer paid. Keys are stored; labels are shown in the app.
+PAYMENT_METHODS = {
+    "cash": "Cash",
+    "bank": "Bank transfer / deposit",
+    "agent": "Agent withdrawal",
+    "mpesa_send": "M-Pesa Send Money",
+    "mpesa_till": "M-Pesa Till (Buy Goods)",
+    "mpesa_paybill": "M-Pesa Paybill",
+    "cheque": "Cheque",
+}
+
 class Payment(db.Model):
     """A repayment made by a customer against their outstanding balance."""
 
@@ -290,9 +301,16 @@ class Payment(db.Model):
     )
     reviewed_at = db.Column(db.DateTime, nullable=True)
     review_note = db.Column(db.String(255), nullable=True)
+    # Nullable: payments recorded before methods were tracked have none.
+    payment_method = db.Column(db.String(20), nullable=True)
+    payment_reference = db.Column(db.String(40), nullable=True)
     submitted_by_shopkeeper = db.relationship(
         "Shopkeeper", foreign_keys=[submitted_by_shopkeeper_id]
     )
+
+    @property
+    def payment_method_label(self):
+        return PAYMENT_METHODS.get(self.payment_method, "Not recorded")
 
     def __repr__(self):
         return f"<Payment {self.payment_id} KES {self.amount_paid}>"
