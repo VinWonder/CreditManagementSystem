@@ -160,7 +160,7 @@ printed in the Flask terminal.
    SMTP host and port (465 uses SSL automatically).
 5. Check delivery:
    ```powershell
-   .env\Scripts\python.exe -m flask --app run send-test-email you@example.com
+   .\venv\Scripts\python.exe -m flask --app run send-test-email you@example.com
    ```
    It prints `Sent.` or the exact reason it failed (for example a refused
    login, which usually means the normal password was used instead of an
