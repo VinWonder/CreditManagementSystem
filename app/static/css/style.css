@@ -1771,7 +1771,7 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
   .sale-item-name { grid-column: 1 / -1; }
 }
 /* Choosing which items a payment is for */
-.payment-items { border: 0; margin: 0; min-width: 0; padding: 0; }
+.payment-items { border: 0; margin: 0 0 1rem; min-width: 0; padding: 0; }
 .payment-item-list { display: grid; gap: 0.45rem; margin-top: 0.5rem; }
 .payment-item { align-items: center; background: #f8fbfa; border: 1px solid #e2ebe8; border-radius: 0.7rem; cursor: pointer; display: flex; gap: 0.65rem; padding: 0.6rem 0.75rem; }
 .payment-item:has(input:checked) { background: #eef7f2; border-color: #9cc4b6; }
