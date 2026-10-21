@@ -469,6 +469,9 @@ body {
   .customer-directory-subtitle { font-size: 0.7rem; max-width: 15rem; }
   .customer-add-button { font-size: 0; gap: 0; height: 2.5rem; justify-content: center; padding: 0; width: 2.5rem; }
   .customer-add-button i { font-size: 0.9rem; }
+  .customer-portfolio-button { font-size: 0.68rem; gap: 0.35rem; min-height: 2.15rem; padding-right: 0.6rem; }
+  .customer-portfolio-button-icon { height: 1.55rem; width: 1.55rem; }
+  .customer-portfolio-button-arrow { display: none; }
   .customer-directory-toolbar { align-items: flex-start; }
   .customer-result-count { margin-left: 0.2rem; }
   .customer-directory-table { min-width: 38rem; }
