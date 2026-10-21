@@ -457,6 +457,44 @@ class MessageDispatchLog(db.Model):
         return f"<Dispatch {self.dispatch_id} {self.channel} {self.status}>"
 
 
+class MpesaAccount(db.Model):
+    """The Paybill or Till one shop is paid into by M-Pesa prompts.
+
+    Set up by the developer with `flask mpesa set` after the shop goes live on
+    Daraja; retailers never see or edit these credentials.
+    """
+
+    __tablename__ = "mpesa_accounts"
+
+    mpesa_account_id = db.Column(db.Integer, primary_key=True)
+    retailer_id = db.Column(
+        db.Integer, db.ForeignKey("retailers.retailer_id"), nullable=False, unique=True
+    )
+    environment = db.Column(db.String(10), nullable=False)  # sandbox | production
+    account_type = db.Column(db.String(10), nullable=False)  # paybill | till
+    # Paybill number, or for a Till the store (head office) number.
+    shortcode = db.Column(db.String(10), nullable=False)
+    till_number = db.Column(db.String(10), nullable=True)
+    consumer_key_encrypted = db.Column(db.Text, nullable=False)
+    consumer_secret_encrypted = db.Column(db.Text, nullable=False)
+    passkey_encrypted = db.Column(db.Text, nullable=False)
+    active = db.Column(db.Boolean, nullable=False, default=True, server_default=db.true())
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    retailer = db.relationship(
+        "Retailer",
+        backref=db.backref("mpesa_account", uselist=False, cascade="all, delete-orphan"),
+    )
+
+    @property
+    def receiving_number(self):
+        """The number customers pay to: the Paybill, or the Till for Buy Goods."""
+        return self.till_number if self.account_type == "till" else self.shortcode
+
+    def __repr__(self):
+        return f"<MpesaAccount retailer={self.retailer_id} {self.account_type} {self.receiving_number}>"
+
+
 class StkPushRequest(db.Model):
     """One M-Pesa payment prompt sent to a customer's phone, and how it ended."""
 
