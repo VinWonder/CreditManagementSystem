@@ -1,8 +1,8 @@
+import re
+
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField
 from wtforms import StringField, PasswordField, SubmitField
-import re
-
 from wtforms.validators import DataRequired, Email, Length, EqualTo, Regexp, ValidationError
 
 
