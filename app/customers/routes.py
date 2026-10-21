@@ -136,6 +136,9 @@ def view_customer(customer_id):
     links = {"whatsapp": None, "sms": None}
     if customer.ledger:
         customer.ledger.recalculate()
+    # Only the shop admin sends reminders, so shopkeepers never get a
+    # composed message or send links.
+    if customer.ledger and current_user.is_admin:
         active_rules = ReminderRule.query.filter_by(
             retailer_id=current_user.retailer_id,
             active=True,
