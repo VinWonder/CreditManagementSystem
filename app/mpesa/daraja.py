@@ -11,6 +11,7 @@ from datetime import datetime
 import requests
 from flask import current_app
 
+from app.reminders.credentials import MessagingCredentialError, decrypt_secret
 from app.timezones import NAIROBI_TIMEZONE
 
 BASE_URLS = {
@@ -63,44 +64,54 @@ def _timestamp():
     return datetime.now(NAIROBI_TIMEZONE).strftime("%Y%m%d%H%M%S")
 
 
-def missing_mpesa_settings(config):
-    """Names of required MPESA_* settings that are empty or invalid; [] when ready."""
-    missing = [
-        name
-        for name in ("MPESA_SHORTCODE", "MPESA_CONSUMER_KEY", "MPESA_CONSUMER_SECRET", "MPESA_PASSKEY")
-        if not config.get(name)
-    ]
-    if config.get("MPESA_ENVIRONMENT") not in BASE_URLS:
-        missing.append("MPESA_ENVIRONMENT")
-    if config.get("MPESA_ACCOUNT_TYPE") not in {"paybill", "till"}:
-        missing.append("MPESA_ACCOUNT_TYPE")
-    elif config.get("MPESA_ACCOUNT_TYPE") == "till" and not config.get("MPESA_TILL_NUMBER"):
-        missing.append("MPESA_TILL_NUMBER")
-    return missing
+def mpesa_account_for(retailer_id):
+    """The shop's active M-Pesa account, or None when prompts are not set up for it."""
+    from app.models import MpesaAccount
 
-
-def stk_push_enabled():
-    return not missing_mpesa_settings(current_app.config)
+    return MpesaAccount.query.filter_by(retailer_id=retailer_id, active=True).first()
 
 
 class DarajaClient:
-    def __init__(self, config=None):
-        config = config or current_app.config
-        missing = missing_mpesa_settings(config)
-        if missing:
-            raise DarajaError(
-                "M-Pesa prompts are not set up on this server. Fill in " + ", ".join(missing) + " in .env."
-            )
-        self.environment = config["MPESA_ENVIRONMENT"]
-        self.base_url = BASE_URLS[self.environment]
-        self.till = config["MPESA_ACCOUNT_TYPE"] == "till"
-        self.shortcode = config["MPESA_SHORTCODE"]
+    def __init__(self, *, environment, account_type, shortcode, till_number,
+                 consumer_key, consumer_secret, passkey):
+        if environment not in BASE_URLS:
+            raise DarajaError(f"Unknown M-Pesa environment '{environment}'.")
+        self.environment = environment
+        self.base_url = BASE_URLS[environment]
+        self.till = account_type == "till"
+        self.shortcode = shortcode
         # Customers pay to the Paybill, or for Buy Goods to the till under the store number.
-        self.receiving_number = config["MPESA_TILL_NUMBER"] if self.till else self.shortcode
-        self._key = config["MPESA_CONSUMER_KEY"]
-        self._secret = config["MPESA_CONSUMER_SECRET"]
-        self._passkey = config["MPESA_PASSKEY"]
-        self.timeout = config.get("MPESA_REQUEST_TIMEOUT_SECONDS", 30)
+        self.receiving_number = till_number if self.till else shortcode
+        self._key = consumer_key
+        self._secret = consumer_secret
+        self._passkey = passkey
+        self.timeout = current_app.config.get("MPESA_REQUEST_TIMEOUT_SECONDS", 30)
+
+    @classmethod
+    def for_account(cls, account):
+        """A client for one shop's saved account, decrypting its credentials."""
+        if account is None:
+            raise DarajaError("M-Pesa prompts are not set up for this shop yet.")
+        try:
+            secrets = {
+                "consumer_key": decrypt_secret(account.consumer_key_encrypted),
+                "consumer_secret": decrypt_secret(account.consumer_secret_encrypted),
+                "passkey": decrypt_secret(account.passkey_encrypted),
+            }
+        except MessagingCredentialError as exc:
+            current_app.logger.error("Cannot decrypt M-Pesa credentials: %s", exc)
+            raise DarajaError("M-Pesa prompts are unavailable right now. Contact support.") from exc
+        return cls(
+            environment=account.environment,
+            account_type=account.account_type,
+            shortcode=account.shortcode,
+            till_number=account.till_number,
+            **secrets,
+        )
+
+    def check_credentials(self):
+        """Sign in to Daraja; raises DarajaError when the keys are refused."""
+        self._access_token()
 
     def _access_token(self):
         cache_key = (self.base_url, self._key, self._secret)
@@ -118,8 +129,8 @@ class DarajaClient:
             raise DarajaError("Could not reach Safaricom. Check the internet connection.") from exc
         if response.status_code in (400, 401):
             raise DarajaError(
-                "Safaricom refused the consumer key and secret. Check MPESA_CONSUMER_KEY and "
-                "MPESA_CONSUMER_SECRET in .env and that they match MPESA_ENVIRONMENT."
+                "Safaricom refused this shop's M-Pesa consumer key and secret. The developer "
+                "should check them with 'flask mpesa test' and that they match the environment."
             )
         try:
             body = response.json() if response.status_code == 200 else {}
