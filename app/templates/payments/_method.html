@@ -1,0 +1,17 @@
+{# How a payment was made, with its M-Pesa code, cheque number or bank reference. #}
+{% macro payment_method_badge(payment) %}
+{% set icons = {
+  "cash": "bi-cash-stack",
+  "bank": "bi-bank",
+  "agent": "bi-shop-window",
+  "mpesa_send": "bi-phone",
+  "mpesa_till": "bi-phone",
+  "mpesa_paybill": "bi-phone",
+  "cheque": "bi-journal-check",
+} %}
+<span class="payment-method{{ ' is-unrecorded' if not payment.payment_method else '' }}">
+  <i class="bi {{ icons.get(payment.payment_method, 'bi-question-circle') }}" aria-hidden="true"></i>
+  <span>{{ payment.payment_method_label }}</span>
+</span>
+{% if payment.payment_reference %}<small class="payment-method-reference">Ref {{ payment.payment_reference }}</small>{% endif %}
+{% endmacro %}
