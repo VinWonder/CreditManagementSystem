@@ -185,7 +185,10 @@ def _upgrade_local_auth_schema():
                         text(f"ALTER TABLE payments ADD COLUMN {name} {definition}")
                     )
         local_table_additions = {
-            "customers": {"shop_name": "VARCHAR(100)"},
+            "customers": {
+                "shop_name": "VARCHAR(100)",
+                "accepts_stk_prompts": "BOOLEAN NOT NULL DEFAULT 0",
+            },
             "message_dispatch_log": {"failure_reason": "VARCHAR(500)"},
         }
         for table_name, table_additions in local_table_additions.items():
