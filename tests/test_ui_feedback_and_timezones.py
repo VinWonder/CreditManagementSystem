@@ -26,6 +26,11 @@ class UiFeedbackAndTimezoneTests(unittest.TestCase):
             flash("Credit sale recorded.", "success")
             return render_template("base.html")
 
+        @self.app.get("/test-notice/<category>")
+        def show_notice(category):
+            flash("You have been logged out.", category)
+            return render_template("base.html")
+
         self.client = self.app.test_client()
 
     def test_naive_utc_sale_time_is_formatted_in_nairobi_time(self):
@@ -59,16 +64,30 @@ class UiFeedbackAndTimezoneTests(unittest.TestCase):
             1,
         )
 
-    def test_success_notice_has_unique_style_and_twenty_second_dismissal(self):
+    def test_success_notice_sits_in_the_bottom_stack_and_dismisses_after_five_seconds(self):
         response = self.client.get("/test-success-notice")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"app-flash-success", response.data)
+        self.assertIn(b'class="app-flash-stack"', response.data)
+        self.assertIn(b"app-flash-success app-flash-auto-dismiss", response.data)
         self.assertIn(b"app-flash-progress", response.data)
         self.assertIn(b"flash-messages.js", response.data)
 
         with open("app/static/js/flash-messages.js", encoding="utf-8") as source:
-            self.assertIn("dismiss, 20000", source.read())
+            self.assertIn("AUTO_DISMISS_MS = 5000", source.read())
+
+    def test_logout_info_notice_also_dismisses_itself(self):
+        response = self.client.get("/test-notice/info")
+
+        self.assertIn(b"app-flash-info app-flash-auto-dismiss", response.data)
+        self.assertIn(b"app-flash-progress", response.data)
+
+    def test_warnings_stay_until_the_user_closes_them(self):
+        response = self.client.get("/test-notice/warning")
+
+        self.assertIn(b"app-flash-warning", response.data)
+        self.assertNotIn(b"app-flash-auto-dismiss", response.data)
+        self.assertNotIn(b"app-flash-progress", response.data)
 
     def test_welcome_preview_uses_shop_workflow_instead_of_scary_debt_total(self):
         response = self.client.get("/")
