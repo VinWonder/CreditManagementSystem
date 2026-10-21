@@ -16,6 +16,9 @@ class Retailer(UserMixin, db.Model):
     owner_name = db.Column(db.String(100), nullable=False)
     phone_number = db.Column(db.String(20), unique=True, nullable=False, index=True)
     email = db.Column(db.String(255), unique=True, nullable=True, index=True)
+    # The inbox the email delivers to (see app.auth.identity.canonical_email), so
+    # owner+2@gmail.com cannot register a second shop for owner@gmail.com.
+    email_canonical = db.Column(db.String(255), unique=True, nullable=True)
     phone_verified_at = db.Column(db.DateTime, nullable=True)
     email_verified_at = db.Column(db.DateTime, nullable=True)
     logo_filename = db.Column(db.String(255), nullable=True)
@@ -43,6 +46,15 @@ class Retailer(UserMixin, db.Model):
     )
     shopkeepers = db.relationship(
         "Shopkeeper", backref="retailer", lazy="dynamic", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        # One shop per name, whatever the capitalisation.
+        db.Index(
+            "uq_retailers_business_name_lower",
+            db.func.lower(business_name),
+            unique=True,
+        ),
     )
     messaging_settings = db.relationship(
         "MessagingSettings",
