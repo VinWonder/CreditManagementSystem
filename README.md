@@ -158,6 +158,14 @@ shopkeeper's submission; bank references are optional. The method and
 reference appear in payment history, dashboard approvals, and the customer's
 page. Payments recorded before this feature show "Not recorded".
 
+Each shop name, phone number and email inbox can register only once. Shop
+names are compared ignoring capitals and extra spaces; phone numbers in any
+format, including numbers already used by a shopkeeper; and emails by the inbox
+they reach, so `owner+2@gmail.com` or `o.w.n.e.r@gmail.com` cannot open a second
+shop for `owner@gmail.com`. The database enforces the same rules. Passwords may
+not contain the shop's phone number or email name. Logging out returns to the
+home page.
+
 New retailers must verify the email they register with: a 6-digit code is
 emailed at sign-up and must be entered before the first sign-in. Codes are
 stored hashed, expire after 15 minutes, allow 5 attempts, and can be resent
