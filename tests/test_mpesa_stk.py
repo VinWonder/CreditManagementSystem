@@ -18,6 +18,7 @@ from app.models import (
     Shopkeeper,
     StkPushRequest,
 )
+from app.mpesa import daraja
 from app.mpesa.daraja import account_reference_for, missing_mpesa_settings, safaricom_msisdn
 
 
@@ -142,6 +143,8 @@ class StkPushPaymentTests(unittest.TestCase):
             g.pop("_login_user", None)
             login_user(self.user)
 
+        daraja._token_cache.clear()
+        self.addCleanup(daraja._token_cache.clear)
         patcher = patch("app.mpesa.daraja.requests")
         self.requests = patcher.start()
         self.requests.RequestException = Exception
@@ -250,6 +253,23 @@ class StkPushPaymentTests(unittest.TestCase):
 
         self.assertIn(b"refused the consumer key and secret", response.data)
 
+    def test_access_token_is_reused_between_calls(self):
+        self._prompt("100")
+        stk = StkPushRequest.query.one()
+        self.requests.post.return_value = STILL_WAITING
+        self.client.get(f"/mpesa/requests/{stk.stk_request_id}/status")
+        self.client.get(f"/mpesa/requests/{stk.stk_request_id}/status")
+
+        self.assertEqual(self.requests.get.call_count, 1)
+
+    def test_rate_limited_sign_in_is_not_reported_as_wrong_keys(self):
+        self.requests.get.return_value = fake_response(429, {})
+
+        response = self._prompt()
+
+        self.assertIn(b"Safaricom is busy right now", response.data)
+        self.assertNotIn(b"refused the consumer key", response.data)
+
     # Results
 
     def test_paid_callback_records_an_approved_payment(self):
@@ -324,6 +344,24 @@ class StkPushPaymentTests(unittest.TestCase):
         self.requests.post.return_value = QUERY_PAID
         self.assertEqual(self.client.get(url).get_json()["status"], "paid")
         self.assertEqual(Payment.query.one().amount_paid, Decimal("500.00"))
+
+    def test_result_4999_and_busy_replies_keep_waiting(self):
+        self._prompt("500")
+        stk = StkPushRequest.query.one()
+        url = f"/mpesa/requests/{stk.stk_request_id}/status"
+
+        self.requests.post.return_value = fake_response(
+            200, {"ResponseCode": "0", "ResultCode": "4999", "ResultDesc": "The transaction is still under processing"}
+        )
+        self.assertEqual(self.client.get(url).get_json()["status"], "pending")
+
+        busy = MagicMock(status_code=429)
+        busy.json.side_effect = ValueError("not JSON")
+        self.requests.post.return_value = busy
+        status = self.client.get(url).get_json()
+        self.assertEqual(status["status"], "pending")
+        self.assertIn("busy", status["message"])
+        self.assertEqual(Payment.query.count(), 0)
 
     def test_unanswered_prompts_expire(self):
         self._prompt("500")
