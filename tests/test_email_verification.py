@@ -1,4 +1,5 @@
 import re
+import smtplib
 import unittest
 from datetime import datetime, timedelta
 from unittest.mock import patch
@@ -196,6 +197,21 @@ class EmailVerificationTests(unittest.TestCase):
         self.assertEqual(EmailVerificationCode.query.count(), 0)
         self.assertIn(b"could not send the verification email", page.data)
 
+    def test_retailer_is_told_when_email_is_not_set_up(self):
+        self.send_email.side_effect = lambda *args: (True, "simulated")
+
+        self._register()
+        page = self.client.get("/auth/verify-email")
+
+        self.assertIn(b"Email sending is not set up on this server yet", page.data)
+        self.assertNotIn(b"We sent a verification code", page.data)
+
+    def test_real_send_confirms_the_address(self):
+        self._register()
+        page = self.client.get("/auth/verify-email")
+
+        self.assertIn(b"We sent a verification code to owner@example.com", page.data)
+
     def test_verify_page_without_a_pending_signup_goes_to_login(self):
         response = self.client.get("/auth/verify-email")
 
@@ -217,6 +233,49 @@ class SendEmailTests(unittest.TestCase):
             app.config["APP_ENV"] = "production"
             sent, _ = send_email("a@example.com", "s", "b")
             self.assertFalse(sent)
+
+    def _smtp_app(self):
+        return self._app(
+            SMTP_HOST="smtp.example.com",
+            SMTP_PORT=587,
+            SMTP_USERNAME="shop@example.com",
+            SMTP_PASSWORD="app-password",
+            SMTP_USE_TLS=True,
+            MAIL_FROM="shop@example.com",
+        )
+
+    def test_refused_login_explains_app_passwords(self):
+        with self._smtp_app().app_context(), patch("app.auth.email.smtplib.SMTP") as smtp:
+            smtp.return_value.login.side_effect = smtplib.SMTPAuthenticationError(535, b"bad")
+            sent, reason = send_email("owner@example.com", "Code", "Body")
+
+        self.assertFalse(sent)
+        self.assertIn("app password", reason)
+        self.assertNotIn("app-password", reason)
+
+    def test_connection_failure_names_the_server(self):
+        with self._smtp_app().app_context(), patch(
+            "app.auth.email.smtplib.SMTP", side_effect=OSError("timed out")
+        ):
+            sent, reason = send_email("owner@example.com", "Code", "Body")
+
+        self.assertFalse(sent)
+        self.assertIn("smtp.example.com:587", reason)
+
+    def test_cli_reports_missing_smtp_settings(self):
+        result = self._app().test_cli_runner().invoke(args=["send-test-email", "a@example.com"])
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("SMTP_HOST is empty", result.output)
+
+    def test_cli_sends_a_test_email(self):
+        app = self._smtp_app()
+        with patch("app.auth.email.smtplib.SMTP") as smtp:
+            result = app.test_cli_runner().invoke(args=["send-test-email", "owner@example.com"])
+
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertIn("Sent.", result.output)
+        smtp.return_value.send_message.assert_called_once()
 
     def test_smtp_settings_are_used_to_send(self):
         app = self._app(
