@@ -6,6 +6,7 @@ from email.message import EmailMessage
 
 import click
 from flask import current_app
+from flask.cli import with_appcontext
 
 
 def send_email(to_address, subject, body):
@@ -64,6 +65,7 @@ def send_email(to_address, subject, body):
 
 @click.command("send-test-email")
 @click.argument("to_address")
+@with_appcontext
 def send_test_email_command(to_address):
     """Send a test email to check the SMTP settings in .env."""
     config = current_app.config
