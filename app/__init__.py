@@ -42,12 +42,13 @@ def create_app(config_class=Config):
     @app.before_request
     def end_sessions_from_before_restart():
         """Sign out sessions created before the server last started."""
-        from flask import session
+        from flask import g, session
 
         if not app.config.get("SESSION_ENDS_ON_RESTART") or not session.get("_user_id"):
             return
         if session.get("_server_boot_id") != app.config["SERVER_BOOT_ID"]:
             session.clear()
+            g.pop("_login_user", None)
 
     @app.before_request
     def refresh_session_lifetime():
