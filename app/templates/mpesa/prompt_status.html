@@ -61,11 +61,11 @@
       // Offline for a moment; try again on the next tick.
     }
     if (status === "pending") {
-      window.setTimeout(poll, 5000);
+      window.setTimeout(poll, 8000);
     }
   }
 
-  window.setTimeout(poll, 5000);
+  window.setTimeout(poll, 8000);
 })();
 </script>
 {% endblock %}
