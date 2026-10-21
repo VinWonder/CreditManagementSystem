@@ -8,6 +8,7 @@ from app.payments.forms import BalanceAdjustmentForm
 from app.reminders.forms import ReminderActionForm
 from app.reminders.engine import select_matching_rule, render_personal_reminder_message
 from app.reminders.links import reminder_links
+from app.transactions.items import customer_item_balances
 from app.permissions import admin_required
 
 customers_bp = Blueprint("customers", __name__, url_prefix="/customers")
@@ -164,4 +165,13 @@ def view_customer(customer_id):
         reminder_links=links,
         adjustment_form=BalanceAdjustmentForm(),
         reminder_form=ReminderActionForm(),
+        item_balances_by_sale=_item_balances_by_sale(customer),
     )
+
+
+def _item_balances_by_sale(customer):
+    """Each sale's items with what is still owed, keyed by transaction id."""
+    grouped = {}
+    for balance in customer_item_balances(customer):
+        grouped.setdefault(balance.sale.transaction_id, []).append(balance)
+    return grouped

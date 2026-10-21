@@ -1778,3 +1778,15 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .payment-item .form-check-input { flex: 0 0 auto; margin: 0; }
 .payment-item-name { flex: 1; font-size: 0.8rem; min-width: 0; overflow-wrap: anywhere; }
 .payment-item-due { color: #ac4c3f; font-size: 0.78rem; white-space: nowrap; }
+/* Item paid / due status on a customer's credit sales */
+.sale-item-status-list { display: grid; gap: 0.35rem; list-style: none; margin: 0; padding: 0; }
+.sale-item-status-list li { align-items: center; display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem; justify-content: space-between; }
+.sale-item-status-name { font-weight: 650; min-width: 0; overflow-wrap: anywhere; }
+.sale-item-status-name small { color: #74878a; font-weight: 500; margin-left: 0.25rem; }
+.sale-item-status { border-radius: 2rem; font-size: 0.68rem; font-weight: 750; padding: 0.15rem 0.55rem; white-space: nowrap; }
+.sale-item-status.is-paid { background: #e6f5ec; color: #23704a; }
+.sale-item-status.is-partial { background: #fff4dc; color: #8a5a12; }
+.sale-item-status.is-due { background: #fff0eb; color: #ac4c3f; }
+@media (max-width: 991.98px) {
+  table.table-stack td .sale-item-status-list { flex: 1 1 100%; text-align: left; }
+}
