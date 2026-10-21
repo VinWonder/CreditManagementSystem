@@ -118,6 +118,17 @@ the customer's outstanding balance until approved. Partial approved payments
 reduce the balance; a zero balance is shown as cleared. Manual corrections
 require a reason and are retained in the customer balance audit history.
 
+New retailers must verify the email they register with: a 6-digit code is
+emailed at sign-up and must be entered before the first sign-in. Codes are
+stored hashed, expire after 15 minutes, allow 5 attempts, and can be resent
+once a minute. Accounts created before this feature are treated as verified.
+Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` and `MAIL_FROM`
+in `.env` to send real email (for Gmail, use an App Password). Without
+`SMTP_HOST`, development prints the code in the Flask terminal.
+
+Passwords must be 8-128 characters with an uppercase letter, a lowercase
+letter, a number and a symbol, and no spaces. The forms show a live checklist.
+
 Phone verification and SMS sign-in codes are currently disabled. Password
 reset codes are supported.
 
@@ -290,4 +301,4 @@ Available after running `python seed.py` against a local development database:
 | Field | Value |
 |---|---|
 | Phone | `+254700111222` |
-| Password | `password123` |
+| Password | `password123` (demo data only; new passwords must meet the rules above) |
