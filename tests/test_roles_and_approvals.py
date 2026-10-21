@@ -429,5 +429,26 @@ class RoleAndApprovalTests(unittest.TestCase):
         dashboard = self.client.get("/dashboard")
         self.assertIn(b"/reminders/rules", dashboard.data)
 
+    def test_customer_list_shows_a_portfolio_button_for_both_roles(self):
+        portfolio_url = f'href="/customers/{self.customer.customer_id}"'.encode()
+        for user in (self.retailer, self.shopkeeper):
+            self._login(user)
+            response = self.client.get("/customers/")
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(b"customer-portfolio-button", response.data)
+            self.assertIn(b"View portfolio for Amina Hassan", response.data)
+            self.assertIn(portfolio_url, response.data)
+
+    def test_portfolio_button_flags_customers_with_a_balance_due(self):
+        self._login(self.retailer)
+        owing = self.client.get("/customers/")
+        self.assertIn(b"customer-portfolio-button has-balance", owing.data)
+
+        self.ledger.outstanding_balance = Decimal("0.00")
+        db.session.commit()
+        cleared = self.client.get("/customers/")
+        self.assertIn(b"customer-portfolio-button", cleared.data)
+        self.assertNotIn(b"has-balance", cleared.data)
+
 if __name__ == "__main__":
     unittest.main()
