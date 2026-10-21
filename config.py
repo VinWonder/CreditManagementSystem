@@ -18,6 +18,11 @@ class Config:
         hours=int(os.environ.get("SESSION_IDLE_HOURS", 12))
     )
     REMEMBER_COOKIE_DURATION = PERMANENT_SESSION_LIFETIME
+    # Sign everyone out when the server restarts. On by default in development;
+    # with several Gunicorn workers enable it only together with --preload.
+    SESSION_ENDS_ON_RESTART = os.environ.get(
+        "SESSION_ENDS_ON_RESTART", "false" if APP_ENV == "production" else "true"
+    ).lower() == "true"
     SESSION_COOKIE_SECURE = os.environ.get(
         "SESSION_COOKIE_SECURE", "true" if APP_ENV == "production" else "false"
     ).lower() == "true"
