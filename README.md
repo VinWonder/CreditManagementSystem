@@ -146,6 +146,75 @@ reset codes are supported.
 
 ---
 
+### Set up M-Pesa payment prompts (STK Push)
+
+The shop admin can send an M-Pesa prompt to a customer's phone from the
+customer's page. The customer sees the amount and the shop, enters their
+M-Pesa PIN, and the payment is recorded automatically as an approved payment
+with the M-Pesa receipt number.
+
+M-Pesa only sends prompts for a **Paybill or Till (Buy Goods) number** linked
+to a Safaricom Daraja app. A personal M-Pesa number cannot receive STK Push
+payments. The prompt text comes from Safaricom, for example
+*"Do you want to pay KES 500 to MAMA NJERI SHOP account no. MAMA NJERI S?"*:
+the business name is the one registered on the Paybill/Till, and the app puts
+the shop name (first 12 letters) in the account field.
+
+Only customers who have agreed get prompts: tick **Customer agrees to receive
+M-Pesa payment prompts** on the customer's form after asking them.
+
+#### 1. Test for free in the sandbox
+
+1. Create an account at https://developer.safaricom.co.ke and sign in.
+2. Open **My Apps → Create new app**, tick **M-Pesa Express (Lipa Na M-Pesa
+   Online)**, and create it. Copy the **Consumer Key** and **Consumer Secret**.
+3. Open **APIs → M-Pesa Express → Simulate**. It shows the test Paybill
+   **174379** and the sandbox **passkey**.
+4. Make sure `.env` has `MESSAGING_CREDENTIALS_ENCRYPTION_KEY` (it encrypts the
+   saved keys; back it up and never change it), then restart the app.
+5. Sign in as the shop admin, open **M-Pesa** in the menu and save:
+   Mode **Sandbox**, Customers pay to **Paybill number**, number **174379**,
+   and the consumer key, consumer secret and passkey.
+6. Create or edit a customer with **your own Safaricom number** and tick the
+   consent box. Give them a credit sale so they owe something.
+7. On that customer's page, under **Request payment by M-Pesa**, enter
+   **1** shilling and press **Send prompt**. Your phone shows the prompt;
+   enter your PIN. The sandbox is for testing and should not move real money,
+   but use KES 1 anyway.
+8. Press **Check status** next to the prompt. It changes to **Paid** and the
+   payment appears in payment history with the M-Pesa reference.
+
+#### 2. Turn on automatic confirmation (optional)
+
+Safaricom reports each result to the app's callback address, which must be a
+public `https://` URL. On your own computer, use a tunnel such as ngrok:
+
+```powershell
+ngrok http 5000
+```
+
+Copy the `https://….ngrok-free.app` address into `.env` as
+`PUBLIC_BASE_URL=https://….ngrok-free.app` and restart the app. The M-Pesa
+page then says **Automatic confirmation is on**, and prompts update to
+**Paid** by themselves. Without it, use **Check status**.
+
+#### 3. Go live with your own Paybill or Till
+
+1. You need a Safaricom Paybill or Till (Lipa Na M-Pesa) number and access to
+   its M-Pesa business (org) portal.
+2. On the Daraja portal, open **Go Live**, choose your shortcode and follow the
+   steps; Safaricom emails the **production passkey**, and your app gets
+   production consumer keys.
+3. Deploy the app on a public `https://` address and set `PUBLIC_BASE_URL` to it.
+4. On the **M-Pesa** page choose **Live**, then:
+   - **Paybill:** enter the Paybill number.
+   - **Till:** choose *Till number (Buy Goods)*, enter the **store (head
+     office) number** in the first box and the **till number** customers pay to.
+   Enter the production consumer key, consumer secret and passkey, and save.
+
+If a prompt fails, the message on the customer's page says why (wrong keys,
+invalid phone number, customer cancelled, wrong PIN, not enough balance).
+
 ### Set up verification emails
 
 Retailers only receive their sign-up code by email once SMTP is configured.
