@@ -50,47 +50,45 @@
           {% endif %}
         </div>
 
-        <div class="transaction-field">
-          {{ form.item_description.label(class="form-label") }}
-          <span class="transaction-input-wrap">
-            <i class="bi bi-basket2" aria-hidden="true"></i>
-            {{ form.item_description(class="form-control", placeholder="e.g. 2kg sugar, 1L cooking oil", maxlength="150", required=true, **{"aria-describedby": "txn-item-help" ~ (" txn-item-errors" if form.item_description.errors else ""), "aria-invalid": "true" if form.item_description.errors else "false"}) }}
-          </span>
-          <small class="transaction-field-help" id="txn-item-help">Be specific so you can recognize this sale later. Up to 150 characters.</small>
-          {% if form.item_description.errors %}
-          <div class="transaction-field-errors" id="txn-item-errors" role="alert">
-            {% for error in form.item_description.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
+        {% macro item_row(entry, index) %}
+        <div class="sale-item-row" data-item-row>
+          <div class="sale-item-field sale-item-name">
+            <label class="form-label" for="items-{{ index }}-item_description">Item</label>
+            <input class="form-control" id="items-{{ index }}-item_description" name="items-{{ index }}-item_description" maxlength="150" placeholder="e.g. Chips" required value="{{ entry.form.item_description.data if entry else '' }}">
+          </div>
+          <div class="sale-item-field sale-item-size">
+            <label class="form-label" for="items-{{ index }}-item_size_inches">Size</label>
+            <select class="form-select" id="items-{{ index }}-item_size_inches" name="items-{{ index }}-item_size_inches">
+              {% for value, label in size_choices %}<option value="{{ value }}"{% if entry and entry.form.item_size_inches.data == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="sale-item-field sale-item-amount">
+            <label class="form-label" for="items-{{ index }}-amount">Price (KES)</label>
+            <input class="form-control" id="items-{{ index }}-amount" name="items-{{ index }}-amount" type="number" inputmode="decimal" min="0.01" max="99999999.99" step="0.01" placeholder="0.00" required value="{{ entry.form.amount.raw_data[0] if entry and entry.form.amount.raw_data else (entry.form.amount.data if entry and entry.form.amount.data is not none else '') }}" data-item-amount>
+          </div>
+          <button type="button" class="sale-item-remove" data-remove-item aria-label="Remove this item"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+          {% if entry and entry.form.errors %}
+          <div class="transaction-field-errors sale-item-errors" role="alert">
+            {% for errors in entry.form.errors.values() %}{% for error in errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}{% endfor %}
           </div>
           {% endif %}
         </div>
+        {% endmacro %}
 
-        <div class="transaction-field">
-          {{ form.item_size_inches.label(class="form-label") }}
-          <span class="transaction-input-wrap">
-            <i class="bi bi-rulers" aria-hidden="true"></i>
-            {{ form.item_size_inches(class="form-select", **{"aria-describedby": "txn-size-help" ~ (" txn-size-errors" if form.item_size_inches.errors else ""), "aria-invalid": "true" if form.item_size_inches.errors else "false"}) }}
-          </span>
-          <small class="transaction-field-help" id="txn-size-help">Optional: select the item's size in inches. The size will be saved with the item description.</small>
-          {% if form.item_size_inches.errors %}
-          <div class="transaction-field-errors" id="txn-size-errors" role="alert">
-            {% for error in form.item_size_inches.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
+        <fieldset class="transaction-field sale-items" aria-describedby="txn-items-help">
+          <legend class="form-label">Items bought</legend>
+          <small class="transaction-field-help" id="txn-items-help">Add each product the customer took now, with its price. They are saved as one sale on one date, and each item can be paid for separately later.</small>
+          <div class="sale-item-list" id="sale-item-list">
+            {% for entry in form.items %}{{ item_row(entry, loop.index0) }}{% endfor %}
           </div>
-          {% endif %}
-        </div>
+          <template id="sale-item-template">{{ item_row(none, "__INDEX__") }}</template>
+          {% for error in form.items.errors if error is string %}<div class="transaction-field-errors" role="alert"><span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span></div>{% endfor %}
+          <div class="sale-items-footer">
+            <button type="button" class="sale-item-add" id="sale-item-add"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add another item</button>
+            <div class="sale-items-total" aria-live="polite"><span>Total</span><strong id="sale-items-total">KES 0.00</strong></div>
+          </div>
+        </fieldset>
 
-        <div class="transaction-field">
-          {{ form.amount.label(class="form-label") }}
-          <span class="transaction-input-wrap transaction-amount-wrap">
-            <span class="transaction-currency" aria-hidden="true">KES</span>
-            {{ form.amount(class="form-control", placeholder="0.00", inputmode="decimal", min="0.01", max="99999999.99", step="0.01", required=true, **{"aria-describedby": "txn-amount-help" ~ (" txn-amount-errors" if form.amount.errors else ""), "aria-invalid": "true" if form.amount.errors else "false"}) }}
-          </span>
-          <small class="transaction-field-help" id="txn-amount-help">Enter the total amount the customer will owe. Minimum KES 0.01.</small>
-          {% if form.amount.errors %}
-          <div class="transaction-field-errors" id="txn-amount-errors" role="alert">
-            {% for error in form.amount.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}
-          </div>
-          {% endif %}
-        </div>
 
         <div id="offline-note" class="transaction-offline-note d-none" role="status" aria-live="polite"></div>
         <div id="offline-error" class="transaction-offline-error d-none" role="alert"></div>
@@ -141,6 +139,56 @@
   }
   if (!form) return;
 
+  // Item rows: add, remove, renumber and total.
+  const list = document.getElementById("sale-item-list");
+  const template = document.getElementById("sale-item-template");
+  const totalOutput = document.getElementById("sale-items-total");
+  const formatKes = (value) => `KES ${value.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  function renumber() {
+    const rows = [...list.querySelectorAll("[data-item-row]")];
+    rows.forEach((row, index) => {
+      row.querySelectorAll("[name], [id], label[for]").forEach((el) => {
+        ["name", "id", "for"].forEach((attr) => {
+          const value = el.getAttribute(attr);
+          if (value) el.setAttribute(attr, value.replace(/items-(\d+|__INDEX__)-/, `items-${index}-`));
+        });
+      });
+      row.querySelector("[data-remove-item]").hidden = rows.length === 1;
+    });
+  }
+
+  function updateTotal() {
+    const total = [...list.querySelectorAll("[data-item-amount]")]
+      .reduce((sum, input) => sum + (Number(input.value) > 0 ? Number(input.value) : 0), 0);
+    totalOutput.textContent = formatKes(total);
+  }
+
+  function addItem() {
+    list.insertAdjacentHTML("beforeend", template.innerHTML);
+    renumber();
+    updateTotal();
+    list.querySelector("[data-item-row]:last-child input").focus();
+  }
+
+  function resetItems() {
+    list.querySelectorAll("[data-item-row]").forEach((row, index) => { if (index > 0) row.remove(); });
+    renumber();
+    updateTotal();
+  }
+
+  document.getElementById("sale-item-add").addEventListener("click", addItem);
+  list.addEventListener("click", (event) => {
+    const remove = event.target.closest("[data-remove-item]");
+    if (!remove) return;
+    remove.closest("[data-item-row]").remove();
+    renumber();
+    updateTotal();
+  });
+  list.addEventListener("input", updateTotal);
+  renumber();
+  updateTotal();
+
   const submitButton = document.getElementById("txn-submit-btn");
   const buttonLabel = submitButton.querySelector("span");
   const offlineNote = document.getElementById("offline-note");
@@ -166,24 +214,28 @@
 
     try {
       const customerId = Number(form.elements.customer_id.value);
-      const amount = Number(form.elements.amount.value);
-      if (!Number.isInteger(customerId) || customerId < 1 || !Number.isFinite(amount) || amount < 0.01) {
-        throw new Error("Choose a customer and enter an amount of at least KES 0.01.");
+      if (!Number.isInteger(customerId) || customerId < 1) {
+        throw new Error("Choose a customer.");
       }
-      const itemDescription = form.elements.item_description.value.trim();
-      if (!itemDescription || itemDescription.length > 150) {
-        throw new Error("Enter an item description of 150 characters or fewer.");
+      const items = [...list.querySelectorAll("[data-item-row]")].map((row) => ({
+        item_description: row.querySelector('[name$="-item_description"]').value.trim(),
+        item_size_inches: row.querySelector('[name$="-item_size_inches"]').value,
+        amount: Number(row.querySelector("[data-item-amount]").value),
+      }));
+      if (!items.length || items.some((item) => !item.item_description || item.item_description.length > 150)) {
+        throw new Error("Give every item a name of 150 characters or fewer.");
       }
-      const itemSizeInches = form.elements.item_size_inches.value;
+      if (items.some((item) => !Number.isFinite(item.amount) || item.amount < 0.01)) {
+        throw new Error("Give every item a price of at least KES 0.01.");
+      }
       await DukaOfflineDB.addPendingTransaction({
         customer_id: customerId,
-        item_description: itemDescription,
-        item_size_inches: itemSizeInches,
-        amount: amount.toFixed(2),
+        items: items.map((item) => ({ ...item, amount: item.amount.toFixed(2) })),
       });
       offlineNote.innerHTML = '<i class="bi bi-cloud-slash" aria-hidden="true"></i><span>Sale saved on this device. It will sync automatically when you are back online.</span>';
       offlineNote.classList.remove("d-none");
       form.reset();
+      resetItems();
     } catch (error) {
       offlineError.textContent = error.message || "This sale could not be saved on this device. Please try again.";
       offlineError.classList.remove("d-none");
