@@ -137,11 +137,18 @@ class PaymentMethodTests(unittest.TestCase):
 
         self.assertEqual(Payment.query.count(), 0)
 
-    def test_mpesa_methods_need_a_valid_transaction_code(self):
+    def test_mpesa_transaction_code_is_optional(self):
         for method in ("agent", "mpesa_send", "mpesa_till", "mpesa_paybill"):
             with self.subTest(method=method):
-                missing = self._pay(method, "")
-                self.assertIn(b"Enter the M-Pesa transaction code", missing.data)
+                response = self._pay(method, "", amount="10.00")
+                self.assertEqual(response.status_code, 302)
+        payments = Payment.query.all()
+        self.assertEqual(len(payments), 4)
+        self.assertTrue(all(payment.payment_reference is None for payment in payments))
+
+    def test_a_given_mpesa_code_must_look_like_one(self):
+        for method in ("agent", "mpesa_send", "mpesa_till", "mpesa_paybill"):
+            with self.subTest(method=method):
                 malformed = self._pay(method, "AB-1")
                 self.assertIn(b"M-Pesa codes are 8-12 letters and numbers", malformed.data)
         self.assertEqual(Payment.query.count(), 0)
