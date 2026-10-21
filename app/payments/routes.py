@@ -150,6 +150,8 @@ def new_payment():
                 retailer_id=current_user.retailer_id,
                 customer_id=customer.customer_id,
                 amount_paid=form.amount_paid.data,
+                payment_method=form.payment_method.data,
+                payment_reference=form.payment_reference.data,
                 approval_status="pending" if not current_user.is_admin else "approved",
                 submitted_by_shopkeeper_id=(
                     current_user.shopkeeper_id if not current_user.is_admin else None
