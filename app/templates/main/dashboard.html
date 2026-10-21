@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "payments/_method.html" import payment_method_badge %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 <section class="dashboard-welcome" aria-label="Welcome and business highlights">
@@ -189,7 +190,7 @@
   </header>
   <div class="table-responsive">
     <table class="table dashboard-approvals-table align-middle mb-0">
-      <thead><tr><th scope="col">Logged</th><th scope="col">Customer</th><th scope="col" class="text-end">Amount</th><th scope="col" class="text-end">Decision</th></tr></thead>
+      <thead><tr><th scope="col">Logged</th><th scope="col">Customer</th><th scope="col">Method</th><th scope="col" class="text-end">Amount</th><th scope="col" class="text-end">Decision</th></tr></thead>
       <tbody>
         {% for p in pending_payments %}
         {% set decision_form = payment_decision_forms[p.payment_id] %}
@@ -199,6 +200,7 @@
             <span class="dashboard-payments-customer"><i class="bi bi-person-circle" aria-hidden="true"></i>{{ p.customer.full_name }}</span>
             {% if p.submitted_by_shopkeeper %}<small class="d-block text-muted">by {{ p.submitted_by_shopkeeper.full_name }}</small>{% endif %}
           </td>
+          <td>{{ payment_method_badge(p) }}</td>
           <td class="text-end"><span class="dashboard-payments-amount">{{ p.amount_paid | kes }}</span></td>
           <td class="text-end">
             <div class="dashboard-approval-buttons">
