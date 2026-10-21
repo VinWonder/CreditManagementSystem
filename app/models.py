@@ -262,7 +262,11 @@ class Customer(db.Model):
 
 
 class CreditTransaction(db.Model):
-    """A single 'deni' (credit sale) issued to a customer."""
+    """A single 'deni' (credit sale) issued to a customer.
+
+    One sale can hold several items bought together (see SaleItem); amount is
+    their total and item_description a short summary such as "Chips, Soda".
+    """
 
     __tablename__ = "credit_transactions"
 
@@ -276,8 +280,32 @@ class CreditTransaction(db.Model):
     # synced = confirmed persisted server-side.
     sync_status = db.Column(db.String(10), default="synced")  # pending | synced
 
+    items = db.relationship(
+        "SaleItem",
+        backref="sale",
+        order_by="SaleItem.position",
+        cascade="all, delete-orphan",
+    )
+
     def __repr__(self):
         return f"<CreditTransaction {self.transaction_id} KES {self.amount}>"
+
+
+class SaleItem(db.Model):
+    """One product within a credit sale, e.g. Chips KES 100 in a Chips + Soda sale."""
+
+    __tablename__ = "sale_items"
+
+    sale_item_id = db.Column(db.Integer, primary_key=True)
+    transaction_id = db.Column(
+        db.Integer, db.ForeignKey("credit_transactions.transaction_id"), nullable=False, index=True
+    )
+    position = db.Column(db.Integer, nullable=False, default=0)
+    description = db.Column(db.String(150), nullable=False)
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+
+    def __repr__(self):
+        return f"<SaleItem {self.description} KES {self.amount}>"
 
 
 # How a customer paid. Keys are stored; labels are shown in the app.
@@ -321,6 +349,9 @@ class Payment(db.Model):
     submitted_by_shopkeeper = db.relationship(
         "Shopkeeper", foreign_keys=[submitted_by_shopkeeper_id]
     )
+    allocations = db.relationship(
+        "PaymentAllocation", backref="payment", cascade="all, delete-orphan"
+    )
 
     @property
     def payment_method_label(self):
@@ -328,6 +359,23 @@ class Payment(db.Model):
 
     def __repr__(self):
         return f"<Payment {self.payment_id} KES {self.amount_paid}>"
+
+
+class PaymentAllocation(db.Model):
+    """The part of a payment the customer said was for a specific item."""
+
+    __tablename__ = "payment_allocations"
+
+    allocation_id = db.Column(db.Integer, primary_key=True)
+    payment_id = db.Column(
+        db.Integer, db.ForeignKey("payments.payment_id"), nullable=False, index=True
+    )
+    sale_item_id = db.Column(
+        db.Integer, db.ForeignKey("sale_items.sale_item_id"), nullable=False, index=True
+    )
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+
+    sale_item = db.relationship("SaleItem")
 
 
 class BalanceAdjustment(db.Model):
@@ -534,6 +582,8 @@ class StkPushRequest(db.Model):
     result_code = db.Column(db.String(10), nullable=True)
     result_desc = db.Column(db.String(255), nullable=True)
     mpesa_receipt = db.Column(db.String(20), nullable=True)
+    # Comma-separated sale item ids the prompt is paying for; empty = oldest first.
+    sale_item_ids = db.Column(db.String(500), nullable=True)
     payment_id = db.Column(db.Integer, db.ForeignKey("payments.payment_id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     completed_at = db.Column(db.DateTime, nullable=True)
