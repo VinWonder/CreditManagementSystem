@@ -1,6 +1,8 @@
+import ipaddress
 import secrets
 from datetime import datetime, timedelta
 from decimal import Decimal
+from urllib.parse import urlsplit
 
 from flask import Blueprint, current_app, jsonify, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -22,12 +24,24 @@ mpesa_bp = Blueprint("mpesa", __name__, url_prefix="/mpesa")
 PROMPT_COOLDOWN = timedelta(minutes=2)
 # After this, a prompt nobody answered is closed so it stops being checked.
 PROMPT_EXPIRY = timedelta(minutes=5)
+# Daraja rejects local or IP callback URLs ("Invalid CallBackURL"). Without a
+# public address, use a .invalid host: Safaricom accepts it, it can never
+# resolve, so payment details go nowhere, and the waiting page asks Safaricom
+# for the result instead.
+UNREACHABLE_CALLBACK_BASE = "https://duka-credit.invalid"
 
 
 def callback_base_url():
-    """The public HTTPS address Safaricom can reach, or None when not configured."""
+    """The public HTTPS address Safaricom can reach, or None when there is none."""
     base = current_app.config.get("PUBLIC_BASE_URL") or ""
-    return base if base.startswith("https://") else None
+    host = urlsplit(base).hostname or ""
+    if not base.startswith("https://") or not host or host == "localhost" or host.endswith(".local"):
+        return None
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        return base
+    return None
 
 
 def recent_pending_prompt(customer_id):
@@ -41,9 +55,7 @@ def recent_pending_prompt(customer_id):
 def send_stk_prompt(customer, amount, phone):
     """Ask Safaricom to prompt the customer's phone. Raises DarajaError with a showable reason."""
     token = secrets.token_urlsafe(32)
-    # Daraja needs an https URL. Without a public address this local one is
-    # unreachable, and the waiting page asks Safaricom for the result instead.
-    callback_url = (callback_base_url() or f"https://{request.host}") + url_for(
+    callback_url = (callback_base_url() or UNREACHABLE_CALLBACK_BASE) + url_for(
         "mpesa.callback", token=token
     )
     reference = account_reference_for(current_user.business_name)
