@@ -65,6 +65,12 @@
           <span><small>Available balance</small><strong id="payment-current-balance">Choose a customer</strong></span>
         </div>
 
+        <fieldset class="payment-field payment-items" id="payment-items" hidden>
+          <legend class="form-label">What is this payment for?</legend>
+          <small class="payment-field-help">Tick the items the customer is paying for, or leave all unticked to pay the oldest items first.</small>
+          <div class="payment-item-list" id="payment-item-list"></div>
+        </fieldset>
+
         <div class="payment-field">
           {{ form.amount_paid.label(class="form-label") }}
           <span class="payment-input-wrap payment-amount-wrap">
@@ -244,6 +250,48 @@
 
   method.addEventListener("change", updateReference);
   customer.addEventListener("change", updateStk);
+
+  // Items the payment can be for. Ticking items fills in what they still owe.
+  const owingItems = {{ owing_items | tojson }};
+  const chosenItemIds = new Set({{ chosen_item_ids | tojson }});
+  const itemsBox = document.getElementById("payment-items");
+  const itemList = document.getElementById("payment-item-list");
+
+  function renderItems() {
+    const items = owingItems[customer.value] || [];
+    itemsBox.hidden = items.length === 0;
+    itemList.innerHTML = "";
+    items.forEach((item) => {
+      const label = document.createElement("label");
+      label.className = "payment-item";
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.className = "form-check-input";
+      box.name = "sale_item_ids";
+      box.value = item.id;
+      box.dataset.remaining = item.remaining;
+      box.checked = chosenItemIds.has(item.id);
+      const name = document.createElement("span");
+      name.className = "payment-item-name";
+      name.textContent = item.label;
+      const due = document.createElement("strong");
+      due.className = "payment-item-due";
+      due.textContent = `${formatKes(item.remaining)} ${item.partly_paid ? "left" : "due"}`;
+      label.append(box, name, due);
+      itemList.append(label);
+    });
+  }
+
+  itemList.addEventListener("change", () => {
+    const checked = [...itemList.querySelectorAll("input:checked")];
+    if (!checked.length) return;
+    let total = checked.reduce((sum, box) => sum + Number(box.dataset.remaining), 0);
+    if (method.value === "mpesa_stk") total = Math.floor(total);
+    amount.value = total.toFixed(method.value === "mpesa_stk" ? 0 : 2);
+    updateBalance();
+  });
+  customer.addEventListener("change", () => { chosenItemIds.clear(); renderItems(); });
+  renderItems();
   reference.addEventListener("input", () => {
     const caret = reference.selectionStart;
     reference.value = reference.value.toUpperCase();
