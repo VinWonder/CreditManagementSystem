@@ -599,7 +599,7 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .preview-customer { display: flex; flex: 1; flex-direction: column; gap: 0.15rem; min-width: 0; }
 .preview-customer strong { font-size: 0.72rem; }
 .preview-customer small { color: #879088; font-size: 0.61rem; }
-.preview-amount { font-size: 0.68rem; white-space: nowrap; }
+.preview-check { color: #3f7d5c; font-size: 0.95rem; margin: 0 0.3rem; }
 .preview-bell { color: #b57456; font-size: 0.9rem; margin: 0 0.3rem; }
 .preview-sync { align-items: center; color: #6c7b70; display: flex; font-size: 0.61rem; justify-content: space-between; padding-top: 0.8rem; }
 .preview-sync i { color: #548264; font-size: 0.83rem; margin-right: 0.22rem; }
@@ -659,7 +659,6 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
   .preview-overview-title { font-size: 1.45rem; }
   .preview-flow { font-size: 0.5rem; gap: 0.25rem; }
   .preview-row { gap: 0.5rem; }
-  .preview-amount { font-size: 0.62rem; }
   .welcome-tool { gap: 0.45rem; padding-left: 0.5rem; }
   .welcome-tool strong { font-size: 0.64rem; }
   .welcome-tool small { font-size: 0.56rem; }
