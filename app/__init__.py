@@ -1,4 +1,8 @@
+import os
+import secrets
+
 from flask import Flask, render_template
+from flask_login import user_logged_in
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import ProgrammingError
 from config import Config
@@ -22,6 +26,28 @@ def create_app(config_class=Config):
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
+
+    # One ID per server start. The reloader's child process inherits it through
+    # the environment, so code reloads keep sessions while a real restart ends them.
+    app.config["SERVER_BOOT_ID"] = os.environ.setdefault(
+        "DUKA_SERVER_BOOT_ID", secrets.token_hex(16)
+    )
+
+    @user_logged_in.connect_via(app)
+    def stamp_session_with_boot_id(sender, user, **extra):
+        from flask import session
+
+        session["_server_boot_id"] = app.config["SERVER_BOOT_ID"]
+
+    @app.before_request
+    def end_sessions_from_before_restart():
+        """Sign out sessions created before the server last started."""
+        from flask import session
+
+        if not app.config.get("SESSION_ENDS_ON_RESTART") or not session.get("_user_id"):
+            return
+        if session.get("_server_boot_id") != app.config["SERVER_BOOT_ID"]:
+            session.clear()
 
     @app.before_request
     def refresh_session_lifetime():
