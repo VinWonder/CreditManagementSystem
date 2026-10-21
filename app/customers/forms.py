@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import BooleanField, StringField, SelectField, SubmitField
+from wtforms import StringField, SelectField, SubmitField
 from wtforms.validators import DataRequired, Length, Optional, Regexp
 
 
@@ -20,8 +20,5 @@ class CustomerForm(FlaskForm):
         "Preferred Reminder Channel",
         choices=[("sms", "SMS"), ("whatsapp", "WhatsApp"), ("both", "SMS + WhatsApp")],
         default="sms",
-    )
-    accepts_stk_prompts = BooleanField(
-        "Customer agrees to receive M-Pesa payment prompts on this number"
     )
     submit = SubmitField("Save Customer")

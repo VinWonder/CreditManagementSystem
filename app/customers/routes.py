@@ -70,7 +70,6 @@ def new_customer():
             phone_number=form.phone_number.data,
             shop_name=(form.shop_name.data or "").strip() or None,
             preferred_channel=form.preferred_channel.data,
-            accepts_stk_prompts=form.accepts_stk_prompts.data,
         )
         db.session.add(customer)
         db.session.flush()  # get customer_id before commit
@@ -104,7 +103,6 @@ def edit_customer(customer_id):
         customer.phone_number = form.phone_number.data
         customer.shop_name = (form.shop_name.data or "").strip() or None
         customer.preferred_channel = form.preferred_channel.data
-        customer.accepts_stk_prompts = form.accepts_stk_prompts.data
         db.session.commit()
         flash("Customer updated.", "success")
         return redirect(url_for("customers.list_customers"))
