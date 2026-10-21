@@ -149,6 +149,14 @@ the customer's outstanding balance until approved. Partial approved payments
 reduce the balance; a zero balance is shown as cleared. Manual corrections
 require a reason and are retained in the customer balance audit history.
 
+A credit sale can hold several items bought at the same time (for example
+Chips KES 100 and Soda KES 300): add a row per item and the total is worked
+out. It stays one sale on one date. When logging a payment, tick the items it
+is for (for example only the Soda); with nothing ticked, the payment pays the
+oldest unpaid items first. The customer's page shows each item as paid, partly
+paid or due, payment lists show what a payment was for, and one reminder lists
+only what is still owed, item by item.
+
 Every payment records how the customer paid: cash, bank transfer/deposit,
 agent withdrawal, M-Pesa Send Money, M-Pesa Till, M-Pesa Paybill, cheque, or
 an M-Pesa prompt sent from the app (see below).
