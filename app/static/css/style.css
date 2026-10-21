@@ -1790,3 +1790,4 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 @media (max-width: 991.98px) {
   table.table-stack td .sale-item-status-list { flex: 1 1 100%; text-align: left; }
 }
+.payment-method-items { color: #3f6b5d; display: block; font-size: 0.7rem; font-weight: 650; margin-top: 0.2rem; overflow-wrap: anywhere; }
