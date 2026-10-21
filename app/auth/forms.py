@@ -1,14 +1,38 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField
 from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import DataRequired, Email, Length, EqualTo, Regexp
+import re
+
+from wtforms.validators import DataRequired, Email, Length, EqualTo, Regexp, ValidationError
+
+
+PASSWORD_MIN_LENGTH = 8
+PASSWORD_RULES = [
+    (r"[A-Z]", "an uppercase letter"),
+    (r"[a-z]", "a lowercase letter"),
+    (r"\d", "a number"),
+    (r"[^A-Za-z0-9\s]", "a symbol such as ! @ # or $"),
+]
+
+
+def strong_password(form, field):
+    """Require every character class and reject spaces, naming each missing rule."""
+    value = field.data or ""
+    if re.search(r"\s", value):
+        raise ValidationError("Passwords cannot contain spaces.")
+    missing = [label for pattern, label in PASSWORD_RULES if not re.search(pattern, value)]
+    if missing:
+        raise ValidationError("Add " + ", ".join(missing) + ".")
 
 
 PASSWORD_VALIDATORS = [
     DataRequired(),
-    Length(min=8, max=128),
-    Regexp(r".*[A-Za-z].*", message="Use at least one letter."),
-    Regexp(r".*\d.*", message="Use at least one number."),
+    Length(
+        min=PASSWORD_MIN_LENGTH,
+        max=128,
+        message=f"Use between {PASSWORD_MIN_LENGTH} and 128 characters.",
+    ),
+    strong_password,
 ]
 
 
