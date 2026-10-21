@@ -13,9 +13,9 @@ document.querySelectorAll('[data_password_strength]').forEach((input) => {
   const meter = input.closest('.auth-field').querySelector('.password-meter span');
   input.addEventListener('input', () => {
     const value = input.value;
-    const score = Number(value.length >= 8) + Number(/[A-Za-z]/.test(value)) + Number(/\d/.test(value));
-    meter.style.width = `${(score / 3) * 100}%`;
-    meter.className = score === 3 ? 'strong' : score === 2 ? 'fair' : '';
+    const score = [value.length >= 8, /[A-Z]/.test(value), /[a-z]/.test(value), /\d/.test(value), /[^A-Za-z0-9\s]/.test(value)].filter(Boolean).length;
+    meter.style.width = `${(score / 5) * 100}%`;
+    meter.className = score === 5 ? 'strong' : score >= 3 ? 'fair' : '';
   });
 });
 
