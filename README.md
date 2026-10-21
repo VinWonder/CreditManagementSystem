@@ -138,6 +138,37 @@ reset codes are supported.
 
 ---
 
+### Set up verification emails
+
+Retailers only receive their sign-up code by email once SMTP is configured.
+Until then the verify page warns that email is not set up and the code is
+printed in the Flask terminal.
+
+1. Use an email account for the shop (Gmail shown here).
+2. Turn on 2-Step Verification: https://myaccount.google.com/security
+3. Create an App Password: https://myaccount.google.com/apppasswords
+4. In `.env`, fill in:
+   ```env
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USE_TLS=true
+   SMTP_USERNAME=yourshop@gmail.com
+   SMTP_PASSWORD=the-16-character-app-password
+   MAIL_FROM=Duka Credit <yourshop@gmail.com>
+   ```
+   For Outlook use `smtp-mail.outlook.com`; for other providers use their
+   SMTP host and port (465 uses SSL automatically).
+5. Check delivery:
+   ```powershell
+   .env\Scripts\python.exe -m flask --app run send-test-email you@example.com
+   ```
+   It prints `Sent.` or the exact reason it failed (for example a refused
+   login, which usually means the normal password was used instead of an
+   App Password).
+6. Restart the app so it picks up the new settings.
+
+---
+
 ## 4. PostgreSQL and deployment
 
 ### Connect a local PostgreSQL database
