@@ -1740,3 +1740,7 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
   .app-nav-account { gap: 0.5rem; padding-left: 0.6rem; }
   .app-account-chip { max-width: 9.5rem; }
 }
+/* Two history tables side by side only fit on wide screens. */
+@media (max-width: 1199.98px) {
+  .customer-history-grid { grid-template-columns: minmax(0, 1fr); }
+}
