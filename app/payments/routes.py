@@ -13,6 +13,8 @@ from app.models import (
     Ledger,
     Payment,
 )
+from app.mpesa.daraja import DarajaError, stk_push_enabled
+from app.mpesa.routes import recent_pending_prompt, send_stk_prompt
 from app.payments.forms import BalanceAdjustmentForm, PaymentDecisionForm, PaymentForm
 from app.permissions import admin_required
 
@@ -124,6 +126,11 @@ def new_payment():
         )
         for customer in owing_customers
     ]
+    stk_enabled = stk_push_enabled()
+    if not stk_enabled:
+        form.payment_method.choices = [
+            choice for choice in form.payment_method.choices if choice[0] != "mpesa_stk"
+        ]
 
     if form.validate_on_submit():
         customer = (
@@ -145,6 +152,21 @@ def new_payment():
                 f"Payment cannot exceed the outstanding balance of "
                 f"KES {current_balance:,.2f}."
             )
+        elif form.payment_method.data == "mpesa_stk":
+            # Release the row lock: nothing is saved until Safaricom answers.
+            db.session.rollback()
+            if recent_pending_prompt(customer.customer_id):
+                form.payment_method.errors.append(
+                    "A prompt was just sent to this customer. Wait for them to answer it first."
+                )
+            else:
+                try:
+                    stk = send_stk_prompt(customer, int(form.amount_paid.data), form.stk_phone.data)
+                except DarajaError as exc:
+                    form.payment_method.errors.append(str(exc))
+                else:
+                    flash(f"M-Pesa prompt sent to {stk.phone_number}.", "info")
+                    return redirect(url_for("mpesa.prompt_status", stk_request_id=stk.stk_request_id))
         else:
             payment = Payment(
                 retailer_id=current_user.retailer_id,
@@ -192,6 +214,8 @@ def new_payment():
         customers_available=bool(owing_customers),
         has_customers=bool(customers),
         balances=balances,
+        customer_phones={customer.customer_id: customer.phone_number for customer in owing_customers},
+        stk_enabled=stk_enabled,
     )
 
 
