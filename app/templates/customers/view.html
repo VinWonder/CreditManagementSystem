@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "payments/_method.html" import payment_method_badge %}
 {% block title %}{{ customer.full_name }}{% endblock %}
 {% block content %}
 <div class="customer-portfolio">
@@ -114,16 +115,17 @@
       <header class="customer-history-heading"><span class="customer-section-icon is-payment"><i class="bi bi-wallet2" aria-hidden="true"></i></span><div><h2>Payments</h2><p>{{ payments|length }} {{ 'payment' if payments|length == 1 else 'payments' }} recorded</p></div></header>
       <div class="table-responsive">
         <table class="table customer-history-table mb-0">
-          <thead><tr><th>Date</th><th>Approval</th><th class="text-end">Amount</th></tr></thead>
+          <thead><tr><th>Date</th><th>Method</th><th>Approval</th><th class="text-end">Amount</th></tr></thead>
           <tbody>
           {% for p in payments %}
             <tr>
               <td>{{ p.payment_date|nairobi('%d %b %Y') }}</td>
+              <td>{{ payment_method_badge(p) }}</td>
               <td><span class="customer-payment-status {{ 'is-approved' if p.approval_status == 'approved' else 'is-pending' if p.approval_status == 'pending' else 'is-rejected' }}">{{ p.approval_status|capitalize }}</span>{% if p.review_note %}<small class="customer-payment-note">{{ p.review_note }}</small>{% endif %}</td>
               <td class="text-end"><strong>{{ p.amount_paid | kes }}</strong></td>
             </tr>
           {% else %}
-            <tr><td colspan="3" class="customer-history-empty">No payments recorded yet.</td></tr>
+            <tr><td colspan="4" class="customer-history-empty">No payments recorded yet.</td></tr>
           {% endfor %}
           </tbody>
         </table>
