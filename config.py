@@ -80,15 +80,7 @@ class Config:
         "MESSAGING_CREDENTIALS_ENCRYPTION_KEY", ""
     )
 
-    # M-Pesa STK Push (Daraja): the Paybill or Till that receives prompted payments.
-    MPESA_ENVIRONMENT = os.environ.get("MPESA_ENVIRONMENT", "sandbox").strip().lower()
-    MPESA_ACCOUNT_TYPE = os.environ.get("MPESA_ACCOUNT_TYPE", "paybill").strip().lower()
-    # Paybill number, or for a Till the store (head office) number.
-    MPESA_SHORTCODE = os.environ.get("MPESA_SHORTCODE", "").strip()
-    MPESA_TILL_NUMBER = os.environ.get("MPESA_TILL_NUMBER", "").strip()
-    MPESA_CONSUMER_KEY = os.environ.get("MPESA_CONSUMER_KEY", "").strip()
-    MPESA_CONSUMER_SECRET = os.environ.get("MPESA_CONSUMER_SECRET", "").strip()
-    MPESA_PASSKEY = os.environ.get("MPESA_PASSKEY", "").strip()
+    # M-Pesa STK Push: each shop's Paybill/Till is saved with `flask mpesa set`.
     # Public HTTPS address Safaricom calls back with each payment result.
     PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").strip().rstrip("/")
     MPESA_REQUEST_TIMEOUT_SECONDS = int(os.environ.get("MPESA_REQUEST_TIMEOUT_SECONDS", 30))
