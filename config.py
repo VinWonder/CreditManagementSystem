@@ -41,6 +41,9 @@ class Config:
     EMAIL_VERIFICATION_CODE_MINUTES = int(os.environ.get("EMAIL_VERIFICATION_CODE_MINUTES", 15))
     EMAIL_VERIFICATION_MAX_ATTEMPTS = int(os.environ.get("EMAIL_VERIFICATION_MAX_ATTEMPTS", 5))
     EMAIL_VERIFICATION_RESEND_SECONDS = int(os.environ.get("EMAIL_VERIFICATION_RESEND_SECONDS", 60))
+    # A sign-up whose email stays unverified this long is treated as abandoned:
+    # its shop name, phone number and email can be registered by someone else.
+    UNVERIFIED_SIGNUP_HOURS = int(os.environ.get("UNVERIFIED_SIGNUP_HOURS", 24))
     DEFAULT_PHONE_REGION = os.environ.get("DEFAULT_PHONE_REGION", "KE").upper()
     MAX_CONTENT_LENGTH = 3 * 1024 * 1024
     SHOP_LOGO_UPLOAD_FOLDER = os.path.join(basedir, "app", "static", "uploads", "logos")
