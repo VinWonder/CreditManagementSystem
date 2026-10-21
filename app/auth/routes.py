@@ -18,6 +18,7 @@ from app.models import (
     PasswordResetCode,
     PhoneVerificationCode,
     LoginChallenge,
+    EmailVerificationCode,
 )
 from app.auth.forms import (
     RegisterForm,
@@ -28,7 +29,9 @@ from app.auth.forms import (
     VerifyResetCodeForm,
     ResetPasswordForm,
     ResendVerificationForm,
+    VerifyEmailForm,
 )
+from app.auth.email import send_email
 from app.reminders.dispatch_service import send_sms
 from app.permissions import admin_required
 
@@ -147,6 +150,59 @@ def create_login_challenge(retailer):
     return challenge, True, info
 
 
+def create_email_verification(retailer):
+    """Email a fresh one-time code to the retailer. Returns (sent, message)."""
+    latest = (
+        EmailVerificationCode.query.filter_by(retailer_id=retailer.retailer_id, used_at=None)
+        .order_by(EmailVerificationCode.created_at.desc())
+        .first()
+    )
+    cooldown = timedelta(seconds=current_app.config["EMAIL_VERIFICATION_RESEND_SECONDS"])
+    if latest and datetime.utcnow() - latest.sent_at < cooldown:
+        return False, "A code was sent recently. Please wait a minute before asking for another."
+    EmailVerificationCode.query.filter_by(
+        retailer_id=retailer.retailer_id, used_at=None
+    ).update({"used_at": datetime.utcnow()}, synchronize_session=False)
+
+    minutes = current_app.config["EMAIL_VERIFICATION_CODE_MINUTES"]
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    db.session.add(
+        EmailVerificationCode(
+            retailer_id=retailer.retailer_id,
+            code_hash=generate_password_hash(code, method="scrypt"),
+            expires_at=datetime.utcnow() + timedelta(minutes=minutes),
+        )
+    )
+    db.session.flush()
+    success, info = send_email(
+        retailer.email,
+        "Your Duka Credit verification code",
+        f"Hello {retailer.owner_name},\n\n"
+        f"Your Duka Credit verification code is {code}. It expires in {minutes} minutes.\n\n"
+        "If you did not create a Duka Credit account, you can ignore this email.\n",
+    )
+    if not success:
+        db.session.rollback()
+        current_app.logger.warning("Verification email failed: %s", info)
+        return False, "We could not send the verification email. Please try again shortly."
+    db.session.commit()
+    if info == "simulated":
+        current_app.logger.info(
+            "Simulated email verification code for retailer %s: %s",
+            retailer.retailer_id,
+            code,
+        )
+    return True, f"We sent a verification code to {retailer.email}."
+
+
+def start_email_verification(retailer):
+    """Remember who is verifying, send a code and show the code entry page."""
+    session["email_verification_retailer_id"] = retailer.retailer_id
+    sent, message = create_email_verification(retailer)
+    flash(message, "info" if sent else "warning")
+    return redirect(url_for("auth.verify_email"))
+
+
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
@@ -196,8 +252,7 @@ def register():
             flash("That phone number is already registered. Please log in.", "warning")
             return redirect(url_for("auth.login"))
 
-        flash("Account created. You can now sign in.", "success")
-        return redirect(url_for("auth.login"))
+        return start_email_verification(retailer)
 
     return render_template("auth/register.html", form=form)
 
@@ -221,7 +276,10 @@ def login():
         )
         account = retailer or shopkeeper
         if account and account.check_password(form.password.data):
+            if retailer and retailer.needs_email_verification:
+                return start_email_verification(retailer)
             session.pop("phone_verification_retailer_id", None)
+            session.pop("email_verification_retailer_id", None)
             session.pop("login_challenge_id", None)
             session.pop("login_next", None)
             next_page = request.args.get("next")
@@ -353,6 +411,66 @@ def verify_phone():
 def resend_phone_verification():
     flash("Phone verification is temporarily disabled. Please log in with your phone number and password.", "info")
     return redirect(url_for("auth.login"))
+
+
+@auth_bp.route("/verify-email", methods=["GET", "POST"])
+def verify_email():
+    if current_user.is_authenticated:
+        return redirect(url_for("main.dashboard"))
+
+    retailer_id = session.get("email_verification_retailer_id")
+    retailer = db.session.get(Retailer, retailer_id) if retailer_id else None
+    if not retailer or not retailer.needs_email_verification:
+        session.pop("email_verification_retailer_id", None)
+        return redirect(url_for("auth.login"))
+
+    form = VerifyEmailForm()
+    if form.validate_on_submit():
+        now = datetime.utcnow()
+        code = (
+            EmailVerificationCode.query.filter_by(retailer_id=retailer.retailer_id, used_at=None)
+            .order_by(EmailVerificationCode.created_at.desc())
+            .first()
+        )
+        if (
+            not code
+            or code.expires_at <= now
+            or code.attempts >= current_app.config["EMAIL_VERIFICATION_MAX_ATTEMPTS"]
+        ):
+            flash("That code is invalid or expired. Send a new code and try again.", "danger")
+        elif not check_password_hash(code.code_hash, form.code.data):
+            code.attempts += 1
+            db.session.commit()
+            flash("That code is invalid or expired. Send a new code and try again.", "danger")
+        else:
+            code.used_at = now
+            retailer.email_verified_at = now
+            db.session.commit()
+            session.pop("email_verification_retailer_id", None)
+            session.permanent = True
+            login_user(retailer, fresh=True)
+            flash("Email verified. Welcome to Duka Credit!", "success")
+            return redirect(url_for("main.dashboard"))
+
+    return render_template(
+        "auth/verify_email.html",
+        form=form,
+        resend_form=ResendVerificationForm(),
+        email=retailer.email,
+        code_minutes=current_app.config["EMAIL_VERIFICATION_CODE_MINUTES"],
+    )
+
+
+@auth_bp.route("/resend-email-verification", methods=["POST"])
+def resend_email_verification():
+    retailer_id = session.get("email_verification_retailer_id")
+    retailer = db.session.get(Retailer, retailer_id) if retailer_id else None
+    form = ResendVerificationForm()
+    if not retailer or not retailer.needs_email_verification or not form.validate_on_submit():
+        return redirect(url_for("auth.login"))
+    sent, message = create_email_verification(retailer)
+    flash(message, "info" if sent else "warning")
+    return redirect(url_for("auth.verify_email"))
 
 
 @auth_bp.route("/forgot-password", methods=["GET", "POST"])
