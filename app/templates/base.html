@@ -18,7 +18,7 @@
   "main.dashboard": ["main.dashboard"],
   "customers.list_customers": ["customers.list_customers", "customers.new_customer", "customers.edit_customer", "customers.view_customer"],
   "transactions.new_transaction": ["transactions.new_transaction", "transactions.list_transactions"],
-  "payments.new_payment": ["payments.new_payment", "payments.list_payments"],
+  "payments.new_payment": ["payments.new_payment", "payments.list_payments", "mpesa.prompt_status"],
   "ledger.receivables_report": ["ledger.receivables_report"],
   "reminders.list_rules": ["reminders.list_rules", "reminders.new_rule", "reminders.edit_rule", "reminders.dispatch_log"]
 } %}
@@ -83,12 +83,6 @@
           <a class="nav-link{% if request.endpoint == 'auth.manage_shopkeepers' %} active{% endif %}"
             href="{{ url_for('auth.manage_shopkeepers') }}"{% if request.endpoint == 'auth.manage_shopkeepers' %} aria-current="page"{% endif %}>
             <i class="bi bi-person-gear" aria-hidden="true"></i><span>Shopkeepers</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link{% if request.endpoint == 'mpesa.settings' %} active{% endif %}"
-            href="{{ url_for('mpesa.settings') }}"{% if request.endpoint == 'mpesa.settings' %} aria-current="page"{% endif %}>
-            <i class="bi bi-phone-vibrate" aria-hidden="true"></i><span>M-Pesa</span>
           </a>
         </li>
         {% endif %}
