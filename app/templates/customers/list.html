@@ -51,9 +51,7 @@
                   <a class="customer-name" href="{{ url_for('customers.view_customer', customer_id=c.customer_id) }}">{{ c.full_name }}</a>
                   <span class="customer-contact">
                     {% if c.shop_name %}<span><i class="bi bi-shop" aria-hidden="true"></i>{{ c.shop_name }}</span>{% endif %}
-                    <a href="tel:{{ c.phone_number }}"><i class="bi bi-telephone" aria-hidden="true"></i>{{ c.phone_number }}</a>
-                    <a class="customer-portfolio-link" href="{{ url_for('customers.view_customer', customer_id=c.customer_id) }}"><i class="bi bi-journal-text" aria-hidden="true"></i>View portfolio</a>
-                    <span class="customer-record-id">ID {{ c.customer_id }}</span>
+                    <a href="tel:{{ c.phone_number }}"><i class="bi bi-telephone" aria-hidden="true"></i>{{ c.phone_number }}</a>                    <span class="customer-record-id">ID {{ c.customer_id }}</span>
                   </span>
                 </span>
               </div>
@@ -78,14 +76,22 @@
               {% endif %}
             </td>
             <td class="text-end customer-actions-column">
-              {% if current_user.is_admin %}
               <div class="customer-row-actions">
+                {% set has_balance = c.ledger and c.ledger.outstanding_balance > 0 %}
+                <a href="{{ url_for('customers.view_customer', customer_id=c.customer_id) }}"
+                  class="customer-portfolio-button{{ ' has-balance' if has_balance else '' }}"
+                  aria-label="View portfolio for {{ c.full_name }}{{ ' (balance due)' if has_balance else '' }}">
+                  <span class="customer-portfolio-button-icon" aria-hidden="true"><i class="bi bi-journal-text"></i></span>
+                  <span>View portfolio</span>
+                  <i class="bi bi-arrow-right customer-portfolio-button-arrow" aria-hidden="true"></i>
+                </a>
+                {% if current_user.is_admin %}
                 <a href="{{ url_for('customers.edit_customer', customer_id=c.customer_id) }}" class="customer-action customer-action-edit" aria-label="Edit {{ c.full_name }}" title="Edit customer"><i class="bi bi-pencil" aria-hidden="true"></i></a>
                 <form action="{{ url_for('customers.delete_customer', customer_id=c.customer_id) }}" method="POST" onsubmit="return confirm('Delete this customer?');">
                   <button type="submit" class="customer-action customer-action-delete" aria-label="Delete {{ c.full_name }}" title="Delete customer"><i class="bi bi-trash3" aria-hidden="true"></i></button>
                 </form>
+                {% endif %}
               </div>
-              {% endif %}
             </td>
           </tr>
         {% endfor %}
