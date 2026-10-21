@@ -120,11 +120,19 @@ def _upgrade_local_auth_schema():
         "email": "VARCHAR(255)",
         "phone_verified_at": "DATETIME",
         "logo_filename": "VARCHAR(255)",
+        "email_verified_at": "DATETIME",
     }
     with db.engine.begin() as connection:
         for name, definition in additions.items():
             if name not in columns:
                 connection.execute(text(f"ALTER TABLE retailers ADD COLUMN {name} {definition}"))
+        if "email_verified_at" not in columns:
+            # Accounts created before email verification keep working.
+            connection.execute(
+                text(
+                    "UPDATE retailers SET email_verified_at = COALESCE(created_at, CURRENT_TIMESTAMP)"
+                )
+            )
         if "payments" in inspector.get_table_names():
             payment_columns = {
                 column["name"] for column in inspector.get_columns("payments")
