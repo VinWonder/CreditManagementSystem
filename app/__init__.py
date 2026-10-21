@@ -196,7 +196,10 @@ def _upgrade_local_auth_schema():
         local_table_additions = {
             "customers": {"shop_name": "VARCHAR(100)"},
             "message_dispatch_log": {"failure_reason": "VARCHAR(500)"},
-            "stk_push_requests": {"requested_by_shopkeeper_id": "INTEGER"},
+            "stk_push_requests": {
+                "requested_by_shopkeeper_id": "INTEGER",
+                "sale_item_ids": "VARCHAR(500)",
+            },
         }
         for table_name, table_additions in local_table_additions.items():
             if table_name not in inspector.get_table_names():
