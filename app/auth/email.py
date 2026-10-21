@@ -42,7 +42,20 @@ def send_email(to_address, subject, body):
             if config.get("SMTP_USERNAME"):
                 server.login(config["SMTP_USERNAME"], config["SMTP_PASSWORD"])
             server.send_message(message)
-    except (smtplib.SMTPException, OSError) as exc:
-        current_app.logger.warning("Email to retailer failed: %s", type(exc).__name__)
-        return False, "The email could not be sent"
-    return True, "sent"
+    except smtplib.SMTPAuthenticationError:
+        reason = (
+            "SMTP login was refused. Check SMTP_USERNAME and SMTP_PASSWORD; "
+            "Gmail and Outlook need an app password, not the normal account password."
+        )
+    except smtplib.SMTPRecipientsRefused:
+        reason = f"The mail server refused the recipient address {to_address}."
+    except smtplib.SMTPSenderRefused:
+        reason = "The mail server refused MAIL_FROM. Use the address you sign in to SMTP with."
+    except smtplib.SMTPException as exc:
+        reason = f"The mail server rejected the message ({type(exc).__name__}: {exc})."
+    except OSError as exc:
+        reason = f"Could not connect to {host}:{port} ({type(exc).__name__}: {exc})."
+    else:
+        return True, "sent"
+    current_app.logger.warning("Email to %s failed: %s", to_address, reason)
+    return False, reason
