@@ -33,6 +33,12 @@ def send_email(to_address, subject, body):
 
     host, port = config["SMTP_HOST"], config["SMTP_PORT"]
     context = ssl.create_default_context()
+    login_refused = (
+        f"SMTP login as {config.get('SMTP_USERNAME')} was refused. SMTP_USERNAME must be "
+        "the account the app password was created for, and Gmail and Outlook need an "
+        "app password, not the normal account password."
+    )
+    stage = "connect"
     try:
         if port == 465:
             server = smtplib.SMTP_SSL(host, port, timeout=15, context=context)
@@ -42,12 +48,17 @@ def send_email(to_address, subject, body):
             if port != 465 and config.get("SMTP_USE_TLS", True):
                 server.starttls(context=context)
             if config.get("SMTP_USERNAME"):
+                stage = "login"
                 server.login(config["SMTP_USERNAME"], config["SMTP_PASSWORD"])
+            stage = "send"
             server.send_message(message)
     except smtplib.SMTPAuthenticationError:
-        reason = (
-            "SMTP login was refused. Check SMTP_USERNAME and SMTP_PASSWORD; "
-            "Gmail and Outlook need an app password, not the normal account password."
+        reason = login_refused
+    except smtplib.SMTPServerDisconnected as exc:
+        # Gmail hangs up instead of answering 535 when the username and the
+        # app password belong to different accounts.
+        reason = login_refused if stage == "login" else (
+            f"The mail server closed the connection ({exc})."
         )
     except smtplib.SMTPRecipientsRefused:
         reason = f"The mail server refused the recipient address {to_address}."
