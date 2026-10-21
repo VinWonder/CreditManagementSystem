@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import IntegerField, PasswordField, SelectField, StringField, SubmitField
-from wtforms.validators import DataRequired, Length, NumberRange, Optional, Regexp, ValidationError
+from wtforms.validators import DataRequired, Length, NumberRange, Regexp, ValidationError
 
 SHORTCODE = Regexp(r"^\d{5,7}$", message="Use the 5-7 digit number from Safaricom.")
 
@@ -21,7 +21,8 @@ class MpesaSettingsForm(FlaskForm):
         "Paybill number, or store number for a Till",
         validators=[DataRequired(), SHORTCODE],
     )
-    till_number = StringField("Till number", validators=[Optional(), SHORTCODE])
+    # Checked in validate_till_number: Optional() would skip the "required for a Till" rule.
+    till_number = StringField("Till number")
     # Secrets are never shown again; leaving them blank keeps the saved value.
     consumer_key = PasswordField("Consumer key", validators=[Length(max=200)])
     consumer_secret = PasswordField("Consumer secret", validators=[Length(max=200)])
@@ -33,8 +34,11 @@ class MpesaSettingsForm(FlaskForm):
         self.has_saved_secrets = has_saved_secrets
 
     def validate_till_number(self, field):
-        if self.account_type.data == "till" and not field.data:
+        if self.account_type.data != "till":
+            return
+        if not (field.data or "").strip():
             raise ValidationError("Enter the Till number customers pay to.")
+        SHORTCODE(self, field)
 
     def _require_secret(self, field):
         if not self.has_saved_secrets and not (field.data or "").strip():
