@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import os
+import re
 import secrets
 from urllib.parse import urljoin, urlparse
 
@@ -32,6 +33,7 @@ from app.auth.forms import (
     VerifyEmailForm,
 )
 from app.auth.email import send_email
+from app.auth.identity import canonical_email, clean_shop_name, shop_name_key
 from app.reminders.dispatch_service import send_sms
 from app.permissions import admin_required
 
@@ -202,6 +204,44 @@ def create_email_verification(retailer):
     return "info", f"We sent a verification code to {retailer.email}."
 
 
+def registration_conflicts(business_name, phone_number, email):
+    """Field name -> message for each detail that already belongs to an account."""
+    problems = {}
+    if Retailer.query.filter(
+        db.func.lower(Retailer.business_name) == shop_name_key(business_name)
+    ).first():
+        problems["business_name"] = (
+            "A shop with this name is already registered. If it is yours, log in; "
+            "otherwise add your area or branch, e.g. 'Mama Njeri Shop Kitengela'."
+        )
+    if (
+        Retailer.query.filter_by(phone_number=phone_number).first()
+        or Shopkeeper.query.filter_by(phone_number=phone_number).first()
+    ):
+        problems["phone_number"] = (
+            "This phone number is already registered. Log in, or use Forgot password."
+        )
+    if Retailer.query.filter(
+        (Retailer.email == email) | (Retailer.email_canonical == canonical_email(email))
+    ).first():
+        problems["email"] = (
+            "This email is already registered to a shop. Log in, or use Forgot password."
+        )
+    return problems
+
+
+def password_guessable_from(password, phone_number, email):
+    """A reason the password is easy to guess from the account's own details, or None."""
+    lowered = (password or "").lower()
+    digits = re.sub(r"\D", "", password or "")
+    if phone_number and phone_number[-9:] in digits:
+        return "Don't use your phone number in your password."
+    mailbox = canonical_email(email).split("@")[0]
+    if len(mailbox) >= 4 and mailbox in lowered.replace(".", ""):
+        return "Don't use your email name in your password."
+    return None
+
+
 def find_retailer_for_reset(account):
     """Match the forgot-password box to a retailer by email or phone number."""
     account = (account or "").strip()
@@ -291,20 +331,23 @@ def register():
 
     form = RegisterForm()
     if form.validate_on_submit():
+        business_name = clean_shop_name(form.business_name.data)
+        owner_name = clean_shop_name(form.owner_name.data)
+        email = normalized_email(form.email.data)
         try:
             phone_number = normalize_phone(form.phone_number.data)
         except ValueError as exc:
             form.phone_number.errors.append(str(exc))
             return render_template("auth/register.html", form=form)
-        email = normalized_email(form.email.data)
-        existing = Retailer.query.filter_by(phone_number=phone_number).first()
-        existing_shopkeeper = Shopkeeper.query.filter_by(phone_number=phone_number).first()
-        if existing or existing_shopkeeper:
-            flash("That phone number is already registered. Please log in.", "warning")
-            return redirect(url_for("auth.login"))
-        if Retailer.query.filter_by(email=email).first():
-            flash("That email is already registered. Please log in or verify your account.", "warning")
-            return redirect(url_for("auth.login"))
+
+        problems = registration_conflicts(business_name, phone_number, email)
+        guessable = password_guessable_from(form.password.data, phone_number, email)
+        if guessable:
+            problems["password"] = guessable
+        if problems:
+            for field_name, message in problems.items():
+                getattr(form, field_name).errors.append(message)
+            return render_template("auth/register.html", form=form)
 
         try:
             logo_filename = save_shop_logo(form.logo.data)
@@ -313,10 +356,11 @@ def register():
             return render_template("auth/register.html", form=form)
 
         retailer = Retailer(
-            business_name=form.business_name.data,
-            owner_name=form.owner_name.data,
+            business_name=business_name,
+            owner_name=owner_name,
             phone_number=phone_number,
             email=email,
+            email_canonical=canonical_email(email),
             logo_filename=logo_filename,
         )
         retailer.set_password(form.password.data)
@@ -324,14 +368,20 @@ def register():
         try:
             db.session.commit()
         except IntegrityError:
+            # Someone registered the same details a moment ago; the database
+            # constraints caught it. Say which field clashed.
             db.session.rollback()
             if logo_filename:
                 try:
                     os.remove(os.path.join(current_app.config["SHOP_LOGO_UPLOAD_FOLDER"], logo_filename))
                 except OSError:
                     pass
-            flash("That phone number is already registered. Please log in.", "warning")
-            return redirect(url_for("auth.login"))
+            problems = registration_conflicts(business_name, phone_number, email) or {
+                "business_name": "These details were just registered. Please check them and try again."
+            }
+            for field_name, message in problems.items():
+                getattr(form, field_name).errors.append(message)
+            return render_template("auth/register.html", form=form)
 
         return start_email_verification(retailer)
 
