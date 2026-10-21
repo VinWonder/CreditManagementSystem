@@ -85,6 +85,7 @@ def create_app(config_class=Config):
     from app.payments.routes import payments_bp
     from app.ledger.routes import ledger_bp
     from app.reminders.routes import reminders_bp
+    from app.mpesa.routes import mpesa_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -93,6 +94,7 @@ def create_app(config_class=Config):
     app.register_blueprint(payments_bp)
     app.register_blueprint(ledger_bp)
     app.register_blueprint(reminders_bp)
+    app.register_blueprint(mpesa_bp)
 
     from app.auth.email import send_test_email_command
 

@@ -1691,3 +1691,13 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .payment-method { align-items: center; background: #eef5f2; border: 1px solid #e0ece7; border-radius: 2rem; color: #2f6b58; display: inline-flex; font-size: 0.68rem; font-weight: 700; gap: 0.35rem; padding: 0.3rem 0.6rem; white-space: nowrap; }
 .payment-method.is-unrecorded { background: #f4f5f5; border-color: #e6e9e9; color: #85918f; font-weight: 600; }
 .payment-method-reference { color: #63777a; display: block; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.66rem; letter-spacing: 0.03em; margin-top: 0.25rem; }
+/* M-Pesa prompts */
+.mpesa-status { align-items: flex-start; border: 1px solid #e1e9e4; border-radius: 0.8rem; display: flex; gap: 0.7rem; margin-bottom: 0.75rem; padding: 0.75rem 0.9rem; }
+.mpesa-status div { display: flex; flex-direction: column; gap: 0.15rem; }
+.mpesa-status strong { font-size: 0.8rem; }
+.mpesa-status span { color: #5d6f6a; font-size: 0.74rem; line-height: 1.45; overflow-wrap: anywhere; }
+.mpesa-status > i { font-size: 1.05rem; margin-top: 0.05rem; }
+.mpesa-status.is-ready { background: #f1faf3; border-color: #cce6d2; color: #24583a; }
+.mpesa-status.is-missing { background: #fff2ef; border-color: #efd3cd; color: #783b32; }
+.mpesa-status.is-warning { background: #fff9eb; border-color: #f1e1b9; color: #74531b; }
+.mpesa-secret-note { color: #63777a; font-size: 0.74rem; margin: 0.25rem 0 0.75rem; }
