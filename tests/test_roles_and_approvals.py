@@ -110,20 +110,20 @@ class RoleAndApprovalTests(unittest.TestCase):
         response = self.client.post(
             f"/auth/shopkeepers/{self.shopkeeper.shopkeeper_id}/password",
             data={
-                "password": "newsecret123",
-                "confirm_password": "newsecret123",
+                "password": "NewSecret#123",
+                "confirm_password": "NewSecret#123",
             },
         )
 
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(self.shopkeeper.check_password("newsecret123"))
+        self.assertTrue(self.shopkeeper.check_password("NewSecret#123"))
         self.assertFalse(self.shopkeeper.check_password("shopkeeper123"))
 
     def test_admin_password_reset_rejects_invalid_confirmation_and_other_tenants(self):
         response = self.client.post(
             f"/auth/shopkeepers/{self.shopkeeper.shopkeeper_id}/password",
             data={
-                "password": "newsecret123",
+                "password": "NewSecret#123",
                 "confirm_password": "does-not-match",
             },
         )
@@ -358,20 +358,20 @@ class RoleAndApprovalTests(unittest.TestCase):
             data={
                 "full_name": "New Clerk",
                 "phone_number": "+254700000044",
-                "password": "initial1234",
+                "password": "Initial#1234",
             },
         )
         self.assertEqual(response.status_code, 302)
         created = Shopkeeper.query.filter_by(phone_number="+254700000044").one()
-        self.assertTrue(created.check_password("initial1234"))
-        self.assertNotEqual(created.password_hash, "initial1234")
+        self.assertTrue(created.check_password("Initial#1234"))
+        self.assertNotEqual(created.password_hash, "Initial#1234")
 
         self.app.before_request_funcs[None].remove(self.authenticate_test_user)
         g.pop("_login_user", None)
         login_client = self.app.test_client()
         login_response = login_client.post(
             "/auth/login",
-            data={"phone_number": "+254700000044", "password": "initial1234"},
+            data={"phone_number": "+254700000044", "password": "Initial#1234"},
         )
         self.assertEqual(login_response.status_code, 302)
         with login_client.session_transaction() as login_session:
