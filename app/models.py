@@ -50,12 +50,6 @@ class Retailer(UserMixin, db.Model):
         uselist=False,
         cascade="all, delete-orphan",
     )
-    mpesa_settings = db.relationship(
-        "MpesaSettings",
-        backref="retailer",
-        uselist=False,
-        cascade="all, delete-orphan",
-    )
 
     # Flask-Login expects get_id() -> str; UserMixin provides it using self.id,
     # so we alias the primary key.
@@ -229,10 +223,6 @@ class Customer(db.Model):
     phone_number = db.Column(db.String(20), nullable=False, index=True)
     shop_name = db.Column(db.String(100), nullable=True)
     preferred_channel = db.Column(db.String(10), default="sms")  # sms | whatsapp | both
-    # The customer agreed to receive M-Pesa payment prompts (STK Push) on their phone.
-    accepts_stk_prompts = db.Column(
-        db.Boolean, default=False, server_default=db.false(), nullable=False
-    )
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     transactions = db.relationship(
@@ -286,6 +276,8 @@ PAYMENT_METHODS = {
     "mpesa_send": "M-Pesa Send Money",
     "mpesa_till": "M-Pesa Till (Buy Goods)",
     "mpesa_paybill": "M-Pesa Paybill",
+    # Sent from the app; recorded only once Safaricom confirms the customer paid.
+    "mpesa_stk": "M-Pesa prompt (STK Push)",
     "cheque": "Cheque",
 }
 
@@ -465,34 +457,6 @@ class MessageDispatchLog(db.Model):
         return f"<Dispatch {self.dispatch_id} {self.channel} {self.status}>"
 
 
-class MpesaSettings(db.Model):
-    """A retailer's Safaricom Daraja app and the Paybill or Till that receives payments."""
-
-    __tablename__ = "mpesa_settings"
-
-    mpesa_settings_id = db.Column(db.Integer, primary_key=True)
-    retailer_id = db.Column(
-        db.Integer, db.ForeignKey("retailers.retailer_id"), nullable=False, unique=True
-    )
-    environment = db.Column(db.String(10), nullable=False, default="sandbox")  # sandbox | production
-    account_type = db.Column(db.String(10), nullable=False, default="paybill")  # paybill | till
-    # Paybill number, or for a Till the store (head office) number Safaricom issued.
-    business_shortcode = db.Column(db.String(10), nullable=False)
-    till_number = db.Column(db.String(10), nullable=True)
-    consumer_key_encrypted = db.Column(db.Text, nullable=False)
-    consumer_secret_encrypted = db.Column(db.Text, nullable=False)
-    passkey_encrypted = db.Column(db.Text, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-
-    @property
-    def receiving_number(self):
-        """The number customers pay to: the Paybill, or the Till for Buy Goods."""
-        return self.till_number if self.account_type == "till" else self.business_shortcode
-
-    def __repr__(self):
-        return f"<MpesaSettings retailer={self.retailer_id} {self.account_type}>"
-
-
 class StkPushRequest(db.Model):
     """One M-Pesa payment prompt sent to a customer's phone, and how it ended."""
 
@@ -504,6 +468,10 @@ class StkPushRequest(db.Model):
     )
     customer_id = db.Column(
         db.Integer, db.ForeignKey("customers.customer_id"), nullable=False, index=True
+    )
+    # Set when a shopkeeper sent the prompt; empty when the shop admin did.
+    requested_by_shopkeeper_id = db.Column(
+        db.Integer, db.ForeignKey("shopkeepers.shopkeeper_id"), nullable=True
     )
     phone_number = db.Column(db.String(15), nullable=False)
     amount = db.Column(db.Integer, nullable=False)  # M-Pesa only takes whole shillings
