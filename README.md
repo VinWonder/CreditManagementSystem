@@ -90,6 +90,37 @@ python run.py
 ```
 Open **http://127.0.0.1:5000** in your browser.
 
+### Use it on a phone or tablet
+
+The app works in any modern browser on phones, tablets, laptops and desktops.
+On phones and tablets the menu folds into the ☰ button and tables show one
+card per row, so nothing runs off the side of the screen.
+
+**On the same Wi-Fi as your computer (testing):**
+
+1. Connect the phone to the same Wi-Fi network as the computer running the app.
+2. Start the app with `python run.py`. It prints two addresses, for example:
+   ```
+   On this computer:  http://127.0.0.1:5000
+   On your phone:     http://192.168.100.9:5000   (same Wi-Fi network)
+   ```
+3. Type the **On your phone** address into the phone's browser (Chrome,
+   Safari, Samsung Internet...). Use `http://`, not `https://`. The address
+   can change when the computer reconnects to Wi-Fi, so check what `run.py`
+   prints each time.
+4. If the page does not load, allow Python through Windows Firewall: the first
+   time `run.py` starts, Windows asks; tick the network type you are on and
+   choose **Allow access**. (Settings → Privacy & security → Windows Security →
+   Firewall & network protection → Allow an app through firewall → Python.)
+5. Optional: add it to the home screen (Chrome: ⋮ → **Add to Home screen**;
+   Safari: Share → **Add to Home Screen**) so it opens like an app.
+
+**From anywhere (mobile data, other networks):** the app has to be reachable
+on the internet. For a quick test, run `ngrok http 5000` and open the
+`https://…ngrok-free.app` address it shows on any phone. For real use, deploy
+the app to a server with a domain and HTTPS (see below); that address works on
+every device and is also what M-Pesa prompts need for instant confirmation.
+
 ### Try offline sales
 
 Log in and open **New Credit Sale**. In your browser's developer tools, set
