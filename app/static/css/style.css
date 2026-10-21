@@ -1744,3 +1744,10 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 @media (max-width: 1199.98px) {
   .customer-history-grid { grid-template-columns: minmax(0, 1fr); }
 }
+/* Open phone/tablet menu: a long shop name shortens with ... instead of widening the menu. */
+@media (max-width: 1199.98px) {
+  .app-nav-collapse { max-width: 100%; min-width: 0; }
+  .app-nav-account { flex: 1 1 100%; min-width: 0; }
+  .app-account-chip { flex: 1 1 auto; max-width: none; min-width: 0; }
+  .app-logout-form { flex: 0 0 auto; }
+}
