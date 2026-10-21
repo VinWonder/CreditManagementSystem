@@ -254,6 +254,20 @@ class StkPushPaymentTests(unittest.TestCase):
         self.assertIn("KES 500 from Peter Kamau", page)
         self.assertIn("Waiting for the customer", page)
 
+    def test_without_a_public_address_the_callback_is_an_unreachable_host(self):
+        # Daraja rejects local and IP callback URLs with "Invalid CallBackURL".
+        for base in ("", "http://duka.example.com", "https://localhost:5000", "https://127.0.0.1:5000",
+                     "https://192.168.100.69"):
+            with self.subTest(base=base):
+                self.app.config["PUBLIC_BASE_URL"] = base
+                StkPushRequest.query.delete()
+                db.session.commit()
+
+                self._prompt("100")
+
+                callback = self.requests.post.call_args.kwargs["json"]["CallBackURL"]
+                self.assertTrue(callback.startswith("https://duka-credit.invalid/mpesa/callback/"), callback)
+
     def test_cents_and_amounts_above_the_balance_are_refused(self):
         cents = self._prompt("100.50")
         too_much = self._prompt("501")
