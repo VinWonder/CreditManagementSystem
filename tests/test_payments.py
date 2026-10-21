@@ -91,7 +91,7 @@ class PaymentFlowTests(unittest.TestCase):
 
         response = self.client.post(
             "/payments/new",
-            data={"customer_id": str(self.customer_id), "amount_paid": "100.01"},
+            data={"customer_id": str(self.customer_id), "amount_paid": "100.01", "payment_method": "cash"},
         )
 
         self.assertEqual(response.status_code, 200)
@@ -104,7 +104,7 @@ class PaymentFlowTests(unittest.TestCase):
 
         response = self.client.post(
             "/payments/new",
-            data={"customer_id": str(self.customer_id), "amount_paid": "40.00"},
+            data={"customer_id": str(self.customer_id), "amount_paid": "40.00", "payment_method": "cash"},
         )
 
         self.assertEqual(response.status_code, 302)

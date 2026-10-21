@@ -163,7 +163,7 @@ class RoleAndApprovalTests(unittest.TestCase):
         self._login(self.shopkeeper)
         response = self.client.post(
             "/payments/new",
-            data={"customer_id": str(self.customer.customer_id), "amount_paid": "40.00"},
+            data={"customer_id": str(self.customer.customer_id), "amount_paid": "40.00", "payment_method": "cash"},
         )
 
         self.assertEqual(response.status_code, 302)
@@ -186,7 +186,7 @@ class RoleAndApprovalTests(unittest.TestCase):
         self._login(self.shopkeeper)
         self.client.post(
             "/payments/new",
-            data={"customer_id": str(self.customer.customer_id), "amount_paid": "40.00"},
+            data={"customer_id": str(self.customer.customer_id), "amount_paid": "40.00", "payment_method": "cash"},
         )
         shopkeeper_dashboard = self.client.get("/dashboard")
         self.assertNotIn(b"Payments awaiting your approval", shopkeeper_dashboard.data)
@@ -210,7 +210,7 @@ class RoleAndApprovalTests(unittest.TestCase):
         self._login(self.shopkeeper)
         self.client.post(
             "/payments/new",
-            data={"customer_id": str(self.customer.customer_id), "amount_paid": "40.00"},
+            data={"customer_id": str(self.customer.customer_id), "amount_paid": "40.00", "payment_method": "cash"},
         )
         self._login(self.retailer)
         dashboard = self.client.get("/dashboard")
@@ -380,7 +380,7 @@ class RoleAndApprovalTests(unittest.TestCase):
         g.pop("_login_user", None)
         payment_response = self.client.post(
             "/payments/new",
-            data={"customer_id": str(self.customer.customer_id), "amount_paid": "100.00"},
+            data={"customer_id": str(self.customer.customer_id), "amount_paid": "100.00", "payment_method": "cash"},
         )
         self.assertEqual(payment_response.status_code, 302)
         self.assertEqual(Ledger.query.one().outstanding_balance, Decimal("0.00"))
