@@ -92,11 +92,11 @@ class ShopkeeperActionForm(FlaskForm):
 
 
 class ForgotPasswordForm(FlaskForm):
-    phone_number = StringField(
-        "Phone Number",
-        validators=[DataRequired(), Regexp(r"^\+?[\d\s().-]{7,25}$")],
+    account = StringField(
+        "Phone number or email",
+        validators=[DataRequired(message="Enter your phone number or email."), Length(max=255)],
     )
-    submit = SubmitField("Send verification code")
+    submit = SubmitField("Email me a code")
 
 
 class VerifyResetCodeForm(FlaskForm):
