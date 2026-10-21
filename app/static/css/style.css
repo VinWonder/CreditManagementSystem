@@ -32,10 +32,11 @@ body {
 .app-flash-close { align-items: center; background: transparent; border: 0; border-radius: 50%; color: currentColor; display: inline-flex; height: 1.8rem; justify-content: center; opacity: 0.6; position: absolute; right: 0.55rem; top: 0.5rem; transition: background 140ms ease, opacity 140ms ease; width: 1.8rem; }
 .app-flash-close:hover { background: rgba(40, 70, 54, 0.08); opacity: 1; }
 .app-flash-close:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-.app-flash-progress { animation: app-flash-countdown 20s linear forwards; background: currentColor; bottom: 0; height: 2px; left: 0; opacity: 0.45; position: absolute; transform-origin: left; width: 100%; }
+.app-flash-progress { animation: app-flash-countdown 5s linear forwards; background: currentColor; bottom: 0; height: 2px; left: 0; opacity: 0.45; position: absolute; transform-origin: left; width: 100%; }
+.app-flash.is-paused .app-flash-progress { animation-play-state: paused; }
 .app-flash.is-dismissing { animation: app-flash-leave 220ms ease-in both; pointer-events: none; }
-@keyframes app-flash-enter { from { opacity: 0; transform: translateY(-0.35rem); } to { opacity: 1; transform: translateY(0); } }
-@keyframes app-flash-leave { to { opacity: 0; transform: translateY(-0.25rem); } }
+@keyframes app-flash-enter { from { opacity: 0; transform: translateY(0.6rem); } to { opacity: 1; transform: translateY(0); } }
+@keyframes app-flash-leave { to { opacity: 0; transform: translateY(0.6rem); } }
 @keyframes app-flash-countdown { to { transform: scaleX(0); } }
 @media (prefers-reduced-motion: reduce) {
   .app-flash, .app-flash-progress { animation-duration: 0.01ms !important; }
