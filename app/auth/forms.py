@@ -107,6 +107,14 @@ class VerifyResetCodeForm(FlaskForm):
     submit = SubmitField("Verify code")
 
 
+class VerifyEmailForm(FlaskForm):
+    code = StringField(
+        "Verification code",
+        validators=[DataRequired(), Length(min=6, max=6), Regexp(r"^\d{6}$", message="Enter the 6-digit code.")],
+    )
+    submit = SubmitField("Verify email")
+
+
 class ResetPasswordForm(FlaskForm):
     password = PasswordField("New password", validators=PASSWORD_VALIDATORS)
     confirm_password = PasswordField(
