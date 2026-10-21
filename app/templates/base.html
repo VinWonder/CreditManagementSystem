@@ -118,8 +118,9 @@
 <main class="container my-4">
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
+    <div class="app-flash-stack">
       {% for category, message in messages %}
-        <div class="app-flash app-flash-{{ category }}{% if category == 'success' %} app-flash-auto-dismiss{% endif %}"
+        <div class="app-flash app-flash-{{ category }}{% if category in ('success', 'info') %} app-flash-auto-dismiss{% endif %}"
           role="{{ 'status' if category in ('success', 'info') else 'alert' }}"
           aria-live="{{ 'polite' if category in ('success', 'info') else 'assertive' }}">
           <span class="app-flash-icon" aria-hidden="true">
@@ -127,9 +128,10 @@
           </span>
           <span class="app-flash-message">{{ message }}</span>
           <button type="button" class="app-flash-close" aria-label="Dismiss notification"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
-          {% if category == 'success' %}<span class="app-flash-progress" aria-hidden="true"></span>{% endif %}
+          {% if category in ('success', 'info') %}<span class="app-flash-progress" aria-hidden="true"></span>{% endif %}
         </div>
       {% endfor %}
+    </div>
     {% endif %}
   {% endwith %}
 
