@@ -202,6 +202,80 @@ def create_email_verification(retailer):
     return "info", f"We sent a verification code to {retailer.email}."
 
 
+def find_retailer_for_reset(account):
+    """Match the forgot-password box to a retailer by email or phone number."""
+    account = (account or "").strip()
+    if "@" in account:
+        return Retailer.query.filter_by(email=normalized_email(account)).first()
+    try:
+        return Retailer.query.filter_by(phone_number=normalize_phone(account)).first()
+    except ValueError:
+        return None
+
+
+def send_password_reset_code(retailer):
+    """Email a fresh reset code, or text it when the account has no email.
+
+    Returns True when a code was sent. A code sent in the last minute is not
+    replaced, so the form cannot be used to flood someone's inbox.
+    """
+    latest = (
+        PasswordResetCode.query.filter_by(retailer_id=retailer.retailer_id, used_at=None)
+        .order_by(PasswordResetCode.created_at.desc())
+        .first()
+    )
+    cooldown = timedelta(seconds=current_app.config["PASSWORD_RESET_RESEND_SECONDS"])
+    if latest and datetime.utcnow() - latest.created_at < cooldown:
+        return False
+
+    PasswordResetCode.query.filter_by(
+        retailer_id=retailer.retailer_id, used_at=None
+    ).delete(synchronize_session=False)
+    minutes = current_app.config["PASSWORD_RESET_CODE_MINUTES"]
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    db.session.add(
+        PasswordResetCode(
+            retailer_id=retailer.retailer_id,
+            code_hash=generate_password_hash(code, method="scrypt"),
+            expires_at=datetime.utcnow() + timedelta(minutes=minutes),
+        )
+    )
+    db.session.flush()
+
+    if retailer.email:
+        success, info = send_email(
+            retailer.email,
+            "Your Duka Credit password reset code",
+            f"Hello {retailer.owner_name},\n\n"
+            f"Your Duka Credit password reset code is {code}. It expires in {minutes} minutes.\n\n"
+            "If you did not ask to reset your password, ignore this email; your password "
+            "stays the same.\n",
+        )
+        channel = "email"
+    else:
+        # Accounts created before email sign-up only have a phone number.
+        success, info = send_verification_sms(
+            retailer.phone_number,
+            f"Duka Credit password reset code: {code}. It expires in {minutes} minutes.",
+        )
+        channel = "SMS"
+
+    if not success:
+        db.session.rollback()
+        current_app.logger.warning("Password reset %s failed: %s", channel, info)
+        return False
+    db.session.commit()
+    if info.startswith("simulated"):
+        current_app.logger.warning(
+            "%s is not configured, so no %s was sent. Password reset code for retailer %s: %s",
+            "Email" if channel == "email" else "SMS",
+            channel,
+            retailer.retailer_id,
+            code,
+        )
+    return True
+
+
 def start_email_verification(retailer):
     """Remember who is verifying, send a code and show the code entry page."""
     session["email_verification_retailer_id"] = retailer.retailer_id
@@ -487,51 +561,30 @@ def forgot_password():
 
     form = ForgotPasswordForm()
     if form.validate_on_submit():
-        try:
-            phone_number = normalize_phone(form.phone_number.data)
-        except ValueError:
-            phone_number = None
-        retailer = Retailer.query.filter_by(phone_number=phone_number).first()
-
+        retailer = find_retailer_for_reset(form.account.data)
         if retailer:
-            PasswordResetCode.query.filter_by(
-                retailer_id=retailer.retailer_id, used_at=None
-            ).delete(synchronize_session=False)
-            code = f"{secrets.randbelow(1_000_000):06d}"
-            reset_code = PasswordResetCode(
-                retailer_id=retailer.retailer_id,
-                code_hash=generate_password_hash(code, method="scrypt"),
-                expires_at=datetime.utcnow()
-                + timedelta(minutes=current_app.config["PASSWORD_RESET_CODE_MINUTES"]),
-            )
-            db.session.add(reset_code)
-            db.session.commit()
-
-            success, info = send_verification_sms(
-                retailer.phone_number,
-                f"Duka Credit verification code: {code}. It expires in "
-                f"{current_app.config['PASSWORD_RESET_CODE_MINUTES']} minutes.",
-            )
-            if success:
-                if info.startswith("simulated"):
-                    current_app.logger.info(
-                        "Simulated password reset code for retailer %s: %s",
-                        retailer.retailer_id,
-                        code,
-                    )
-            else:
-                db.session.delete(reset_code)
-                db.session.commit()
-                current_app.logger.warning("Password reset SMS failed: %s", info)
-
-        session["password_reset_phone"] = phone_number
+            send_password_reset_code(retailer)
+        # Remember who asked without revealing whether the account exists.
+        session["password_reset_retailer_id"] = retailer.retailer_id if retailer else None
         flash(
-            "If an account matches that phone number, a verification code has been sent.",
+            "If an account matches, we have sent a 6-digit code to its email address. "
+            "It usually arrives within a minute; check your spam folder too.",
             "info",
         )
         return redirect(url_for("auth.verify_reset_code"))
 
     return render_template("auth/forgot_password.html", form=form)
+
+
+@auth_bp.route("/resend-reset-code", methods=["POST"])
+def resend_reset_code():
+    form = ResendVerificationForm()
+    retailer_id = session.get("password_reset_retailer_id")
+    retailer = db.session.get(Retailer, retailer_id) if retailer_id else None
+    if form.validate_on_submit() and retailer:
+        send_password_reset_code(retailer)
+    flash("If your account exists, a new code is on its way.", "info")
+    return redirect(url_for("auth.verify_reset_code"))
 
 
 @auth_bp.route("/verify-reset-code", methods=["GET", "POST"])
@@ -540,8 +593,8 @@ def verify_reset_code():
         return redirect(url_for("main.dashboard"))
 
     form = VerifyResetCodeForm()
-    phone_number = session.get("password_reset_phone")
-    retailer = Retailer.query.filter_by(phone_number=phone_number).first() if phone_number else None
+    retailer_id = session.get("password_reset_retailer_id")
+    retailer = db.session.get(Retailer, retailer_id) if retailer_id else None
     reset_code = (
         PasswordResetCode.query.filter_by(retailer_id=retailer.retailer_id, used_at=None)
         .order_by(PasswordResetCode.created_at.desc())
@@ -568,7 +621,12 @@ def verify_reset_code():
             session["password_reset_id"] = reset_code.reset_id
             return redirect(url_for("auth.reset_password"))
 
-    return render_template("auth/verify_reset_code.html", form=form)
+    return render_template(
+        "auth/verify_reset_code.html",
+        form=form,
+        resend_form=ResendVerificationForm(),
+        code_minutes=current_app.config["PASSWORD_RESET_CODE_MINUTES"],
+    )
 
 
 @auth_bp.route("/reset-password", methods=["GET", "POST"])
@@ -591,7 +649,7 @@ def reset_password():
         reset_code.used_at = datetime.utcnow()
         db.session.commit()
         session.pop("password_reset_id", None)
-        session.pop("password_reset_phone", None)
+        session.pop("password_reset_retailer_id", None)
         flash("Your password has been updated. You can now log in.", "success")
         return redirect(url_for("auth.login"))
 
