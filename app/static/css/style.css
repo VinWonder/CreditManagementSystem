@@ -341,6 +341,18 @@ body {
 .customer-action-edit:hover { background: #eef5f2; border-color: #cadfd6; color: #286b58; }
 .customer-action-delete:hover { background: #fff1ee; border-color: #f0d2cc; color: #b64e42; }
 .customer-action:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+/* View portfolio: the primary way into a customer's account from the list. */
+.customer-portfolio-button { align-items: center; background: linear-gradient(135deg, #2c7a7b, #205b5c); border-radius: 0.75rem; box-shadow: 0 0.35rem 0.9rem rgba(32, 91, 92, 0.18); color: #fff; display: inline-flex; font-size: 0.72rem; font-weight: 750; gap: 0.5rem; min-height: 2.35rem; padding: 0.3rem 0.75rem 0.3rem 0.3rem; position: relative; text-decoration: none; transition: box-shadow 160ms ease, transform 160ms ease, background 160ms ease; white-space: nowrap; }
+.customer-portfolio-button:hover { background: linear-gradient(135deg, #256d6e, #194e50); box-shadow: 0 0.55rem 1.2rem rgba(32, 91, 92, 0.26); color: #fff; transform: translateY(-1px); }
+.customer-portfolio-button:focus-visible { outline: 3px solid rgba(44, 122, 123, 0.45); outline-offset: 2px; }
+.customer-portfolio-button-icon { align-items: center; background: rgba(255, 255, 255, 0.18); border-radius: 0.55rem; display: inline-flex; font-size: 0.8rem; height: 1.75rem; justify-content: center; width: 1.75rem; }
+.customer-portfolio-button-arrow { font-size: 0.7rem; transition: transform 160ms ease; }
+.customer-portfolio-button:hover .customer-portfolio-button-arrow { transform: translateX(3px); }
+.customer-portfolio-button.has-balance::after { background: #f4a340; border: 2px solid #fff; border-radius: 50%; content: ""; height: 0.7rem; position: absolute; right: -0.2rem; top: -0.2rem; width: 0.7rem; }
+@media (prefers-reduced-motion: reduce) {
+  .customer-portfolio-button, .customer-portfolio-button-arrow { transition: none; }
+  .customer-portfolio-button:hover, .customer-portfolio-button:hover .customer-portfolio-button-arrow { transform: none; }
+}
 .customer-empty-state { align-items: center; display: flex; flex-direction: column; min-height: 17rem; justify-content: center; padding: 2rem 1.25rem; text-align: center; }
 .customer-empty-icon { align-items: center; background: #edf5f1; border: 1px solid #e1ede7; border-radius: 1rem; color: #327c63; display: inline-flex; font-size: 1.25rem; height: 3.2rem; justify-content: center; margin-bottom: 0.85rem; width: 3.2rem; }
 .customer-empty-state h2 { color: var(--ink); font-size: 0.95rem; font-weight: 750; margin: 0; }
