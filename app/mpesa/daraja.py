@@ -10,7 +10,6 @@ from datetime import datetime
 import requests
 from flask import current_app
 
-from app.reminders.credentials import decrypt_secret
 from app.timezones import NAIROBI_TIMEZONE
 
 BASE_URLS = {
@@ -55,29 +54,59 @@ def _timestamp():
     return datetime.now(NAIROBI_TIMEZONE).strftime("%Y%m%d%H%M%S")
 
 
+def missing_mpesa_settings(config):
+    """Names of required MPESA_* settings that are empty or invalid; [] when ready."""
+    missing = [
+        name
+        for name in ("MPESA_SHORTCODE", "MPESA_CONSUMER_KEY", "MPESA_CONSUMER_SECRET", "MPESA_PASSKEY")
+        if not config.get(name)
+    ]
+    if config.get("MPESA_ENVIRONMENT") not in BASE_URLS:
+        missing.append("MPESA_ENVIRONMENT")
+    if config.get("MPESA_ACCOUNT_TYPE") not in {"paybill", "till"}:
+        missing.append("MPESA_ACCOUNT_TYPE")
+    elif config.get("MPESA_ACCOUNT_TYPE") == "till" and not config.get("MPESA_TILL_NUMBER"):
+        missing.append("MPESA_TILL_NUMBER")
+    return missing
+
+
+def stk_push_enabled():
+    return not missing_mpesa_settings(current_app.config)
+
+
 class DarajaClient:
-    def __init__(self, settings):
-        self.settings = settings
-        self.base_url = BASE_URLS[settings.environment]
-        self.timeout = current_app.config.get("MPESA_REQUEST_TIMEOUT_SECONDS", 30)
+    def __init__(self, config=None):
+        config = config or current_app.config
+        missing = missing_mpesa_settings(config)
+        if missing:
+            raise DarajaError(
+                "M-Pesa prompts are not set up on this server. Fill in " + ", ".join(missing) + " in .env."
+            )
+        self.environment = config["MPESA_ENVIRONMENT"]
+        self.base_url = BASE_URLS[self.environment]
+        self.till = config["MPESA_ACCOUNT_TYPE"] == "till"
+        self.shortcode = config["MPESA_SHORTCODE"]
+        # Customers pay to the Paybill, or for Buy Goods to the till under the store number.
+        self.receiving_number = config["MPESA_TILL_NUMBER"] if self.till else self.shortcode
+        self._key = config["MPESA_CONSUMER_KEY"]
+        self._secret = config["MPESA_CONSUMER_SECRET"]
+        self._passkey = config["MPESA_PASSKEY"]
+        self.timeout = config.get("MPESA_REQUEST_TIMEOUT_SECONDS", 30)
 
     def _access_token(self):
         try:
             response = requests.get(
                 f"{self.base_url}/oauth/v1/generate",
                 params={"grant_type": "client_credentials"},
-                auth=(
-                    decrypt_secret(self.settings.consumer_key_encrypted),
-                    decrypt_secret(self.settings.consumer_secret_encrypted),
-                ),
+                auth=(self._key, self._secret),
                 timeout=self.timeout,
             )
         except requests.RequestException as exc:
             raise DarajaError("Could not reach Safaricom. Check the internet connection.") from exc
         if response.status_code != 200:
             raise DarajaError(
-                "Safaricom refused the consumer key and secret. Check them on the M-Pesa page "
-                "and that they match the sandbox or production setting."
+                "Safaricom refused the consumer key and secret. Check MPESA_CONSUMER_KEY and "
+                "MPESA_CONSUMER_SECRET in .env and that they match MPESA_ENVIRONMENT."
             )
         token = response.json().get("access_token")
         if not token:
@@ -85,8 +114,7 @@ class DarajaClient:
         return token
 
     def _password(self, timestamp):
-        passkey = decrypt_secret(self.settings.passkey_encrypted)
-        raw = f"{self.settings.business_shortcode}{passkey}{timestamp}"
+        raw = f"{self.shortcode}{self._passkey}{timestamp}"
         return base64.b64encode(raw.encode("utf-8")).decode("ascii")
 
     def _post(self, path, payload):
@@ -108,17 +136,16 @@ class DarajaClient:
     def stk_push(self, phone_number, amount, account_reference, description, callback_url):
         """Send the payment prompt. Returns Daraja's response with the CheckoutRequestID."""
         timestamp = _timestamp()
-        till = self.settings.account_type == "till"
         status, body = self._post(
             "/mpesa/stkpush/v1/processrequest",
             {
-                "BusinessShortCode": self.settings.business_shortcode,
+                "BusinessShortCode": self.shortcode,
                 "Password": self._password(timestamp),
                 "Timestamp": timestamp,
-                "TransactionType": "CustomerBuyGoodsOnline" if till else "CustomerPayBillOnline",
+                "TransactionType": "CustomerBuyGoodsOnline" if self.till else "CustomerPayBillOnline",
                 "Amount": int(amount),
                 "PartyA": phone_number,
-                "PartyB": self.settings.receiving_number,
+                "PartyB": self.receiving_number,
                 "PhoneNumber": phone_number,
                 "CallBackURL": callback_url,
                 "AccountReference": account_reference,
@@ -137,7 +164,7 @@ class DarajaClient:
         status, body = self._post(
             "/mpesa/stkpushquery/v1/query",
             {
-                "BusinessShortCode": self.settings.business_shortcode,
+                "BusinessShortCode": self.shortcode,
                 "Password": self._password(timestamp),
                 "Timestamp": timestamp,
                 "CheckoutRequestID": checkout_request_id,
