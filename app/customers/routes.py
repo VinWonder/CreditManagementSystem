@@ -1,9 +1,12 @@
+from decimal import ROUND_CEILING, Decimal
+
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 
 from app.extensions import db
-from app.models import CreditTransaction, Customer, Ledger, ReminderRule
+from app.models import CreditTransaction, Customer, Ledger, MpesaSettings, ReminderRule, StkPushRequest
 from app.customers.forms import CustomerForm
+from app.mpesa.forms import StkActionForm, StkPushForm
 from app.payments.forms import BalanceAdjustmentForm
 from app.reminders.forms import ReminderActionForm
 from app.reminders.engine import select_matching_rule, render_personal_reminder_message
@@ -166,4 +169,26 @@ def view_customer(customer_id):
         reminder_links=links,
         adjustment_form=BalanceAdjustmentForm(),
         reminder_form=ReminderActionForm(),
+        **_mpesa_prompt_context(customer),
     )
+
+
+def _mpesa_prompt_context(customer):
+    """What the admin needs to send this customer an M-Pesa prompt."""
+    if not current_user.is_admin:
+        return {"mpesa_settings": None, "stk_requests": []}
+    balance = Decimal(customer.ledger.outstanding_balance) if customer.ledger else Decimal("0")
+    owed = int(balance.to_integral_value(rounding=ROUND_CEILING)) if balance > 0 else 0
+    return {
+        "mpesa_settings": MpesaSettings.query.filter_by(
+            retailer_id=current_user.retailer_id
+        ).first(),
+        "stk_form": StkPushForm(
+            formdata=None, amount=owed or None, phone_number=customer.phone_number
+        ),
+        "stk_action_form": StkActionForm(),
+        "stk_requests": customer.stk_requests.order_by(
+            StkPushRequest.created_at.desc()
+        ).limit(5).all(),
+        "stk_max_amount": owed,
+    }
