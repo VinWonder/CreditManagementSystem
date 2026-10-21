@@ -80,5 +80,10 @@ class Config:
         "MESSAGING_CREDENTIALS_ENCRYPTION_KEY", ""
     )
 
+    # M-Pesa STK Push (Daraja). Retailers save their own keys in the app; this is
+    # the public HTTPS address Safaricom calls back with each payment result.
+    PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").strip().rstrip("/")
+    MPESA_REQUEST_TIMEOUT_SECONDS = int(os.environ.get("MPESA_REQUEST_TIMEOUT_SECONDS", 30))
+
     # Ageing buckets (days overdue) used in receivables report
     AGEING_BUCKETS = [(0, 7), (8, 14), (15, 30), (31, 60), (61, 10_000)]
