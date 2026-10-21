@@ -15,6 +15,9 @@ body {
   color: var(--ink);
 }
 
+/* Notifications float at the bottom of the screen, above the page content. */
+.app-flash-stack { bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 0.6rem; left: 50%; pointer-events: none; position: fixed; transform: translateX(-50%); width: min(28rem, calc(100% - 2rem)); z-index: 1090; }
+.app-flash-stack .app-flash { margin: 0; pointer-events: auto; }
 .app-flash { align-items: center; animation: app-flash-enter 240ms ease-out both; background: #fff; border: 1px solid #e1e9e4; border-left: 4px solid #438366; border-radius: 0.8rem; box-shadow: 0 0.55rem 1.6rem rgba(22, 55, 42, 0.09); color: #29483b; display: flex; gap: 0.7rem; margin: 0 0 0.75rem; min-height: 3.4rem; overflow: hidden; padding: 0.75rem 2.7rem 0.75rem 0.85rem; position: relative; }
 .app-flash-success { background: linear-gradient(100deg, #f1faf3, #fff 78%); border-color: #cce6d2; border-left-color: #34825a; color: #24583a; }
 .app-flash-info { background: linear-gradient(100deg, #f0f8fb, #fff 78%); border-color: #d0e6ed; border-left-color: #39809b; color: #28596c; }
