@@ -151,7 +151,7 @@ def create_login_challenge(retailer):
 
 
 def create_email_verification(retailer):
-    """Email a fresh one-time code to the retailer. Returns (sent, message)."""
+    """Email a fresh one-time code to the retailer. Returns (flash_category, message)."""
     latest = (
         EmailVerificationCode.query.filter_by(retailer_id=retailer.retailer_id, used_at=None)
         .order_by(EmailVerificationCode.created_at.desc())
@@ -159,7 +159,7 @@ def create_email_verification(retailer):
     )
     cooldown = timedelta(seconds=current_app.config["EMAIL_VERIFICATION_RESEND_SECONDS"])
     if latest and datetime.utcnow() - latest.sent_at < cooldown:
-        return False, "A code was sent recently. Please wait a minute before asking for another."
+        return "warning", "A code was sent recently. Please wait a minute before asking for another."
     EmailVerificationCode.query.filter_by(
         retailer_id=retailer.retailer_id, used_at=None
     ).update({"used_at": datetime.utcnow()}, synchronize_session=False)
@@ -184,22 +184,29 @@ def create_email_verification(retailer):
     if not success:
         db.session.rollback()
         current_app.logger.warning("Verification email failed: %s", info)
-        return False, "We could not send the verification email. Please try again shortly."
+        return "warning", "We could not send the verification email. Please try again shortly."
     db.session.commit()
     if info == "simulated":
-        current_app.logger.info(
-            "Simulated email verification code for retailer %s: %s",
+        # No SMTP server is configured, so nothing left this machine.
+        current_app.logger.warning(
+            "Email is not configured (SMTP_HOST is empty), so no email was sent. "
+            "Verification code for retailer %s: %s",
             retailer.retailer_id,
             code,
         )
-    return True, f"We sent a verification code to {retailer.email}."
+        return (
+            "warning",
+            "Email sending is not set up on this server yet, so no email was sent. "
+            "For testing, the code is printed in the server terminal.",
+        )
+    return "info", f"We sent a verification code to {retailer.email}."
 
 
 def start_email_verification(retailer):
     """Remember who is verifying, send a code and show the code entry page."""
     session["email_verification_retailer_id"] = retailer.retailer_id
-    sent, message = create_email_verification(retailer)
-    flash(message, "info" if sent else "warning")
+    category, message = create_email_verification(retailer)
+    flash(message, category)
     return redirect(url_for("auth.verify_email"))
 
 
@@ -468,8 +475,8 @@ def resend_email_verification():
     form = ResendVerificationForm()
     if not retailer or not retailer.needs_email_verification or not form.validate_on_submit():
         return redirect(url_for("auth.login"))
-    sent, message = create_email_verification(retailer)
-    flash(message, "info" if sent else "warning")
+    category, message = create_email_verification(retailer)
+    flash(message, category)
     return redirect(url_for("auth.verify_email"))
 
 
