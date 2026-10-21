@@ -1,8 +1,14 @@
+import re
 from decimal import Decimal, InvalidOperation
 
 from flask_wtf import FlaskForm
 from wtforms import SelectField, DecimalField, SubmitField, StringField
 from wtforms.validators import DataRequired, Length, ValidationError
+
+from app.models import PAYMENT_METHODS
+
+# Methods that leave an M-Pesa confirmation code the admin can check.
+MPESA_CODE_METHODS = {"agent", "mpesa_send", "mpesa_till", "mpesa_paybill"}
 
 
 def _coerce_customer_id(value):
@@ -57,7 +63,34 @@ class PaymentForm(FlaskForm):
         places=2,
         validators=[DataRequired(), _validate_amount],
     )
+    payment_method = SelectField(
+        "Payment method",
+        choices=[("", "Choose how the customer paid")] + list(PAYMENT_METHODS.items()),
+        validators=[DataRequired(message="Choose how the customer paid.")],
+    )
+    payment_reference = StringField("Reference", validators=[Length(max=40)])
     submit = SubmitField("Log Payment")
+
+    def validate_payment_reference(self, field):
+        method = self.payment_method.data
+        reference = re.sub(r"\s+", "", field.data or "").upper()
+        field.data = reference or None
+        if method in MPESA_CODE_METHODS:
+            if not reference:
+                raise ValidationError("Enter the M-Pesa transaction code from the confirmation SMS.")
+            if not re.fullmatch(r"[A-Z0-9]{8,12}", reference):
+                raise ValidationError("M-Pesa codes are 8-12 letters and numbers, e.g. QFT4ABC123.")
+        elif method == "cheque":
+            if not reference:
+                raise ValidationError("Enter the cheque number.")
+            if not re.fullmatch(r"[A-Z0-9-]{3,20}", reference):
+                raise ValidationError("Cheque numbers use letters, numbers and dashes only.")
+        elif method == "bank":
+            if reference and not re.fullmatch(r"[A-Z0-9/-]{3,40}", reference):
+                raise ValidationError("Bank references use letters, numbers, / and - only.")
+        else:
+            # Cash leaves no reference to record.
+            field.data = None
 
 
 class PaymentDecisionForm(FlaskForm):
