@@ -61,6 +61,13 @@
         </span>
         <small class="customer-field-help" id="customer-channel-help">Choose SMS, WhatsApp, or both. Both sends reminders through each channel.</small>
       </div>
+      <div class="customer-form-field">
+        <div class="form-check customer-stk-consent">
+          {{ form.accepts_stk_prompts(class="form-check-input", **{"aria-describedby": "customer-stk-help"}) }}
+          {{ form.accepts_stk_prompts.label(class="form-check-label") }}
+        </div>
+        <small class="customer-field-help" id="customer-stk-help">Only tick this after the customer agrees. The shop admin can then send an M-Pesa prompt to this phone; the customer enters their PIN to pay.</small>
+      </div>
       <div class="customer-form-actions">
         <button class="customer-save-button" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i>{{ form.submit.label.text }}</button>
         <a class="customer-cancel-link" href="{{ url_for('customers.list_customers') }}">Cancel</a>
