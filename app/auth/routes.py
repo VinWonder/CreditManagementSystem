@@ -34,6 +34,7 @@ from app.auth.forms import (
 )
 from app.auth.email import send_email
 from app.auth.identity import canonical_email, clean_shop_name, shop_name_key
+from app.auth.signups import release_abandoned_signups
 from app.reminders.dispatch_service import send_sms
 from app.permissions import admin_required
 
@@ -340,6 +341,8 @@ def register():
             form.phone_number.errors.append(str(exc))
             return render_template("auth/register.html", form=form)
 
+        # Details held by a sign-up that never verified its email are freed first.
+        release_abandoned_signups(business_name, phone_number, email)
         problems = registration_conflicts(business_name, phone_number, email)
         guessable = password_guessable_from(form.password.data, phone_number, email)
         if guessable:
