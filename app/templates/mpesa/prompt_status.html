@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}M-Pesa prompt{% endblock %}
+{% block content %}
+<section class="customer-form-layout mpesa-wait" aria-labelledby="mpesa-wait-title">
+  <a class="customer-form-back" href="{{ url_for('payments.new_payment') }}">
+    <i class="bi bi-arrow-left" aria-hidden="true"></i> Log another payment
+  </a>
+  <div class="customer-form-card">
+    <div class="customer-form-intro">
+      <span class="customer-form-mark"><i class="bi bi-phone-vibrate" aria-hidden="true"></i></span>
+      <p class="eyebrow mb-1">M-Pesa prompt</p>
+      <h1 id="mpesa-wait-title">KES {{ '{:,}'.format(stk.amount) }} from {{ stk.customer.full_name }}</h1>
+      <p>Sent to {{ stk.phone_number }} at {{ stk.created_at|nairobi('%H:%M') }}. The customer sees a prompt to pay <strong>{{ stk.account_reference }}</strong> and enters their M-Pesa PIN.</p>
+    </div>
+
+    <div id="mpesa-wait-status" class="mpesa-wait-status is-{{ initial.status }}" role="status" aria-live="polite">
+      <span class="mpesa-wait-icon" aria-hidden="true">
+        <span class="spinner-border spinner-border-sm mpesa-wait-spinner"></span>
+        <i class="bi bi-check-circle-fill mpesa-wait-paid"></i>
+        <i class="bi bi-x-circle-fill mpesa-wait-stopped"></i>
+      </span>
+      <div>
+        <strong id="mpesa-wait-message">{{ initial.message }}</strong>
+        <small id="mpesa-wait-receipt"{% if not initial.receipt %} hidden{% endif %}>M-Pesa receipt {{ initial.receipt or '' }}</small>
+      </div>
+    </div>
+
+    <div class="customer-form-actions">
+      <a class="customer-save-button" href="{{ url_for('customers.view_customer', customer_id=stk.customer_id) }}"><i class="bi bi-person" aria-hidden="true"></i> View {{ stk.customer.full_name }}</a>
+      <a class="customer-cancel-link" href="{{ url_for('payments.list_payments') }}">Payment history</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const box = document.getElementById("mpesa-wait-status");
+  const message = document.getElementById("mpesa-wait-message");
+  const receipt = document.getElementById("mpesa-wait-receipt");
+  const url = "{{ url_for('mpesa.prompt_status_json', stk_request_id=stk.stk_request_id) }}";
+  let status = "{{ initial.status }}";
+
+  async function poll() {
+    if (status !== "pending") {
+      return;
+    }
+    try {
+      const response = await fetch(url, { headers: { Accept: "application/json" } });
+      if (response.ok) {
+        const data = await response.json();
+        status = data.status;
+        box.className = `mpesa-wait-status is-${data.status}`;
+        message.textContent = data.message;
+        if (data.receipt) {
+          receipt.textContent = `M-Pesa receipt ${data.receipt}`;
+          receipt.hidden = false;
+        }
+      }
+    } catch (error) {
+      // Offline for a moment; try again on the next tick.
+    }
+    if (status === "pending") {
+      window.setTimeout(poll, 5000);
+    }
+  }
+
+  window.setTimeout(poll, 5000);
+})();
+</script>
+{% endblock %}
