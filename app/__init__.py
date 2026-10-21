@@ -99,6 +99,9 @@ def create_app(config_class=Config):
     from app.auth.email import send_test_email_command
 
     app.cli.add_command(send_test_email_command)
+    from app.mpesa.cli import mpesa_cli
+
+    app.cli.add_command(mpesa_cli)
 
     @app.context_processor
     def inject_logout_form():
