@@ -5,13 +5,17 @@
 <div class="auth-shell">
   <div class="auth-brand"><span class="auth-brand-mark"><i class="bi bi-shop"></i></span><span>Duka Credit</span></div>
   <div class="auth-card">
-    <div class="auth-heading"><p class="auth-kicker">Step 2 of 3</p><h1>Verify your phone</h1><p>Enter the six-digit code sent to your registered phone number.</p></div>
+    <div class="auth-heading"><p class="auth-kicker">Step 2 of 3</p><h1>Check your email</h1><p>Enter the six-digit code we emailed to the address on your account. It expires in {{ code_minutes }} minutes.</p></div>
     <form method="POST" novalidate>
       {{ form.hidden_tag() }}
       <div class="auth-field">{{ form.code.label(class="form-label") }}{{ form.code(class="form-control verification-code", inputmode="numeric", autocomplete="one-time-code", maxlength="6", placeholder="000000", autofocus=true) }}{% for e in form.code.errors %}<div class="field-error">{{ e }}</div>{% endfor %}</div>
       {{ form.submit(class="btn auth-submit w-100") }}
     </form>
-    <p class="auth-switch"><a href="{{ url_for('auth.forgot_password') }}">Request a new code</a></p>
+    <form method="POST" action="{{ url_for('auth.resend_reset_code') }}" class="text-center mt-3">
+      {{ resend_form.hidden_tag() }}
+      <button type="submit" class="btn btn-link auth-resend">Send a new code</button>
+    </form>
+    <p class="auth-switch">Can't find it? Check your spam folder, or <a href="{{ url_for('auth.forgot_password') }}">try a different phone number or email</a>.</p>
   </div>
 </div>
 {% endblock %}
