@@ -47,7 +47,7 @@
     </div>
     {% if payments %}
     <div class="table-responsive">
-      <table class="table payment-history-table align-middle mb-0">
+      <table class="table table-stack payment-history-table align-middle mb-0">
         <thead>
           <tr><th scope="col">Date received</th><th scope="col">Customer</th><th scope="col" class="text-end">Amount paid</th><th scope="col">Method</th><th scope="col">Approval</th>{% if current_user.is_admin %}<th scope="col">Admin action</th>{% endif %}</tr>
         </thead>
@@ -63,7 +63,7 @@
               <small class="payment-history-time">{{ payment.payment_date.strftime('%H:%M') }}</small>
               {% endif %}
             </td>
-            <td>
+            <td class="stack-primary">
               <a class="payment-history-customer" href="{{ url_for('customers.view_customer', customer_id=payment.customer_id) }}">
                 <span class="payment-history-avatar" aria-hidden="true">{{ payment.customer.full_name.split()[0][0]|upper }}{{ payment.customer.full_name.split()[-1][0]|upper if payment.customer.full_name.split()|length > 1 else '' }}</span>
                 <span><strong>{{ payment.customer.full_name }}</strong><small>{{ payment.customer.phone_number }}</small></span>
@@ -80,7 +80,7 @@
               {% if payment.review_note %}<small class="d-block text-muted">{{ payment.review_note }}</small>{% endif %}
             </td>
             {% if current_user.is_admin %}
-            <td>
+            <td class="stack-actions">
               {% if payment.approval_status == 'pending' %}
               {% set decision_form = decision_forms[payment.payment_id] %}
               <form method="POST" action="{{ url_for('payments.approve_payment', payment_id=payment.payment_id) }}" class="mb-1">

@@ -38,7 +38,7 @@
     </div>
     {% if rules %}
     <div class="table-responsive">
-      <table class="table reminder-rules-table align-middle mb-0">
+      <table class="table table-stack reminder-rules-table align-middle mb-0">
         <thead><tr><th scope="col">Reminder trigger</th><th scope="col">Channel</th><th scope="col">Message preview</th><th scope="col">Status</th>{% if current_user.is_admin %}<th scope="col"><span class="visually-hidden">Actions</span></th>{% endif %}</tr></thead>
         <tbody>
         {% for rule in rules %}
@@ -48,7 +48,7 @@
             <td><span class="reminder-message-preview" title="{{ rule.message_template }}">{{ rule.message_template }}</span></td>
             <td>{% if rule.active %}<span class="reminder-rule-status is-active"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Active</span>{% else %}<span class="reminder-rule-status is-paused"><i class="bi bi-pause-circle-fill" aria-hidden="true"></i> Paused</span>{% endif %}</td>
             {% if current_user.is_admin %}
-            <td class="text-end">
+            <td class="text-end stack-actions" data-label="">
               <div class="reminder-row-actions">
                 <a href="{{ url_for('reminders.edit_rule', rule_id=rule.rule_id) }}" class="reminder-row-action" aria-label="Edit rule for {{ rule.trigger_days_overdue }} days overdue" title="Edit rule"><i class="bi bi-pencil" aria-hidden="true"></i></a>
                 <form action="{{ url_for('reminders.delete_rule', rule_id=rule.rule_id) }}" method="POST" onsubmit="return confirm('Delete this reminder rule?');">

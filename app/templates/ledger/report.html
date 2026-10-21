@@ -66,7 +66,7 @@
 
     {% if ledgers %}
     <div class="table-responsive">
-      <table class="table receivables-table align-middle mb-0">
+      <table class="table table-stack receivables-table align-middle mb-0">
         <thead>
           <tr>
             <th scope="col">Customer</th>
@@ -79,7 +79,7 @@
         <tbody>
         {% for ledger in ledgers %}
           <tr>
-            <td>
+            <td class="stack-primary">
               <a class="receivables-customer" href="{{ url_for('customers.view_customer', customer_id=ledger.customer_id) }}">
                 <span class="receivables-avatar" aria-hidden="true">{{ ledger.customer.full_name.split()[0][0]|upper }}{{ ledger.customer.full_name.split()[-1][0]|upper if ledger.customer.full_name.split()|length > 1 else '' }}</span>
                 <span><strong>{{ ledger.customer.full_name }}</strong><small>View customer account</small></span>

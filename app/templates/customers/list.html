@@ -37,14 +37,14 @@
   <div class="customer-directory-card">
     {% if customers %}
     <div class="table-responsive">
-      <table class="table customer-directory-table align-middle mb-0">
+      <table class="table table-stack customer-directory-table align-middle mb-0">
         <thead>
           <tr><th scope="col">Customer</th><th scope="col">Preferred channel</th><th scope="col">Outstanding balance</th><th scope="col" class="customer-actions-column"><span class="visually-hidden">Actions</span></th></tr>
         </thead>
         <tbody>
         {% for c in customers %}
           <tr>
-            <td>
+            <td class="stack-primary">
               <div class="customer-identity">
                 <span class="customer-avatar" aria-hidden="true">{{ c.full_name.split()[0][0]|upper }}{{ c.full_name.split()[-1][0]|upper if c.full_name.split()|length > 1 else '' }}</span>
                 <span class="customer-identity-copy">
@@ -75,7 +75,7 @@
                 <span class="customer-balance-unknown">No ledger</span>
               {% endif %}
             </td>
-            <td class="text-end customer-actions-column">
+            <td class="text-end customer-actions-column stack-actions" data-label="">
               <div class="customer-row-actions">
                 {% set has_balance = c.ledger and c.ledger.outstanding_balance > 0 %}
                 <a href="{{ url_for('customers.view_customer', customer_id=c.customer_id) }}"

@@ -83,7 +83,7 @@
 
     {% if transactions %}
     <div class="table-responsive">
-      <table class="table transaction-history-table align-middle mb-0">
+      <table class="table table-stack transaction-history-table align-middle mb-0">
         <thead>
           <tr><th scope="col">Date</th><th scope="col">Customer</th><th scope="col">Item</th><th scope="col" class="text-end">Amount</th><th scope="col">Sync status</th></tr>
         </thead>
@@ -97,7 +97,7 @@
               </span>
               {% if transaction.transaction_date %}<small class="transaction-history-time">{{ transaction.transaction_date|nairobi('%H:%M') }} EAT</small>{% endif %}
             </td>
-            <td>
+            <td class="stack-primary">
               <a class="transaction-history-customer" href="{{ url_for('customers.view_customer', customer_id=transaction.customer_id) }}">
                 <span class="transaction-history-avatar" aria-hidden="true">{{ transaction.customer.full_name.split()[0][0]|upper }}{{ transaction.customer.full_name.split()[-1][0]|upper if transaction.customer.full_name.split()|length > 1 else '' }}</span>
                 <span><strong>{{ transaction.customer.full_name }}</strong><small>{{ transaction.customer.phone_number }}</small></span>

@@ -99,7 +99,7 @@
     <section class="customer-history-card">
       <header class="customer-history-heading"><span class="customer-section-icon"><i class="bi bi-cart-check" aria-hidden="true"></i></span><div><h2>Credit sales</h2><p>{{ transactions|length }} {{ 'sale' if transactions|length == 1 else 'sales' }} recorded</p></div></header>
       <div class="table-responsive">
-        <table class="table customer-history-table mb-0">
+        <table class="table table-stack customer-history-table mb-0">
           <thead><tr><th>Date</th><th>Item</th><th class="text-end">Amount</th></tr></thead>
           <tbody>
           {% for t in transactions %}
@@ -114,7 +114,7 @@
     <section class="customer-history-card">
       <header class="customer-history-heading"><span class="customer-section-icon is-payment"><i class="bi bi-wallet2" aria-hidden="true"></i></span><div><h2>Payments</h2><p>{{ payments|length }} {{ 'payment' if payments|length == 1 else 'payments' }} recorded</p></div></header>
       <div class="table-responsive">
-        <table class="table customer-history-table mb-0">
+        <table class="table table-stack customer-history-table mb-0">
           <thead><tr><th>Date</th><th>Method</th><th>Approval</th><th class="text-end">Amount</th></tr></thead>
           <tbody>
           {% for p in payments %}
@@ -136,7 +136,7 @@
     <section class="customer-history-card">
       <header class="customer-history-heading"><span class="customer-section-icon is-audit"><i class="bi bi-journal-check" aria-hidden="true"></i></span><div><h2>Adjustment history</h2><p>Admin balance corrections</p></div></header>
       <div class="table-responsive">
-        <table class="table customer-history-table mb-0">
+        <table class="table table-stack customer-history-table mb-0">
           <thead><tr><th>Date</th><th>Change</th><th>Reason</th></tr></thead>
           <tbody>
           {% for adjustment in adjustments %}

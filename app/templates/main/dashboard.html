@@ -189,20 +189,20 @@
     <a class="panel-link" href="{{ url_for('payments.list_payments') }}">All payments <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
   </header>
   <div class="table-responsive">
-    <table class="table dashboard-approvals-table align-middle mb-0">
+    <table class="table table-stack dashboard-approvals-table align-middle mb-0">
       <thead><tr><th scope="col">Logged</th><th scope="col">Customer</th><th scope="col">Method</th><th scope="col" class="text-end">Amount</th><th scope="col" class="text-end">Decision</th></tr></thead>
       <tbody>
         {% for p in pending_payments %}
         {% set decision_form = payment_decision_forms[p.payment_id] %}
         <tr>
           <td><span class="activity-date"><strong>{{ p.payment_date.strftime('%d') }}</strong><span>{{ p.payment_date.strftime('%b %Y') }}</span></span></td>
-          <td>
+          <td class="stack-primary">
             <span class="dashboard-payments-customer"><i class="bi bi-person-circle" aria-hidden="true"></i>{{ p.customer.full_name }}</span>
             {% if p.submitted_by_shopkeeper %}<small class="d-block text-muted">by {{ p.submitted_by_shopkeeper.full_name }}</small>{% endif %}
           </td>
           <td>{{ payment_method_badge(p) }}</td>
           <td class="text-end"><span class="dashboard-payments-amount">{{ p.amount_paid | kes }}</span></td>
-          <td class="text-end">
+          <td class="text-end stack-actions">
             <div class="dashboard-approval-buttons">
               <form method="POST" action="{{ url_for('payments.approve_payment', payment_id=p.payment_id) }}">
                 {{ decision_form.hidden_tag() }}
@@ -237,13 +237,13 @@
       {% if recent_transactions %}
       <div class="activity-count"><i class="bi bi-receipt" aria-hidden="true"></i> Latest {{ recent_transactions|length }} sales</div>
       <div class="table-responsive">
-        <table class="table activity-table activity-payment-table align-middle mb-0">
+        <table class="table table-stack activity-table activity-payment-table align-middle mb-0">
           <thead><tr><th scope="col">Date</th><th scope="col">Sale and customer</th><th scope="col" class="text-end">Amount</th></tr></thead>
           <tbody>
             {% for t in recent_transactions %}
             <tr>
               <td><span class="activity-date"><strong>{{ t.transaction_date|nairobi('%d') }}</strong><span>{{ t.transaction_date|nairobi('%b %Y') }}</span></span></td>
-              <td><span class="activity-description">{{ t.item_description }}</span><span class="activity-customer"><i class="bi bi-person" aria-hidden="true"></i>{{ t.customer.full_name }}</span></td>
+              <td class="stack-primary"><span class="activity-description">{{ t.item_description }}</span><span class="activity-customer"><i class="bi bi-person" aria-hidden="true"></i>{{ t.customer.full_name }}</span></td>
               <td class="text-end amount-cell">{{ t.amount | kes }}</td>
             </tr>
             {% endfor %}
@@ -272,13 +272,13 @@
       </div>
       {% if recent_payments %}
       <div class="table-responsive dashboard-payments-scroll">
-        <table class="table activity-table dashboard-payments-table align-middle mb-0">
+        <table class="table table-stack activity-table dashboard-payments-table align-middle mb-0">
           <thead><tr><th scope="col">Date</th><th scope="col">Customer</th><th scope="col" class="text-end">Received</th></tr></thead>
           <tbody>
             {% for p in recent_payments %}
             <tr>
               <td><span class="activity-date"><strong>{{ p.payment_date.strftime('%d') }}</strong><span>{{ p.payment_date.strftime('%b %Y') }}</span></span></td>
-              <td><span class="activity-customer-name dashboard-payments-customer"><i class="bi bi-person-circle" aria-hidden="true"></i>{{ p.customer.full_name }}</span></td>
+              <td class="stack-primary"><span class="activity-customer-name dashboard-payments-customer"><i class="bi bi-person-circle" aria-hidden="true"></i>{{ p.customer.full_name }}</span></td>
               <td class="text-end">
                 <span class="dashboard-payments-amount">{{ p.amount_paid | kes }}</span>
                 <span class="dashboard-payments-status{{ ' is-approved' if p.approval_status == 'approved' else ' is-pending' }}">{{ p.approval_status|capitalize }}</span>
