@@ -5,6 +5,7 @@ https://developer.safaricom.co.ke/APIs/MpesaExpressSimulate
 
 import base64
 import re
+import time
 from datetime import datetime
 
 import requests
@@ -26,8 +27,16 @@ RESULT_MESSAGES = {
     "2001": "The customer entered the wrong M-Pesa PIN.",
 }
 CANCELLED_CODES = {"1032", "1037"}
-# Returned by the status query while the customer has not answered yet.
+# Returned by the status query while the customer has not answered yet: an
+# error code before Safaricom has the request, then result code 4999.
 STILL_PROCESSING_CODE = "500.001.1001"
+STILL_PROCESSING_RESULT = "4999"
+
+
+# Access tokens last about an hour; reuse them instead of signing in on every
+# call, which doubles traffic and trips Safaricom's rate limit.
+_token_cache = {}
+TOKEN_REFRESH_MARGIN_SECONDS = 60
 
 
 class DarajaError(Exception):
@@ -94,6 +103,10 @@ class DarajaClient:
         self.timeout = config.get("MPESA_REQUEST_TIMEOUT_SECONDS", 30)
 
     def _access_token(self):
+        cache_key = (self.base_url, self._key, self._secret)
+        cached = _token_cache.get(cache_key)
+        if cached and cached[1] > time.monotonic():
+            return cached[0]
         try:
             response = requests.get(
                 f"{self.base_url}/oauth/v1/generate",
@@ -103,14 +116,24 @@ class DarajaClient:
             )
         except requests.RequestException as exc:
             raise DarajaError("Could not reach Safaricom. Check the internet connection.") from exc
-        if response.status_code != 200:
+        if response.status_code in (400, 401):
             raise DarajaError(
                 "Safaricom refused the consumer key and secret. Check MPESA_CONSUMER_KEY and "
                 "MPESA_CONSUMER_SECRET in .env and that they match MPESA_ENVIRONMENT."
             )
-        token = response.json().get("access_token")
+        try:
+            body = response.json() if response.status_code == 200 else {}
+        except ValueError:
+            body = {}
+        token = body.get("access_token")
         if not token:
-            raise DarajaError("Safaricom did not return an access token.")
+            # Rate limits and outages, not bad keys.
+            raise DarajaError("Safaricom is busy right now. Please try again in a minute.")
+        lifetime = int(body.get("expires_in") or 3599)
+        _token_cache[cache_key] = (
+            token,
+            time.monotonic() + max(lifetime - TOKEN_REFRESH_MARGIN_SECONDS, 0),
+        )
         return token
 
     def _password(self, timestamp):
@@ -131,7 +154,8 @@ class DarajaClient:
         try:
             return response.status_code, response.json()
         except ValueError as exc:
-            raise DarajaError("Safaricom sent an unexpected response.") from exc
+            # Safaricom answers rate limits and outages with a non-JSON page.
+            raise DarajaError("Safaricom is busy right now. Please try again in a minute.") from exc
 
     def stk_push(self, phone_number, amount, account_reference, description, callback_url):
         """Send the payment prompt. Returns Daraja's response with the CheckoutRequestID."""
@@ -170,7 +194,10 @@ class DarajaClient:
                 "CheckoutRequestID": checkout_request_id,
             },
         )
-        if body.get("errorCode") == STILL_PROCESSING_CODE:
+        if (
+            body.get("errorCode") == STILL_PROCESSING_CODE
+            or str(body.get("ResultCode")) == STILL_PROCESSING_RESULT
+        ):
             return None, "The customer has not answered the prompt yet."
         if "ResultCode" not in body:
             message = body.get("errorMessage") or "Unknown error"
