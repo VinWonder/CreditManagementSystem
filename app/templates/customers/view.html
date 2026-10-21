@@ -61,18 +61,14 @@
     {% else %}
     <p>This account owes {{ customer.ledger.outstanding_balance | kes }}, but there are no active reminder rules for this shop yet.</p>
     {% endif %}
-    {% if current_user.is_admin %}
     {% if active_rules %}
     <a class="customer-reminder-config-link" href="{{ url_for('reminders.edit_rule', rule_id=active_rules[0].rule_id) }}"><i class="bi bi-sliders" aria-hidden="true"></i> Edit earliest rule to day 0 to send on the sale day</a>
     {% else %}
     <a class="customer-reminder-config-link" href="{{ url_for('reminders.new_rule') }}"><i class="bi bi-plus-circle" aria-hidden="true"></i> Create a day 0 rule for same-day reminders</a>
     {% endif %}
-    {% else %}
-    <p class="customer-reminder-admin-note">Ask your shop admin to activate a same-day (day 0) rule or adjust the earliest rule.</p>
-    {% endif %}
     {% endif %}
     {% if customer.preferred_channel != 'both' %}
-    <p class="customer-channel-explainer"><i class="bi bi-info-circle" aria-hidden="true"></i> This customer's saved preference is {{ customer.preferred_channel|capitalize }}, so a personal reminder will use that channel only. To use SMS and WhatsApp, {% if current_user.is_admin %}<a href="{{ url_for('customers.edit_customer', customer_id=customer.customer_id) }}">update their preference</a>{% else %}ask your shop admin to update their preference{% endif %} to “SMS + WhatsApp” after confirming they agree to both.</p>
+    <p class="customer-channel-explainer"><i class="bi bi-info-circle" aria-hidden="true"></i> This customer's saved preference is {{ customer.preferred_channel|capitalize }}, so a personal reminder will use that channel only. To use SMS and WhatsApp, <a href="{{ url_for('customers.edit_customer', customer_id=customer.customer_id) }}">update their preference</a> to “SMS + WhatsApp” after confirming they agree to both.</p>
     {% endif %}
   </div>
 </section>

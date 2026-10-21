@@ -827,7 +827,6 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .customer-reminder-channel.is-disabled { background: #f1f3f2; border-color: #dfe4e1; color: #96a29b; cursor: not-allowed; pointer-events: none; }
 .customer-reminder-config-link { align-items: center; background: #fff; border: 1px solid #e1d2a9; border-radius: 0.6rem; color: #735719; display: inline-flex; font-size: 0.8rem; font-weight: 750; gap: 0.4rem; margin-top: 0.7rem; min-height: 2.4rem; padding: 0.5rem 0.7rem; text-decoration: none; }
 .customer-reminder-config-link:hover { background: #fffdf7; border-color: #cdb779; color: #5c4514; }
-.customer-reminder-admin-note { color: #785f2a !important; }
 .customer-channel-explainer { border-top: 1px solid rgba(73, 125, 91, 0.17); margin-top: 0.8rem !important; padding-top: 0.65rem; }
 .customer-channel-explainer a { color: #246847; font-weight: 750; }
 .customer-admin-card, .customer-history-card { background: #fff; border: 1px solid #e2ebe8; border-radius: 0.95rem; box-shadow: 0 0.45rem 1.3rem rgba(24, 52, 45, 0.045); margin-bottom: 1rem; overflow: hidden; }
