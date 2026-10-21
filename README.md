@@ -120,7 +120,7 @@ require a reason and are retained in the customer balance audit history.
 
 Every payment records how the customer paid: cash, bank transfer/deposit,
 agent withdrawal, M-Pesa Send Money, M-Pesa Till, M-Pesa Paybill, or cheque.
-M-Pesa and agent payments need the M-Pesa transaction code and cheques need
+The M-Pesa transaction code is optional for M-Pesa and agent payments; cheques need
 the cheque number, so the admin can check them before approving a
 shopkeeper's submission; bank references are optional. The method and
 reference appear in payment history, dashboard approvals, and the customer's
