@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for, flash
+from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
@@ -16,6 +16,8 @@ from app.models import (
 from app.mpesa.daraja import DarajaError, mpesa_account_for
 from app.mpesa.routes import recent_pending_prompt, send_stk_prompt
 from app.payments.forms import BalanceAdjustmentForm, PaymentDecisionForm, PaymentForm
+from app.timezones import format_nairobi_datetime
+from app.transactions.items import allocate_payment, customer_item_balances
 from app.permissions import admin_required
 
 payments_bp = Blueprint("payments", __name__, url_prefix="/payments")
@@ -127,10 +129,29 @@ def new_payment():
         for customer in owing_customers
     ]
     stk_enabled = mpesa_account_for(current_user.retailer_id) is not None
+    # Unpaid items per customer, so the payment can name what it is for.
+    owing_items = {
+        customer.customer_id: [
+            {
+                "id": balance.item_id,
+                "label": f"{balance.description} · {format_nairobi_datetime(balance.sale.transaction_date, '%d %b %Y')}",
+                "remaining": f"{balance.remaining:.2f}",
+                "partly_paid": balance.status == "partly paid",
+            }
+            for balance in customer_item_balances(customer, include_pending=True)
+            if balance.item_id is not None and balance.remaining > 0
+        ]
+        for customer in owing_customers
+    }
     if not stk_enabled:
         form.payment_method.choices = [
             choice for choice in form.payment_method.choices if choice[0] != "mpesa_stk"
         ]
+
+    try:
+        chosen_item_ids = [int(value) for value in request.form.getlist("sale_item_ids")]
+    except ValueError:
+        chosen_item_ids = None
 
     if form.validate_on_submit():
         customer = (
@@ -145,8 +166,19 @@ def new_payment():
             current_user.retailer_id, include_pending=True
         )
         current_balance = current_balances.get(form.customer_id.data, Decimal("0"))
+        chosen_owed = {
+            item["id"]: Decimal(item["remaining"])
+            for item in owing_items.get(form.customer_id.data, [])
+        }
         if customer is None or current_balance <= 0:
             form.customer_id.errors.append("Choose a customer with an outstanding balance.")
+        elif chosen_item_ids is None or any(item_id not in chosen_owed for item_id in chosen_item_ids):
+            form.amount_paid.errors.append("One of the chosen items is not owed by this customer any more.")
+        elif chosen_item_ids and form.amount_paid.data > sum(chosen_owed[i] for i in set(chosen_item_ids)):
+            form.amount_paid.errors.append(
+                f"The chosen items only have KES {sum(chosen_owed[i] for i in set(chosen_item_ids)):,.2f} "
+                "left to pay. Lower the amount or choose more items."
+            )
         elif form.amount_paid.data > current_balance:
             form.amount_paid.errors.append(
                 f"Payment cannot exceed the outstanding balance of "
@@ -161,7 +193,9 @@ def new_payment():
                 )
             else:
                 try:
-                    stk = send_stk_prompt(customer, int(form.amount_paid.data), form.stk_phone.data)
+                    stk = send_stk_prompt(
+                        customer, int(form.amount_paid.data), form.stk_phone.data, chosen_item_ids
+                    )
                 except DarajaError as exc:
                     form.payment_method.errors.append(str(exc))
                 else:
@@ -183,6 +217,9 @@ def new_payment():
                 ),
                 reviewed_at=datetime.utcnow() if current_user.is_admin else None,
             )
+            # Name the chosen items before adding the payment, so their balances
+            # are worked out without this payment counted twice.
+            allocate_payment(payment, customer, chosen_item_ids)
             db.session.add(payment)
 
             ledger = Ledger.query.filter_by(customer_id=customer.customer_id).first()
@@ -215,6 +252,8 @@ def new_payment():
         has_customers=bool(customers),
         balances=balances,
         customer_phones={customer.customer_id: customer.phone_number for customer in owing_customers},
+        owing_items=owing_items,
+        chosen_item_ids=chosen_item_ids or [],
         stk_enabled=stk_enabled,
     )
 
