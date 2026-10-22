@@ -16,6 +16,8 @@ from app.models import (
 from app.mpesa.daraja import DarajaError, mpesa_account_for
 from app.mpesa.routes import recent_pending_prompt, send_stk_prompt
 from app.payments.forms import BalanceAdjustmentForm, PaymentDecisionForm, PaymentForm
+from app.payments.receipts import receipt_message
+from app.reminders.links import normalize_msisdn, reminder_links
 from app.timezones import format_nairobi_datetime
 from app.transactions.items import allocate_payment, customer_item_balances
 from app.permissions import admin_required
@@ -243,6 +245,9 @@ def new_payment():
                     f"KES {remaining_balance:,.2f} due until approved."
                 )
             flash(message, "success")
+            if current_user.is_admin:
+                # Offer to send the customer a confirmation right away.
+                return redirect(url_for("payments.payment_receipt", payment_id=payment.payment_id))
             return redirect(url_for("payments.list_payments"))
 
     return render_template(
@@ -309,7 +314,31 @@ def approve_payment(payment_id):
         else f"Payment approved. Outstanding balance: KES {remaining_balance:,.2f}.",
         "success",
     )
-    return redirect(url_for("payments.list_payments"))
+    return redirect(url_for("payments.payment_receipt", payment_id=payment.payment_id))
+
+
+@payments_bp.route("/<int:payment_id>/receipt")
+@login_required
+@admin_required
+def payment_receipt(payment_id):
+    """A ready-written payment confirmation the admin sends from their own phone."""
+    payment = Payment.query.filter_by(
+        payment_id=payment_id, retailer_id=current_user.retailer_id
+    ).first_or_404()
+    if payment.approval_status != "approved":
+        flash("Only confirmed payments can be receipted.", "warning")
+        return redirect(url_for("payments.list_payments"))
+    if payment.customer.ledger:
+        payment.customer.ledger.recalculate()
+    message = receipt_message(payment)
+    db.session.rollback()
+    return render_template(
+        "payments/receipt.html",
+        payment=payment,
+        message=message,
+        phone=normalize_msisdn(payment.customer.phone_number),
+        links=reminder_links(payment.customer, message),
+    )
 
 
 @payments_bp.route("/<int:payment_id>/reject", methods=["POST"])
