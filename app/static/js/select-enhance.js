@@ -1,9 +1,9 @@
 (() => {
-  // Styled dropdowns for mouse and trackpad users. Phones and tablets keep the
-  // system picker, which is easier to use by touch, and every page still works
-  // with plain <select>s if Tom Select did not load (for example offline).
-  const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-  if (!finePointer || typeof window.TomSelect === "undefined") {
+  // Styled dropdowns on every device. On small screens the list opens as a
+  // panel over a dimmed page with large rows for tapping. Every page still
+  // works with plain <select>s if Tom Select did not load (for example offline).
+  const SMALL_SCREEN = window.matchMedia("(max-width: 767.98px)");
+  if (typeof window.TomSelect === "undefined") {
     window.DukaSelect = { enhance() {}, sync() {} };
     return;
   }
@@ -42,12 +42,43 @@
     return { html: `${iconHtml}<span class="duka-option-text">${text}</span>` };
   }
 
+  // Small screens: dim the page behind the open list; tapping the dim area
+  // closes the list without pressing whatever is underneath.
+  let backdrop = null;
+
+  function panelTitle(select) {
+    // Read before Tom Select re-points the label at its own control.
+    const label = select.id ? document.querySelector(`label[for="${select.id}"]`) : null;
+    return (label && label.textContent.trim()) || select.getAttribute("aria-label") || "Choose an option";
+  }
+
+  function openPanel(control, title) {
+    if (!SMALL_SCREEN.matches) return;
+    control.dropdown.dataset.title = title;
+    backdrop = document.createElement("div");
+    backdrop.className = "duka-select-backdrop";
+    backdrop.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      control.close();
+      control.blur();
+    });
+    document.body.append(backdrop);
+    document.body.classList.add("duka-select-open");
+  }
+
+  function closePanel() {
+    if (backdrop) backdrop.remove();
+    backdrop = null;
+    document.body.classList.remove("duka-select-open");
+  }
+
   function enhance(root = document) {
     root.querySelectorAll("select:not([multiple]):not([data-native-select])").forEach((select) => {
       if (select.tomselect || select.closest(".iti")) return;
       // Customer lists grow with the shop, so they always get a search box.
       const searchable = select.name === "customer_id" || select.options.length > SEARCH_FROM;
       const compact = !select.classList.contains("form-select");
+      const title = panelTitle(select);
       new window.TomSelect(select, {
         create: false,
         allowEmptyOption: true,
@@ -59,6 +90,8 @@
         placeholder: searchable ? "Type to search…" : undefined,
         wrapperClass: `ts-wrapper duka-select${compact ? " is-compact" : ""}`,
         dropdownClass: "ts-dropdown duka-dropdown",
+        onDropdownOpen() { openPanel(this, title); },
+        onDropdownClose() { closePanel(); },
         render: {
           option: (data, escape) => `<div class="duka-option">${parts(select, data, escape).html}</div>`,
           item: (data, escape) => {
