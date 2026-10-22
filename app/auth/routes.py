@@ -200,7 +200,9 @@ def create_email_verification(retailer, to_address=None):
     if not success:
         db.session.rollback()
         current_app.logger.warning("Verification email failed: %s", info)
-        return "danger", "We could not send the verification email. Please try again shortly."
+        # The reason names the problem (blocked port, refused key, unverified
+        # sender) without any secret, so whoever sees it knows what to fix.
+        return "danger", f"We could not send the verification email. Reason: {info}"
     db.session.commit()
     if info == "simulated":
         # No SMTP server is configured, so nothing left this machine.
@@ -412,9 +414,10 @@ def register():
                     os.remove(os.path.join(current_app.config["SHOP_LOGO_UPLOAD_FOLDER"], logo_filename))
                 except OSError:
                     pass
+            reason = message.split("Reason: ", 1)[-1]
             form.email.errors.append(
                 f"We couldn't send the verification email to {email}, so your account was not "
-                "created. Check the address and try again in a minute."
+                f"created. Reason: {reason}"
             )
             return render_template("auth/register.html", form=form)
         flash(message, category)

@@ -116,7 +116,10 @@ def send_email(to_address, subject, body):
     except smtplib.SMTPException as exc:
         reason = f"The mail server rejected the message ({type(exc).__name__}: {exc})."
     except OSError as exc:
-        reason = f"Could not connect to {host}:{port} ({type(exc).__name__}: {exc})."
+        reason = (
+            f"Could not connect to {host}:{port} ({type(exc).__name__}). Hosts such as Render's "
+            "free plan block email ports; set BREVO_API_KEY to send through Brevo instead."
+        )
     else:
         return True, "sent"
     current_app.logger.warning("Email to %s failed: %s", to_address, reason)

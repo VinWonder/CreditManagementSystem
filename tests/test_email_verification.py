@@ -195,6 +195,7 @@ class EmailVerificationTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"couldn&#39;t send the verification email to owner@example.com", response.data)
+        self.assertIn(b"Reason: Could not connect to smtp.gmail.com:587", response.data)
         self.assertEqual(Retailer.query.count(), 0)
         self.assertEqual(EmailVerificationCode.query.count(), 0)
 
