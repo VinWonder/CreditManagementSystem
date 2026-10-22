@@ -1791,3 +1791,10 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
   table.table-stack td .sale-item-status-list { flex: 1 1 100%; text-align: left; }
 }
 .payment-method-items { color: #3f6b5d; display: block; font-size: 0.7rem; font-weight: 650; margin-top: 0.2rem; overflow-wrap: anywhere; }
+/* Payment receipt page */
+.receipt-message { font-size: 0.86rem; line-height: 1.5; min-height: 11rem; resize: vertical; }
+.receipt-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.4rem; }
+.receipt-to { margin-top: 0.4rem; }
+.payment-receipt .customer-form-intro .payment-method { margin-left: 0.25rem; vertical-align: middle; }
+.payment-receipt-link { align-items: center; color: #28685a; display: inline-flex; font-size: 0.72rem; font-weight: 750; gap: 0.3rem; margin-top: 0.3rem; text-decoration: none; }
+.payment-receipt-link:hover { text-decoration: underline; }

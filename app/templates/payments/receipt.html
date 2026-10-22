@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "payments/_method.html" import payment_method_badge %}
+{% block title %}Send payment receipt{% endblock %}
+{% block content %}
+<section class="customer-form-layout payment-receipt" aria-labelledby="receipt-title">
+  <a class="customer-form-back" href="{{ url_for('payments.list_payments') }}">
+    <i class="bi bi-arrow-left" aria-hidden="true"></i> Payment history
+  </a>
+  <div class="customer-form-card">
+    <div class="customer-form-intro">
+      <span class="customer-form-mark"><i class="bi bi-receipt-cutoff" aria-hidden="true"></i></span>
+      <p class="eyebrow mb-1">Payment confirmed</p>
+      <h1 id="receipt-title">Send {{ payment.customer.full_name }} a receipt</h1>
+      <p>{{ payment.amount_paid | kes }} received {{ payment.payment_date|nairobi('%d %b %Y · %H:%M') }} EAT. {{ payment_method_badge(payment) }}</p>
+    </div>
+
+    <div class="customer-form-field">
+      <label class="form-label" for="receipt-message">Message</label>
+      <textarea class="form-control receipt-message" id="receipt-message" rows="8" maxlength="1000">{{ message }}</textarea>
+      <small class="customer-field-help">You can change the wording before sending. It opens in your own WhatsApp or SMS app, from your phone number; you press send there.</small>
+    </div>
+
+    {% if phone %}
+    <div class="receipt-actions">
+      <a class="customer-reminder-channel is-whatsapp" id="receipt-whatsapp" href="{{ links.whatsapp }}" target="_blank" rel="noopener noreferrer">
+        <i class="bi bi-whatsapp" aria-hidden="true"></i> Send on WhatsApp
+      </a>
+      <a class="customer-reminder-channel is-sms" id="receipt-sms" href="{{ links.sms }}">
+        <i class="bi bi-chat-left-text" aria-hidden="true"></i> Send by SMS
+      </a>
+    </div>
+    <p class="customer-field-help receipt-to">To {{ payment.customer.phone_number }}</p>
+    {% else %}
+    <p class="customer-reminder-admin-note receipt-no-phone"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ payment.customer.full_name }}'s phone number can't be used for WhatsApp or SMS. <a href="{{ url_for('customers.edit_customer', customer_id=payment.customer_id) }}">Fix the number</a>, or copy the message above.</p>
+    {% endif %}
+
+    <div class="customer-form-actions">
+      <a class="customer-cancel-link" href="{{ url_for('payments.list_payments') }}">Skip for now</a>
+      <a class="customer-cancel-link" href="{{ url_for('customers.view_customer', customer_id=payment.customer_id) }}">View {{ payment.customer.full_name }}</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+{% if phone %}
+<script>
+(() => {
+  // Keep the links in step with any edits to the message.
+  const phone = "{{ phone }}";
+  const text = document.getElementById("receipt-message");
+  const whatsapp = document.getElementById("receipt-whatsapp");
+  const sms = document.getElementById("receipt-sms");
+  const update = () => {
+    const encoded = encodeURIComponent(text.value);
+    whatsapp.href = `https://wa.me/${phone}?text=${encoded}`;
+    sms.href = `sms:+${phone}?body=${encoded}`;
+  };
+  text.addEventListener("input", update);
+})();
+</script>
+{% endif %}
+{% endblock %}
