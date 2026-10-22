@@ -47,13 +47,28 @@ def _delete(retailer):
 
 
 def release_abandoned_signups(business_name, phone_number, email):
-    """Delete abandoned sign-ups holding any of these details. Returns how many."""
-    matches = _abandoned().filter(
+    """Delete sign-ups that stand in the way of this registration. Returns how many.
+
+    An unverified sign-up for the same email inbox is the same person trying
+    again (perhaps the code never arrived), so it is replaced straight away.
+    Other unverified sign-ups holding the name or phone are released after
+    UNVERIFIED_SIGNUP_HOURS.
+    """
+    same_details = (
         (db.func.lower(Retailer.business_name) == shop_name_key(business_name))
         | (Retailer.phone_number == phone_number)
         | (Retailer.email == email)
         | (Retailer.email_canonical == canonical_email(email))
-    ).all()
+    )
+    matches = _abandoned().filter(same_details).all()
+    matches += [
+        retailer
+        for retailer in Retailer.query.filter(
+            Retailer.email_verified_at.is_(None),
+            (Retailer.email == email) | (Retailer.email_canonical == canonical_email(email)),
+        ).all()
+        if retailer not in matches
+    ]
     released = [retailer for retailer in matches if not _holds_shop_data(retailer)]
     for retailer in released:
         _delete(retailer)
