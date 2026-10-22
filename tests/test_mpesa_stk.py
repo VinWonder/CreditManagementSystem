@@ -342,6 +342,19 @@ class StkPushPaymentTests(unittest.TestCase):
         self.assertIn("M-Pesa prompt (STK Push)", history)
         self.assertIn("Ref QFT4ABC123", history)
 
+    def test_paid_prompt_offers_the_admin_a_receipt(self):
+        self._prompt("500")
+        stk = StkPushRequest.query.one()
+        status_url = f"/mpesa/requests/{stk.stk_request_id}/status"
+        self.assertIsNone(self.client.get(status_url).get_json()["receipt_url"])
+
+        self._callback(stk)
+
+        payment = Payment.query.one()
+        self.assertEqual(self.client.get(status_url).get_json()["receipt_url"], f"/payments/{payment.payment_id}/receipt")
+        self.user = self.shopkeeper
+        self.assertIsNone(self.client.get(status_url).get_json()["receipt_url"])
+
     def test_shopkeeper_prompts_are_confirmed_by_m_pesa_not_the_admin(self):
         self.user = self.shopkeeper
         self._prompt("200")
