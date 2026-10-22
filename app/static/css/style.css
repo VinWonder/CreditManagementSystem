@@ -1739,6 +1739,7 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
   .app-nav-links .nav-link { gap: 0.35rem; padding-inline: 0.5rem; }
   .app-nav-account { gap: 0.5rem; padding-left: 0.6rem; }
   .app-account-chip { max-width: 9.5rem; }
+  .app-account-menu { max-width: 9.5rem; }
 }
 /* Two history tables side by side only fit on wide screens. */
 @media (max-width: 1199.98px) {
@@ -1855,3 +1856,43 @@ body.duka-select-open { overflow: hidden; }
   .duka-select .ts-control { font-size: 0.9rem; min-height: 2.9rem; }
   .duka-select.is-compact .ts-control { font-size: 0.75rem; min-height: 2.2rem; }
 }
+/* Account menu in the top bar */
+.app-account-menu { flex: 0 1 auto; max-width: 15rem; min-width: 0; }
+.app-account-menu .app-account-chip { max-width: 100%; width: 100%; }
+.app-account-chip.dropdown-toggle { background: transparent; border: 0; border-radius: 0.75rem; color: inherit; cursor: pointer; padding: 0.25rem 0.4rem; text-align: left; transition: background 140ms ease; }
+.app-account-chip.dropdown-toggle:hover, .app-account-chip.dropdown-toggle[aria-expanded="true"] { background: rgba(255, 255, 255, 0.08); }
+.app-account-chip.dropdown-toggle:focus-visible { outline: 2px solid #d8ef9f; outline-offset: 2px; }
+.app-account-chip.dropdown-toggle::after { border-top-color: rgba(255, 255, 255, 0.7); flex: 0 0 auto; margin-left: 0.35rem; }
+.app-account-dropdown { border: 1px solid #dfe8e5; border-radius: 0.8rem; box-shadow: 0 1rem 2.2rem rgba(22, 55, 42, 0.16); margin-top: 0.5rem !important; min-width: 15rem; padding: 0.35rem; }
+.app-account-dropdown-head { border-bottom: 1px solid #edf2f0; display: flex; flex-direction: column; margin-bottom: 0.3rem; padding: 0.5rem 0.75rem 0.6rem; }
+.app-account-dropdown-head strong { color: var(--ink); font-size: 0.85rem; }
+.app-account-dropdown-head small { color: #6f8386; font-size: 0.74rem; overflow-wrap: anywhere; }
+.app-account-dropdown .dropdown-item { align-items: center; border-radius: 0.55rem; color: var(--ink); display: flex; font-size: 0.84rem; gap: 0.55rem; padding: 0.55rem 0.75rem; }
+.app-account-dropdown .dropdown-item i { color: #2f6b58; }
+.app-account-dropdown .dropdown-item:hover, .app-account-dropdown .dropdown-item:focus { background: #eef6f2; color: #1e5448; }
+.app-account-dropdown .dropdown-item.active { background: #e2efe9; color: #1e5448; font-weight: 700; }
+
+/* Profile summary */
+.account-summary { border: 1px solid #e2ebe8; border-radius: 0.85rem; margin: 0 1.25rem 0.5rem; overflow: hidden; }
+.account-summary-row { align-items: center; display: flex; gap: 0.75rem; padding: 0.75rem 0.9rem; }
+.account-summary-row + .account-summary-row { border-top: 1px solid #edf2f0; }
+.account-summary-icon { align-items: center; background: #eef5f2; border-radius: 0.55rem; color: #2f6b58; display: inline-flex; flex: 0 0 2.1rem; height: 2.1rem; justify-content: center; }
+.account-summary-text { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.account-summary-text small { color: #6f8386; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.account-summary-text strong { color: var(--ink); font-size: 0.86rem; overflow-wrap: anywhere; }
+.account-summary-text em { color: #8a5a12; font-size: 0.74rem; }
+.account-summary-link { color: #28685a; font-size: 0.8rem; font-weight: 750; text-decoration: none; white-space: nowrap; }
+.account-summary-link:hover { text-decoration: underline; }
+.account-logo { overflow: hidden; }
+.account-logo img { height: 100%; object-fit: cover; width: 100%; }
+/* Phone/tablet menu: the account chip shrinks and shortens the shop name beside Log out. */
+@media (max-width: 1199.98px) {
+  .app-account-menu { flex: 1 1 auto; max-width: none; }
+}
+.account-page .iti { display: block; width: 100%; }
+/* Smaller laptops: the chip shows the logo only; the shop name is in the menu heading. */
+@media (min-width: 1200px) and (max-width: 1399.98px) {
+  .app-account-chip .app-account-details { display: none; }
+  .app-account-menu { max-width: none; }
+}
+.app-account-dropdown-shop { color: #2f6b58; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 0.15rem; text-transform: uppercase; }
