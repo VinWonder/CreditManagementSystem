@@ -90,7 +90,8 @@
       </ul>
 
       <div class="app-nav-account">
-        <div class="app-account-chip">
+        <div class="dropdown app-account-menu">
+        <button class="app-account-chip dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu">
           <span class="app-account-avatar">
             {% if current_user.logo_filename %}
             <img src="{{ url_for('static', filename='uploads/logos/' ~ current_user.logo_filename) }}"
@@ -103,6 +104,19 @@
             <span class="app-account-label">{{ 'Shop admin' if current_user.is_admin else 'Shopkeeper' }}</span>
             <span class="app-account-name">{{ current_user.business_name }}</span>
           </span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end app-account-dropdown">
+          <li class="app-account-dropdown-head">
+            <span class="app-account-dropdown-shop">{{ current_user.business_name }}</span>
+            <strong>{{ current_user.owner_name }}</strong>
+            <small>{{ current_user.email if current_user.is_admin and current_user.email else current_user.phone_number }}</small>
+          </li>
+          <li><a class="dropdown-item{% if request.endpoint == 'account.profile' %} active{% endif %}" href="{{ url_for('account.profile') }}"><i class="bi bi-person-gear" aria-hidden="true"></i> Profile</a></li>
+          <li><a class="dropdown-item{% if request.endpoint == 'account.change_password' %} active{% endif %}" href="{{ url_for('account.change_password') }}"><i class="bi bi-key" aria-hidden="true"></i> Change password</a></li>
+          {% if current_user.is_admin %}
+          <li><a class="dropdown-item{% if request.endpoint in ('account.change_email', 'account.confirm_email') %} active{% endif %}" href="{{ url_for('account.change_email') }}"><i class="bi bi-envelope" aria-hidden="true"></i> Change email</a></li>
+          {% endif %}
+        </ul>
         </div>
         <form class="app-logout-form" method="POST" action="{{ url_for('auth.logout') }}">
           {{ logout_form.hidden_tag() }}
