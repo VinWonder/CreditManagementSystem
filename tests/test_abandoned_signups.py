@@ -154,5 +154,49 @@ class AbandonedSignupTests(unittest.TestCase):
         )
 
 
+    def test_purge_all_includes_fresh_unverified_signups(self):
+        self._existing(hours_ago=1, name="Fresh Shop", phone="+254700000012", email="fresh@example.com")
+        runner = self.app.test_cli_runner()
+
+        self.assertIn("No sign-ups are unverified for more than 24 hours", runner.invoke(args=["accounts", "purge-unverified"]).output)
+        self.assertIn("Deleted 1 sign-up(s) unverified.", runner.invoke(args=["accounts", "purge-unverified", "--all"]).output)
+        self.assertEqual(Retailer.query.count(), 0)
+
+    def test_delete_removes_a_shop_with_all_its_records(self):
+        from decimal import Decimal
+        from app.models import (CreditTransaction, Ledger, MessageDispatchLog, Payment, PaymentAllocation,
+                                ReminderRule, SaleItem, Shopkeeper, StkPushRequest)
+        shop_id = self._existing(hours_ago=500, verified=True)
+        other_id = self._existing(hours_ago=500, verified=True, name="Keep Me", phone="+254700000014",
+                                  email="keep@example.com")
+        customer = Customer(retailer_id=shop_id, full_name="C", phone_number="+254711000001")
+        db.session.add(customer)
+        db.session.flush()
+        sale = CreditTransaction(retailer_id=shop_id, customer_id=customer.customer_id, item_description="Chips",
+                                 amount=Decimal("100"), items=[SaleItem(position=0, description="Chips", amount=Decimal("100"))])
+        db.session.add(sale)
+        db.session.flush()
+        payment = Payment(retailer_id=shop_id, customer_id=customer.customer_id, amount_paid=Decimal("50"),
+                          approval_status="approved", reviewed_by_retailer_id=shop_id)
+        payment.allocations = [PaymentAllocation(sale_item_id=sale.items[0].sale_item_id, amount=Decimal("50"))]
+        db.session.add_all([
+            payment,
+            Ledger(retailer_id=shop_id, customer_id=customer.customer_id),
+            Shopkeeper(retailer_id=shop_id, full_name="S", phone_number="+254700000015", password_hash="x"),
+            ReminderRule(retailer_id=shop_id, trigger_days_overdue=0, message_template="Hi"),
+            MessageDispatchLog(customer_id=customer.customer_id, channel="sms", message_content="Hi"),
+            StkPushRequest(retailer_id=shop_id, customer_id=customer.customer_id, phone_number="254711000001",
+                           amount=10, account_reference="X", callback_token="t1"),
+        ])
+        db.session.commit()
+
+        result = self.app.test_cli_runner().invoke(args=["accounts", "delete", str(shop_id), "--yes"])
+
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertEqual([r.retailer_id for r in Retailer.query.all()], [other_id])
+        for model in (Customer, CreditTransaction, SaleItem, Payment, PaymentAllocation, Ledger, Shopkeeper,
+                      ReminderRule, MessageDispatchLog, StkPushRequest):
+            self.assertEqual(model.query.count(), 0, model.__name__)
+
 if __name__ == "__main__":
     unittest.main()
