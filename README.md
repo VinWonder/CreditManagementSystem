@@ -157,6 +157,13 @@ oldest unpaid items first. The customer's page shows each item as paid, partly
 paid or due, payment lists show what a payment was for, and one reminder lists
 only what is still owed, item by item.
 
+After the admin logs or approves a payment (or an M-Pesa prompt is paid), a
+receipt page offers a ready-written confirmation for the customer: the amount,
+the date and time in EAT, how they paid and the reference, the items the
+payment covered and the balance still owed. The admin can edit it, then press
+WhatsApp or SMS to send it from their own phone. Any confirmed payment can be
+receipted again from payment history.
+
 Every payment records how the customer paid: cash, bank transfer/deposit,
 agent withdrawal, M-Pesa Send Money, M-Pesa Till, M-Pesa Paybill, cheque, or
 an M-Pesa prompt sent from the app (see below).
