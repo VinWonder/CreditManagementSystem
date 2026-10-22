@@ -2,7 +2,7 @@ import re
 import smtplib
 import unittest
 from datetime import datetime, timedelta
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from app import create_app
 from app.auth.email import send_email
@@ -288,6 +288,41 @@ class SendEmailTests(unittest.TestCase):
 
         self.assertFalse(sent)
         self.assertIn("smtp.example.com:587", reason)
+
+    def _brevo_app(self):
+        return self._app(BREVO_API_KEY="xkeysib-test", MAIL_FROM="Duka Credit <shop@gmail.com>", SMTP_HOST="")
+
+    def test_brevo_sends_over_https_when_its_key_is_set(self):
+        response = MagicMock(status_code=201)
+        response.json.return_value = {"messageId": "<abc@smtp-relay.mailin.fr>"}
+        with self._brevo_app().app_context(), patch("app.auth.email.requests.post", return_value=response) as post,                 patch("app.auth.email.smtplib.SMTP") as smtp:
+            sent, info = send_email("owner@example.com", "Code", "Your code is 123456")
+
+        self.assertEqual((sent, info), (True, "sent"))
+        smtp.assert_not_called()
+        self.assertEqual(post.call_args.args[0], "https://api.brevo.com/v3/smtp/email")
+        self.assertEqual(post.call_args.kwargs["headers"]["api-key"], "xkeysib-test")
+        payload = post.call_args.kwargs["json"]
+        self.assertEqual(payload["sender"], {"name": "Duka Credit", "email": "shop@gmail.com"})
+        self.assertEqual(payload["to"], [{"email": "owner@example.com"}])
+        self.assertEqual(payload["textContent"], "Your code is 123456")
+
+    def test_brevo_errors_are_explained(self):
+        refused = MagicMock(status_code=401)
+        refused.json.return_value = {"message": "Key not found"}
+        unverified = MagicMock(status_code=400)
+        unverified.json.return_value = {"message": "Sender is not valid"}
+        with self._brevo_app().app_context(), patch("app.auth.email.requests.post", side_effect=[refused, unverified]):
+            self.assertIn("refused the API key", send_email("a@example.com", "s", "b")[1])
+            self.assertIn("verified sender in Brevo", send_email("a@example.com", "s", "b")[1])
+
+    def test_production_accepts_brevo_instead_of_smtp(self):
+        config = type("Prod", (EmailVerificationConfig,), {
+            "APP_ENV": "production", "SECRET_KEY": "prod-secret", "SESSION_COOKIE_SECURE": True,
+            "SQLALCHEMY_DATABASE_URI": "postgresql+psycopg://u:p@localhost/x", "SMTP_HOST": "",
+            "BREVO_API_KEY": "xkeysib-test",
+        })
+        self.assertEqual(create_app(config).config["BREVO_API_KEY"], "xkeysib-test")
 
     def test_cli_reports_missing_smtp_settings(self):
         result = self._app().test_cli_runner().invoke(args=["send-test-email", "a@example.com"])
