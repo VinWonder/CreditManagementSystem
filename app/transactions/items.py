@@ -9,6 +9,7 @@ uses before any manual balance corrections.
 
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 
 from app.models import CreditTransaction, PaymentAllocation, SaleItem
@@ -69,33 +70,67 @@ def customer_item_balances(customer, include_pending=False):
         else:
             balances.append(ItemBalance(sale, None, sale.item_description, Decimal(sale.amount)))
 
-    payments = [payment for payment in customer.payments if payment.approval_status in statuses]
+    balances, _paid_by = _settle(customer, statuses, balances, by_item_id)
+    return balances
 
-    explicit = defaultdict(lambda: ZERO)
-    unallocated = ZERO
+
+def payment_item_breakdown(customer):
+    """For each approved payment, the items it paid: {payment_id: [(ItemBalance, amount)]}.
+
+    Uses the same rules as customer_item_balances, taking payments that name no
+    items in the order they were made, so a receipt can say what was paid for.
+    """
+    balances = []
+    by_item_id = {}
+    for balance in customer_item_balances(customer):
+        balance.paid = ZERO
+        balances.append(balance)
+        if balance.item_id is not None:
+            by_item_id[balance.item_id] = balance
+    _balances, paid_by = _settle(customer, ("approved",), balances, by_item_id)
+    return paid_by
+
+
+def _settle(customer, statuses, balances, by_item_id):
+    """Apply payments to items: named items first, then the oldest unpaid items.
+
+    Returns the balances and, per payment, which items it paid and how much.
+    """
+    payments = sorted(
+        (payment for payment in customer.payments if payment.approval_status in statuses),
+        key=lambda payment: (payment.payment_date or datetime.min, payment.payment_id or 0),
+    )
+    paid_by = defaultdict(list)
+    # Money each payment still has to give after its named items, in payment order.
+    leftovers = []
     for payment in payments:
         named = ZERO
         for allocation in payment.allocations:
-            explicit[allocation.sale_item_id] += Decimal(allocation.amount)
-            named += Decimal(allocation.amount)
-        unallocated += max(Decimal(payment.amount_paid) - named, ZERO)
+            amount = Decimal(allocation.amount)
+            named += amount
+            balance = by_item_id.get(allocation.sale_item_id)
+            applied = min(amount, balance.remaining) if balance is not None else ZERO
+            if applied > ZERO:
+                balance.paid += applied
+                paid_by[payment.payment_id].append((balance, applied))
+            if amount - applied > ZERO:
+                leftovers.append([payment, amount - applied])
+        unnamed = max(Decimal(payment.amount_paid) - named, ZERO)
+        if unnamed > ZERO:
+            leftovers.append([payment, unnamed])
 
-    for item_id, amount in explicit.items():
-        balance = by_item_id.get(item_id)
-        if balance is None:
-            unallocated += amount
-            continue
-        applied = min(amount, balance.amount)
-        balance.paid += applied
-        unallocated += amount - applied
-
-    for balance in balances:
-        if unallocated <= ZERO:
-            break
-        applied = min(unallocated, balance.remaining)
-        balance.paid += applied
-        unallocated -= applied
-    return balances
+    queue = iter(balance for balance in balances)
+    current = next(queue, None)
+    for payment, amount in leftovers:
+        while amount > ZERO and current is not None:
+            if current.remaining <= ZERO:
+                current = next(queue, None)
+                continue
+            applied = min(amount, current.remaining)
+            current.paid += applied
+            amount -= applied
+            paid_by[payment.payment_id].append((current, applied))
+    return balances, paid_by
 
 
 def allocate_payment(payment, customer, sale_item_ids):
