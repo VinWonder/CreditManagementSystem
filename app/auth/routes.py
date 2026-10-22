@@ -154,7 +154,10 @@ def create_login_challenge(retailer):
 
 
 def create_email_verification(retailer):
-    """Email a fresh one-time code to the retailer. Returns (flash_category, message)."""
+    """Email a fresh one-time code to the retailer. Returns (flash_category, message).
+
+    The category is "danger" only when the email could not be sent at all.
+    """
     latest = (
         EmailVerificationCode.query.filter_by(retailer_id=retailer.retailer_id, used_at=None)
         .order_by(EmailVerificationCode.created_at.desc())
@@ -187,7 +190,7 @@ def create_email_verification(retailer):
     if not success:
         db.session.rollback()
         current_app.logger.warning("Verification email failed: %s", info)
-        return "warning", "We could not send the verification email. Please try again shortly."
+        return "danger", "We could not send the verification email. Please try again shortly."
     db.session.commit()
     if info == "simulated":
         # No SMTP server is configured, so nothing left this machine.
@@ -386,7 +389,26 @@ def register():
                 getattr(form, field_name).errors.append(message)
             return render_template("auth/register.html", form=form)
 
-        return start_email_verification(retailer)
+        session["email_verification_retailer_id"] = retailer.retailer_id
+        category, message = create_email_verification(retailer)
+        if category == "danger":
+            # Without the code the account could never be used; don't let it
+            # block a second try with the same name, phone and email.
+            session.pop("email_verification_retailer_id", None)
+            db.session.delete(retailer)
+            db.session.commit()
+            if logo_filename:
+                try:
+                    os.remove(os.path.join(current_app.config["SHOP_LOGO_UPLOAD_FOLDER"], logo_filename))
+                except OSError:
+                    pass
+            form.email.errors.append(
+                f"We couldn't send the verification email to {email}, so your account was not "
+                "created. Check the address and try again in a minute."
+            )
+            return render_template("auth/register.html", form=form)
+        flash(message, category)
+        return redirect(url_for("auth.verify_email"))
 
     return render_template("auth/register.html", form=form)
 
