@@ -188,14 +188,30 @@ class EmailVerificationTests(unittest.TestCase):
             EmailVerificationCode.query.filter_by(used_at=None).count(), 1
         )
 
-    def test_failed_email_leaves_no_usable_code(self):
-        self.send_email.side_effect = lambda *args: (False, "The email could not be sent")
+    def test_failed_email_keeps_nothing_so_the_retailer_can_try_again(self):
+        self.send_email.side_effect = lambda *args: (False, "Could not connect to smtp.gmail.com:587")
 
-        self._register()
-        page = self.client.get("/auth/verify-email")
+        response = self._register()
 
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"couldn&#39;t send the verification email to owner@example.com", response.data)
+        self.assertEqual(Retailer.query.count(), 0)
         self.assertEqual(EmailVerificationCode.query.count(), 0)
-        self.assertIn(b"could not send the verification email", page.data)
+
+        self.send_email.side_effect = None
+        self.send_email.return_value = (True, "sent")
+        retry = self._register()
+        self.assertTrue(retry.headers["Location"].endswith("/auth/verify-email"))
+        self.assertEqual(Retailer.query.count(), 1)
+
+    def test_registering_again_with_the_same_email_replaces_an_unverified_signup(self):
+        self._register()
+
+        again = self._register()
+
+        self.assertTrue(again.headers["Location"].endswith("/auth/verify-email"))
+        self.assertEqual(Retailer.query.count(), 1)
+        self.assertEqual(len(self.sent), 2)
 
     def test_retailer_is_told_when_email_is_not_set_up(self):
         self.send_email.side_effect = lambda *args: (True, "simulated")

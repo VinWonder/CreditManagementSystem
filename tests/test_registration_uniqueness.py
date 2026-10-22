@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime
 from unittest.mock import patch
 
 from sqlalchemy.exc import IntegrityError
@@ -38,6 +39,9 @@ class RegistrationUniquenessTests(unittest.TestCase):
         email_patch.start()
         self.addCleanup(email_patch.stop)
         self._register(name="Mama Njeri Shop", phone="+254700000011", email="owner@gmail.com")
+        # The shop being protected has finished signing up.
+        Retailer.query.one().email_verified_at = datetime.utcnow()
+        db.session.commit()
 
     def tearDown(self):
         db.session.remove()
