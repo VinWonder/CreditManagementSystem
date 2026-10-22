@@ -206,9 +206,46 @@ letter, a number and a symbol, and no spaces. The forms show a live checklist.
 Forgotten passwords: the retailer enters their phone number or email and a
 6-digit reset code is emailed to the address on the account, usually within
 seconds (accounts without an email get it by SMS). A new code can be requested
-once a minute. Phone verification and SMS sign-in codes are currently disabled.
+once a minute. Shops manage their name, logo, phone, email and password from Profile in the
+account menu. Phone verification and SMS sign-in codes are currently disabled.
 
 ---
+
+### Deploy on Render
+
+1. **Database:** New + → PostgreSQL (region Frankfurt). Copy its *Internal
+   Database URL*.
+2. **Web service:** New + → Web Service from this repository, same region.
+   - Build command: `pip install -r requirements.txt`
+   - Start command:
+     `flask --app run db upgrade && gunicorn run:app --workers 2 --timeout 60 --bind 0.0.0.0:$PORT`
+3. **Environment:** `PYTHON_VERSION=3.12.8`, `APP_ENV=production`, `SECRET_KEY`
+   (generate), `SESSION_COOKIE_SECURE=true`, `DATABASE_URL` (internal URL),
+   `MESSAGING_CREDENTIALS_ENCRYPTION_KEY`, `PUBLIC_BASE_URL` (the service's
+   `https://…onrender.com` address), `MAIL_FROM`, and email (below).
+4. **Email:** Render's free plan blocks outgoing SMTP, so Gmail settings cannot
+   send codes there. Create a free account at https://www.brevo.com, add and
+   verify your `MAIL_FROM` address under *Senders*, create an API key under
+   *SMTP & API → API keys*, and set `BREVO_API_KEY`. When it is set, emails go
+   through Brevo instead of SMTP.
+
+**Redeploy:** pushing to `main` redeploys automatically. To redeploy by hand,
+open the service → *Manual Deploy* → *Deploy latest commit*. Database changes
+run on start-up.
+
+**Manage accounts on Render** from your own computer (free services have no
+shell). Copy the database's *External Database URL*, then in PowerShell:
+
+```powershell
+$env:DATABASE_URL = "the External Database URL"
+$env:MESSAGING_CREDENTIALS_ENCRYPTION_KEY = "the same key as on Render"
+venv\Scripts\python.exe -m flask --app run accounts list
+venv\Scripts\python.exe -m flask --app run accounts purge-unverified --all   # clear unverified sign-ups
+venv\Scripts\python.exe -m flask --app run accounts delete <shop>            # delete a test shop
+```
+
+Close that PowerShell window afterwards so your local app uses your own
+database again.
 
 ### Set up M-Pesa payment prompts (STK Push)
 
