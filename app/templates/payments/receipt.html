@@ -14,6 +14,7 @@
       <p>{{ payment.amount_paid | kes }} received {{ payment.payment_date|nairobi('%d %b %Y · %H:%M') }} EAT. {{ payment_method_badge(payment) }}</p>
     </div>
 
+    <div class="customer-form">
     <div class="customer-form-field">
       <label class="form-label" for="receipt-message">Message</label>
       <textarea class="form-control receipt-message" id="receipt-message" rows="8" maxlength="1000">{{ message }}</textarea>
@@ -37,6 +38,7 @@
     <div class="customer-form-actions">
       <a class="customer-cancel-link" href="{{ url_for('payments.list_payments') }}">Skip for now</a>
       <a class="customer-cancel-link" href="{{ url_for('customers.view_customer', customer_id=payment.customer_id) }}">View {{ payment.customer.full_name }}</a>
+    </div>
     </div>
   </div>
 </section>
