@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "account/_field.html" import field %}
+{% block title %}Confirm new email{% endblock %}
+{% block content %}
+<section class="customer-form-layout account-page" aria-labelledby="confirm-title">
+  <a class="customer-form-back" href="{{ url_for('account.profile') }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Profile</a>
+  <div class="customer-form-card">
+    <div class="customer-form-intro">
+      <span class="customer-form-mark"><i class="bi bi-envelope-check" aria-hidden="true"></i></span>
+      <p class="eyebrow mb-1">Account email</p>
+      <h1 id="confirm-title">Check your new inbox</h1>
+      <p>We sent a six-digit code to <strong>{{ pending_email }}</strong>. It expires in {{ code_minutes }} minutes. Your email stays <strong>{{ current_user.email or 'not set' }}</strong> until you enter it.</p>
+    </div>
+    <form class="customer-form" method="POST" novalidate>
+      {{ form.hidden_tag() }}
+      {{ field(form.code, "bi-123", "Can't find it? Check your spam folder.", {"inputmode": "numeric", "autocomplete": "one-time-code", "maxlength": "6", "placeholder": "000000"}) }}
+      <div class="customer-form-actions">
+        <button class="customer-save-button" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i>{{ form.submit.label.text }}</button>
+        <a class="customer-cancel-link" href="{{ url_for('account.change_email') }}">Use a different email</a>
+      </div>
+    </form>
+    <form class="customer-form pt-0" method="POST" action="{{ url_for('account.resend_email_code') }}">
+      {{ resend_form.hidden_tag() }}
+      <button type="submit" class="btn btn-link p-0">Send a new code</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

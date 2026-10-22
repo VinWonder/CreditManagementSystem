@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "account/_field.html" import field %}
+{% block title %}Change email{% endblock %}
+{% block content %}
+<section class="customer-form-layout account-page" aria-labelledby="email-title">
+  <a class="customer-form-back" href="{{ url_for('account.profile') }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Profile</a>
+  <div class="customer-form-card">
+    <div class="customer-form-intro">
+      <span class="customer-form-mark"><i class="bi bi-envelope" aria-hidden="true"></i></span>
+      <p class="eyebrow mb-1">Account email</p>
+      <h1 id="email-title">Change email</h1>
+      <p>Your email is <strong>{{ current_user.email or 'not set' }}</strong>. We'll send a code to the new address; it only changes once you enter that code. Password reset codes go to this email.</p>
+    </div>
+    <form class="customer-form" method="POST" novalidate>
+      {{ form.hidden_tag() }}
+      {{ field(form.email, "bi-envelope", "", {"autocomplete": "email", "inputmode": "email", "maxlength": "255"}) }}
+      {{ field(form.current_password, "bi-lock", "", {"autocomplete": "current-password"}) }}
+      <div class="customer-form-actions">
+        <button class="customer-save-button" type="submit"><i class="bi bi-send" aria-hidden="true"></i>{{ form.submit.label.text }}</button>
+        <a class="customer-cancel-link" href="{{ url_for('account.profile') }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

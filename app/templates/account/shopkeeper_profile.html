@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<section class="customer-form-layout account-page" aria-labelledby="profile-title">
+  <div class="customer-form-card">
+    <div class="customer-form-intro">
+      <span class="customer-form-mark"><i class="bi bi-person-badge" aria-hidden="true"></i></span>
+      <p class="eyebrow mb-1">Shopkeeper</p>
+      <h1 id="profile-title">{{ current_user.full_name }}</h1>
+      <p>You work at <strong>{{ current_user.business_name }}</strong>. Ask your shop admin if your name or phone number needs changing.</p>
+    </div>
+    <div class="account-summary">
+      <div class="account-summary-row">
+        <span class="account-summary-icon"><i class="bi bi-phone" aria-hidden="true"></i></span>
+        <span class="account-summary-text"><small>Phone (you sign in with this)</small><strong>{{ current_user.phone_number }}</strong></span>
+      </div>
+      <div class="account-summary-row">
+        <span class="account-summary-icon"><i class="bi bi-key" aria-hidden="true"></i></span>
+        <span class="account-summary-text"><small>Password</small><strong>••••••••</strong></span>
+        <a class="account-summary-link" href="{{ url_for('account.change_password') }}">Change</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

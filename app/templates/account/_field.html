@@ -1,0 +1,16 @@
+{# One labelled input in the account pages, with help text and errors. #}
+{% macro field(f, icon, help="", attrs={}) %}
+<div class="customer-form-field">
+  {{ f.label(class="form-label") }}
+  <span class="customer-input-wrap">
+    <i class="bi {{ icon }}" aria-hidden="true"></i>
+    {{ f(class="form-control", **dict(attrs, **{"aria-describedby": f.id ~ "-help", "aria-invalid": "true" if f.errors else "false"})) }}
+  </span>
+  {% if help %}<small class="customer-field-help" id="{{ f.id }}-help">{{ help }}</small>{% endif %}
+  {% if f.errors %}
+  <div class="customer-field-errors" role="alert">
+    {% for e in f.errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ e }}</span>{% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}

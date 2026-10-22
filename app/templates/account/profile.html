@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "account/_field.html" import field %}
+{% block title %}Profile{% endblock %}
+{% block page_head %}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/css/intlTelInput.css">{% endblock %}
+{% block content %}
+<section class="customer-form-layout account-page" aria-labelledby="profile-title">
+  <div class="customer-form-card">
+    <div class="customer-form-intro">
+      <span class="customer-form-mark account-logo">
+        {% if current_user.logo_filename %}<img src="{{ url_for('static', filename='uploads/logos/' ~ current_user.logo_filename) }}" alt="">{% else %}<i class="bi bi-shop" aria-hidden="true"></i>{% endif %}
+      </span>
+      <p class="eyebrow mb-1">Shop admin</p>
+      <h1 id="profile-title">Profile</h1>
+      <p>Keep your shop's details up to date. Customers see your shop name in reminders, receipts and M-Pesa prompts.</p>
+    </div>
+
+    <div class="account-summary">
+      <div class="account-summary-row">
+        <span class="account-summary-icon"><i class="bi bi-envelope" aria-hidden="true"></i></span>
+        <span class="account-summary-text">
+          <small>Email</small>
+          <strong>{{ current_user.email or 'Not set' }}</strong>
+          {% if current_user.pending_email %}<em>Waiting to confirm {{ current_user.pending_email }}</em>{% endif %}
+        </span>
+        <a class="account-summary-link" href="{{ url_for('account.confirm_email' if current_user.pending_email else 'account.change_email') }}">{{ 'Enter code' if current_user.pending_email else 'Change' }}</a>
+      </div>
+      <div class="account-summary-row">
+        <span class="account-summary-icon"><i class="bi bi-key" aria-hidden="true"></i></span>
+        <span class="account-summary-text"><small>Password</small><strong>••••••••</strong></span>
+        <a class="account-summary-link" href="{{ url_for('account.change_password') }}">Change</a>
+      </div>
+    </div>
+
+    <form class="customer-form" method="POST" enctype="multipart/form-data" novalidate>
+      {{ form.hidden_tag() }}
+      {{ field(form.business_name, "bi-shop", "Must be different from every other shop's name.", {"maxlength": "100", "autocomplete": "organization"}) }}
+      {{ field(form.owner_name, "bi-person", "", {"maxlength": "100", "autocomplete": "name"}) }}
+      <div class="customer-form-field">
+        {{ form.phone_number.label(class="form-label") }}
+        {{ form.phone_number(class="form-control", autocomplete="tel", inputmode="tel", **{"aria-describedby": "phone-help"}) }}
+        <small class="customer-field-help" id="phone-help">You sign in with this number.</small>
+        {% for e in form.phone_number.errors %}<div class="customer-field-errors" role="alert"><span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ e }}</span></div>{% endfor %}
+      </div>
+      {{ field(form.current_password, "bi-lock", "Only needed if you change the phone number.", {"autocomplete": "current-password"}) }}
+      <div class="customer-form-field">
+        {{ form.logo.label(class="form-label") }}
+        {{ form.logo(class="form-control", accept="image/png,image/jpeg,image/webp") }}
+        <small class="customer-field-help">JPG, PNG or WEBP up to 3 MB.</small>
+        {% if current_user.logo_filename %}
+        <div class="form-check mt-2">{{ form.remove_logo(class="form-check-input") }} {{ form.remove_logo.label(class="form-check-label") }}</div>
+        {% endif %}
+        {% for e in form.logo.errors %}<div class="customer-field-errors" role="alert"><span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ e }}</span></div>{% endfor %}
+      </div>
+      <div class="customer-form-actions">
+        <button class="customer-save-button" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i>{{ form.submit.label.text }}</button>
+        <a class="customer-cancel-link" href="{{ url_for('main.dashboard') }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/js/intlTelInput.min.js"></script><script src="{{ url_for('static', filename='js/auth.js') }}"></script>{% endblock %}
