@@ -19,6 +19,8 @@ class Retailer(UserMixin, db.Model):
     # The inbox the email delivers to (see app.auth.identity.canonical_email), so
     # owner+2@gmail.com cannot register a second shop for owner@gmail.com.
     email_canonical = db.Column(db.String(255), unique=True, nullable=True)
+    # A new email waiting for its verification code before it replaces `email`.
+    pending_email = db.Column(db.String(255), nullable=True)
     phone_verified_at = db.Column(db.DateTime, nullable=True)
     email_verified_at = db.Column(db.DateTime, nullable=True)
     logo_filename = db.Column(db.String(255), nullable=True)

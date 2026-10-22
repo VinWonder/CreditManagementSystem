@@ -165,6 +165,7 @@ def _upgrade_local_auth_schema():
         "logo_filename": "VARCHAR(255)",
         "email_verified_at": "DATETIME",
         "email_canonical": "VARCHAR(255)",
+        "pending_email": "VARCHAR(255)",
     }
     with db.engine.begin() as connection:
         for name, definition in additions.items():
