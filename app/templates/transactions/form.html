@@ -166,6 +166,7 @@
 
   function addItem() {
     list.insertAdjacentHTML("beforeend", template.innerHTML);
+    window.DukaSelect.enhance(list.lastElementChild);
     renumber();
     updateTotal();
     list.querySelector("[data-item-row]:last-child input").focus();
