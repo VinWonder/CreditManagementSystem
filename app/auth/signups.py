@@ -18,12 +18,9 @@ def _cutoff():
     return datetime.utcnow() - timedelta(hours=current_app.config.get("UNVERIFIED_SIGNUP_HOURS", 24))
 
 
-def _abandoned():
-    return Retailer.query.filter(
-        Retailer.email.isnot(None),
-        Retailer.email_verified_at.is_(None),
-        Retailer.created_at < _cutoff(),
-    )
+def _abandoned(any_age=False):
+    query = Retailer.query.filter(Retailer.email.isnot(None), Retailer.email_verified_at.is_(None))
+    return query if any_age else query.filter(Retailer.created_at < _cutoff())
 
 
 def _holds_shop_data(retailer):
@@ -77,9 +74,9 @@ def release_abandoned_signups(business_name, phone_number, email):
     return len(released)
 
 
-def purge_abandoned_signups(dry_run=False):
-    """Delete every abandoned sign-up. Returns the accounts removed (or that would be)."""
-    abandoned = [retailer for retailer in _abandoned().all() if not _holds_shop_data(retailer)]
+def purge_abandoned_signups(dry_run=False, any_age=False):
+    """Delete every abandoned sign-up (any_age: every unverified one). Returns those removed."""
+    abandoned = [retailer for retailer in _abandoned(any_age).all() if not _holds_shop_data(retailer)]
     if not dry_run:
         for retailer in abandoned:
             _delete(retailer)
