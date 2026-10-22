@@ -20,8 +20,10 @@ def create_app(config_class=Config):
             raise RuntimeError("Enable SESSION_COOKIE_SECURE when running behind HTTPS.")
         if not app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql+"):
             raise RuntimeError("Production must use PostgreSQL, not SQLite.")
-        if not app.config.get("SMTP_HOST"):
-            raise RuntimeError("Set SMTP_HOST so new retailers can receive email verification codes.")
+        if not (app.config.get("SMTP_HOST") or app.config.get("BREVO_API_KEY")):
+            raise RuntimeError(
+                "Set SMTP_HOST or BREVO_API_KEY so new retailers can receive email verification codes."
+            )
 
     db.init_app(app)
     login_manager.init_app(app)
