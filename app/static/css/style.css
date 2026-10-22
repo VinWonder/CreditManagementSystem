@@ -1840,3 +1840,18 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .duka-select.single.input-active .ts-control { cursor: pointer; }
 /* Focus is shown by the green ring (or the surrounding box), not the browser outline. */
 .duka-select .ts-control:focus, .duka-select .ts-control:focus-visible { outline: none; }
+/* Small screens: the open list is a panel over a dimmed page, sized for tapping. */
+.duka-select-backdrop { animation: duka-backdrop-in 140ms ease-out; background: rgba(15, 34, 30, 0.45); inset: 0; position: fixed; z-index: 1084; }
+@keyframes duka-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+body.duka-select-open { overflow: hidden; }
+@media (max-width: 767.98px) {
+  .duka-dropdown { border-radius: 1rem; bottom: auto !important; left: 0.75rem !important; margin: 0; max-height: min(70dvh, 32rem); padding: 0.5rem; position: fixed !important; right: 0.75rem !important; top: calc(env(safe-area-inset-top, 0px) + 4.25rem) !important; width: auto !important; }
+  .duka-dropdown[data-title]::before { border-bottom: 1px solid #edf2f0; color: #1e5448; content: attr(data-title); display: block; font-size: 0.95rem; font-weight: 800; margin: -0.5rem -0.5rem 0.4rem; padding: 0.85rem 1rem 0.75rem; }
+  .duka-dropdown .ts-dropdown-content { max-height: calc(min(70dvh, 32rem) - 7rem); overscroll-behavior: contain; }
+  .duka-dropdown .option { font-size: 0.95rem; min-height: 3rem; padding: 0.7rem 2.4rem 0.7rem 0.8rem; }
+  .duka-dropdown .dropdown-input-wrap { margin: -0.4rem -0.5rem 0.4rem; padding: 0.5rem 0.6rem; }
+  /* 16px stops iPhones zooming into the search box. */
+  .duka-dropdown .dropdown-input { font-size: 16px; padding-bottom: 0.65rem; padding-top: 0.65rem; }
+  .duka-select .ts-control { font-size: 0.9rem; min-height: 2.9rem; }
+  .duka-select.is-compact .ts-control { font-size: 0.75rem; min-height: 2.2rem; }
+}
