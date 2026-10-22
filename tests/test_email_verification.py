@@ -317,6 +317,18 @@ class SendEmailTests(unittest.TestCase):
             self.assertIn("refused the API key", send_email("a@example.com", "s", "b")[1])
             self.assertIn("verified sender in Brevo", send_email("a@example.com", "s", "b")[1])
 
+    def test_brevo_key_problems_say_what_to_do(self):
+        blocked = MagicMock(status_code=401)
+        blocked.json.return_value = {"message": "We have detected you are using an unrecognised IP address"}
+        with self._brevo_app().app_context(), patch("app.auth.email.requests.post", return_value=blocked):
+            self.assertIn("turn off IP blocking", send_email("a@example.com", "s", "b")[1])
+
+        smtp_key_app = self._app(BREVO_API_KEY="xsmtpsib-abc", MAIL_FROM="shop@gmail.com", SMTP_HOST="")
+        refused = MagicMock(status_code=401)
+        refused.json.return_value = {"message": "Key not found"}
+        with smtp_key_app.app_context(), patch("app.auth.email.requests.post", return_value=refused):
+            self.assertIn("That is an SMTP key", send_email("a@example.com", "s", "b")[1])
+
     def test_production_accepts_brevo_instead_of_smtp(self):
         config = type("Prod", (EmailVerificationConfig,), {
             "APP_ENV": "production", "SECRET_KEY": "prod-secret", "SESSION_COOKIE_SECURE": True,

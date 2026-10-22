@@ -46,7 +46,14 @@ def _send_with_brevo(to_address, subject, body):
         except ValueError:
             detail = ""
         if response.status_code == 401:
-            reason = "Brevo refused the API key. Check BREVO_API_KEY."
+            key = config["BREVO_API_KEY"]
+            if key.startswith("xsmtpsib-"):
+                hint = "That is an SMTP key; create an API key (it starts with xkeysib-)."
+            elif "ip" in detail.lower():
+                hint = "Brevo blocked this server's IP address; turn off IP blocking under Security → Authorised IPs."
+            else:
+                hint = "Check BREVO_API_KEY is a Brevo API key (xkeysib-...)."
+            reason = f"Brevo refused the API key ({detail or 'unauthorised'}). {hint}"
         else:
             reason = (
                 f"Brevo did not send the email ({response.status_code}: {detail}). "

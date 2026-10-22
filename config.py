@@ -54,7 +54,8 @@ class Config:
     SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "true").lower() == "true"
     MAIL_FROM = os.environ.get("MAIL_FROM", "")
     # Brevo email API: use instead of SMTP where outgoing SMTP ports are blocked (e.g. Render free).
-    BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "").strip()
+    # Pasted keys sometimes keep quotes or spaces around them.
+    BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "").strip().strip("'\"").strip()
 
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL", "sqlite:///" + os.path.join(basedir, "credit_system.db")
