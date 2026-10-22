@@ -153,11 +153,15 @@ def create_login_challenge(retailer):
     return challenge, True, info
 
 
-def create_email_verification(retailer):
+def create_email_verification(retailer, to_address=None):
     """Email a fresh one-time code to the retailer. Returns (flash_category, message).
 
-    The category is "danger" only when the email could not be sent at all.
+    to_address sends the code to a new address the retailer wants to switch to
+    instead of the current one. The category is "danger" only when the email
+    could not be sent at all.
     """
+    to_address = to_address or retailer.email
+    changing = to_address != retailer.email
     latest = (
         EmailVerificationCode.query.filter_by(retailer_id=retailer.retailer_id, used_at=None)
         .order_by(EmailVerificationCode.created_at.desc())
@@ -180,12 +184,18 @@ def create_email_verification(retailer):
         )
     )
     db.session.flush()
+    reason = (
+        "confirm this as the new email for your Duka Credit shop"
+        if changing
+        else "finish setting up your Duka Credit account"
+    )
     success, info = send_email(
-        retailer.email,
+        to_address,
         "Your Duka Credit verification code",
         f"Hello {retailer.owner_name},\n\n"
-        f"Your Duka Credit verification code is {code}. It expires in {minutes} minutes.\n\n"
-        "If you did not create a Duka Credit account, you can ignore this email.\n",
+        f"Your Duka Credit verification code is {code}. Use it to {reason}. "
+        f"It expires in {minutes} minutes.\n\n"
+        "If you did not ask for this, you can ignore this email.\n",
     )
     if not success:
         db.session.rollback()
@@ -205,7 +215,7 @@ def create_email_verification(retailer):
             "Email sending is not set up on this server yet, so no email was sent. "
             "For testing, the code is printed in the server terminal.",
         )
-    return "info", f"We sent a verification code to {retailer.email}."
+    return "info", f"We sent a verification code to {to_address}."
 
 
 def registration_conflicts(business_name, phone_number, email):
