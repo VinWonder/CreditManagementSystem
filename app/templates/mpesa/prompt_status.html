@@ -25,6 +25,10 @@
       </div>
     </div>
 
+    <a class="customer-reminder-channel is-whatsapp mpesa-wait-receipt" id="mpesa-wait-receipt-link" href="{{ initial.receipt_url or '#' }}"{% if not initial.receipt_url %} hidden{% endif %}>
+      <i class="bi bi-send" aria-hidden="true"></i> Send the customer a receipt
+    </a>
+
     <div class="customer-form-actions">
       <a class="customer-save-button" href="{{ url_for('customers.view_customer', customer_id=stk.customer_id) }}"><i class="bi bi-person" aria-hidden="true"></i> View {{ stk.customer.full_name }}</a>
       <a class="customer-cancel-link" href="{{ url_for('payments.list_payments') }}">Payment history</a>
@@ -55,6 +59,11 @@
         if (data.receipt) {
           receipt.textContent = `M-Pesa receipt ${data.receipt}`;
           receipt.hidden = false;
+        }
+        if (data.receipt_url) {
+          const link = document.getElementById("mpesa-wait-receipt-link");
+          link.href = data.receipt_url;
+          link.hidden = false;
         }
       }
     } catch (error) {

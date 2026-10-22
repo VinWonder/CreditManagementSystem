@@ -154,6 +154,12 @@ def _status_payload(stk, message=None):
         "status": stk.status,
         "message": message or messages[stk.status],
         "receipt": stk.mpesa_receipt,
+        # The admin can send the customer a confirmation once M-Pesa confirms it.
+        "receipt_url": (
+            url_for("payments.payment_receipt", payment_id=stk.payment_id)
+            if stk.status == "paid" and stk.payment_id and current_user.is_admin
+            else None
+        ),
     }
 
 

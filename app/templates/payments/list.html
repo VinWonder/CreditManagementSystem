@@ -97,6 +97,7 @@
               </form>
               {% else %}
               <span class="small text-muted">{% if payment.reviewed_at %}Reviewed {{ payment.reviewed_at|nairobi('%d %b %Y · %H:%M') }} EAT{% else %}—{% endif %}</span>
+              {% if payment.approval_status == 'approved' %}<a class="payment-receipt-link d-flex" href="{{ url_for('payments.payment_receipt', payment_id=payment.payment_id) }}"><i class="bi bi-send" aria-hidden="true"></i> Send receipt</a>{% endif %}
               {% endif %}
             </td>
             {% endif %}
