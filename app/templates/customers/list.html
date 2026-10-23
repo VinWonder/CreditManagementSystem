@@ -1,7 +1,8 @@
 {% extends "base.html" %}
+{% from "_daybook.html" import chip, show_more %}
 {% block title %}Customers{% endblock %}
 {% block content %}
-<section class="customer-directory" aria-labelledby="customer-directory-title">
+<section class="customer-directory{% if print_mode %} is-print-view{% endif %}" aria-labelledby="customer-directory-title">
   <header class="customer-directory-header">
     <div>
       <p class="eyebrow mb-1">Your customer book</p>
@@ -9,101 +10,79 @@
       <p class="customer-directory-subtitle">Keep customer contact details and credit balances close at hand.</p>
     </div>
     <div class="customer-directory-actions">
-      <button type="button" class="btn customer-print-button" onclick="window.print()"><i class="bi bi-printer" aria-hidden="true"></i> Print list</button>
+      <a class="btn customer-print-button" href="{{ list_url(print=1) }}" aria-label="Print customer list"><i class="bi bi-printer" aria-hidden="true"></i> <span>Print list</span></a>
       <a href="{{ url_for('customers.new_customer') }}" class="btn customer-add-button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Customer</a>
     </div>
   </header>
 
+  {% if print_mode %}
   <div class="customer-print-heading">
     <p>{{ current_user.business_name }}</p>
     <h2>Customer directory</h2>
     {% if query %}<p>Search: {{ query }}</p>{% endif %}
+    {% if show != 'all' %}<p>Showing: {{ filters[show] }}</p>{% endif %}
     <p>{{ customers|length }} {{ 'customer' if customers|length == 1 else 'customers' }}</p>
   </div>
-
-  <div class="customer-directory-toolbar">
+  <table class="table customer-print-table">
+    <thead><tr><th scope="col">Customer</th><th scope="col">Phone</th><th scope="col">Shop</th><th scope="col" class="text-end">Balance</th></tr></thead>
+    <tbody>
+    {% for c in customers %}
+      <tr>
+        <td>{{ c.full_name }}</td>
+        <td>{{ c.phone_number }}</td>
+        <td>{{ c.shop_name or '' }}</td>
+        <td class="text-end">{% if c.ledger and c.ledger.outstanding_balance > 0 %}{{ c.ledger.outstanding_balance | kes }}{% elif c.customer_id in customers_with_purchases %}Paid up{% else %}No purchases yet{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="customer-directory-card daybook-card">
     <form class="customer-search" method="GET" role="search">
+      {% if show != 'all' %}<input type="hidden" name="show" value="{{ show }}">{% endif %}
+      {% if sort != 'name' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+      {% if letter %}<input type="hidden" name="letter" value="{{ letter }}">{% endif %}
       <label class="visually-hidden" for="customer-search-input">Search customers by name, shop, or phone</label>
       <i class="bi bi-search customer-search-icon" aria-hidden="true"></i>
       <input id="customer-search-input" type="search" name="q" placeholder="Search by name, shop, or phone..." value="{{ query }}">
       {% if query %}
-      <a class="customer-search-clear" href="{{ url_for('customers.list_customers') }}" aria-label="Clear customer search"><i class="bi bi-x-lg" aria-hidden="true"></i></a>
+      <a class="customer-search-clear" href="{{ list_url(q=None) }}" aria-label="Clear customer search"><i class="bi bi-x-lg" aria-hidden="true"></i></a>
       {% endif %}
       <button type="submit">Search</button>
     </form>
-    <span class="customer-result-count"><i class="bi bi-person-check" aria-hidden="true"></i>{{ customers|length }} {{ 'customer' if customers|length == 1 else 'customers' }}{% if query %} found{% else %} on file{% endif %}</span>
-  </div>
 
-  <div class="customer-directory-card">
-    {% if customers %}
-    <div class="table-responsive">
-      <table class="table table-stack customer-directory-table align-middle mb-0">
-        <thead>
-          <tr><th scope="col">Customer</th><th scope="col">Preferred channel</th><th scope="col">Outstanding balance</th><th scope="col" class="customer-actions-column"><span class="visually-hidden">Actions</span></th></tr>
-        </thead>
-        <tbody>
-        {% for c in customers %}
-          <tr>
-            <td class="stack-primary">
-              <div class="customer-identity">
-                <span class="customer-avatar" aria-hidden="true">{{ c.full_name.split()[0][0]|upper }}{{ c.full_name.split()[-1][0]|upper if c.full_name.split()|length > 1 else '' }}</span>
-                <span class="customer-identity-copy">
-                  <a class="customer-name" href="{{ url_for('customers.view_customer', customer_id=c.customer_id) }}">{{ c.full_name }}</a>
-                  <span class="customer-contact">
-                    {% if c.shop_name %}<span><i class="bi bi-shop" aria-hidden="true"></i>{{ c.shop_name }}</span>{% endif %}
-                    <a href="tel:{{ c.phone_number }}"><i class="bi bi-telephone" aria-hidden="true"></i>{{ c.phone_number }}</a>                    <span class="customer-record-id">ID {{ c.customer_id }}</span>
-                  </span>
-                </span>
-              </div>
-            </td>
-            <td>
-              <span class="customer-channel">
-                <i class="bi {{ 'bi-chat-dots-fill' if c.preferred_channel == 'whatsapp' else 'bi-chat-square-dots-fill' if c.preferred_channel == 'both' else 'bi-chat-left-text-fill' }}" aria-hidden="true"></i>
-                {{ 'SMS + WhatsApp' if c.preferred_channel == 'both' else c.preferred_channel|capitalize }}
-              </span>
-            </td>
-            <td>
-              {% if c.ledger %}
-                {% if c.ledger.outstanding_balance > 0 %}
-                <span class="customer-balance customer-balance-due">{{ c.ledger.outstanding_balance | kes }}</span>
-                {% elif c.customer_id in customers_with_purchases %}
-                <span class="customer-balance customer-balance-clear"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Paid up</span>
-                {% else %}
-                <span class="customer-balance-unknown">No purchases yet</span>
-                {% endif %}
-              {% else %}
-                <span class="customer-balance-unknown">No ledger</span>
-              {% endif %}
-            </td>
-            <td class="text-end customer-actions-column stack-actions" data-label="">
-              <div class="customer-row-actions">
-                {% set has_balance = c.ledger and c.ledger.outstanding_balance > 0 %}
-                <a href="{{ url_for('customers.view_customer', customer_id=c.customer_id) }}"
-                  class="customer-portfolio-button{{ ' has-balance' if has_balance else '' }}"
-                  aria-label="View portfolio for {{ c.full_name }}{{ ' (balance due)' if has_balance else '' }}">
-                  <span class="customer-portfolio-button-icon" aria-hidden="true"><i class="bi bi-journal-text"></i></span>
-                  <span>View portfolio</span>
-                  <i class="bi bi-arrow-right customer-portfolio-button-arrow" aria-hidden="true"></i>
-                </a>
-                {% if current_user.is_admin %}
-                <a href="{{ url_for('customers.edit_customer', customer_id=c.customer_id) }}" class="customer-action customer-action-edit" aria-label="Edit {{ c.full_name }}" title="Edit customer"><i class="bi bi-pencil" aria-hidden="true"></i></a>
-                <form action="{{ url_for('customers.delete_customer', customer_id=c.customer_id) }}" method="POST" onsubmit="return confirm('Delete this customer?');">
-                  <button type="submit" class="customer-action customer-action-delete" aria-label="Delete {{ c.full_name }}" title="Delete customer"><i class="bi bi-trash3" aria-hidden="true"></i></button>
-                </form>
-                {% endif %}
-              </div>
-            </td>
-          </tr>
+    <div class="daybook-toolbar customer-toolbar">
+      <div class="list-chips" role="group" aria-label="Show customers">
+        {% for key, name in filters.items() %}
+        {{ chip(name, list_url(show=None if key == 'all' else key), show == key, counts[key], {'owing': 'due', 'overdue': 'overdue', 'clear': 'clear'}.get(key, '')) }}
         {% endfor %}
-        </tbody>
-      </table>
+      </div>
+      <div class="list-chips customer-sort" role="group" aria-label="Sort customers">
+        <span class="customer-sort-label">Sort</span>
+        {% for key, name in sorts.items() %}
+        {{ chip(name, list_url(sort=None if key == 'name' else key), sort == key) }}
+        {% endfor %}
+      </div>
     </div>
+
+    {% if letters|length > 1 %}
+    <nav class="letter-jump" aria-label="Show customers by first letter">
+      <a href="{{ list_url(letter=None) }}" class="{{ 'is-active' if not letter }}"{% if not letter %} aria-current="true"{% endif %}>All</a>
+      {% for item in letters %}<a href="{{ list_url(letter=None if letter == item else item) }}" class="{{ 'is-active' if letter == item }}"{% if letter == item %} aria-current="true"{% endif %} aria-label="Names starting with {{ item }}">{{ item }}</a>{% endfor %}
+    </nav>
+    {% endif %}
+
+    {% if groups %}
+    <div class="daybook" data-daybook>
+      {% include "customers/_rows.html" %}
+    </div>
+    {{ show_more(batch, 'customers') }}
     {% else %}
     <div class="customer-empty-state">
-      <span class="customer-empty-icon"><i class="bi {{ 'bi-search' if query else 'bi-people' }}" aria-hidden="true"></i></span>
-      <h2>{% if query %}No customers match that search{% else %}Your customer list is ready{% endif %}</h2>
-      <p>{% if query %}Try another name or phone number, or clear your search to see all customers.{% else %}Add your first customer to start keeping their contact details and credit in one place.{% endif %}</p>
-      {% if query %}
+      <span class="customer-empty-icon"><i class="bi {{ 'bi-search' if total_customers else 'bi-people' }}" aria-hidden="true"></i></span>
+      <h2>{% if not total_customers %}Your customer list is ready{% elif query %}No customers match that search{% else %}No customers here{% endif %}</h2>
+      <p>{% if not total_customers %}Add your first customer to start keeping their contact details and credit in one place.{% elif query %}Try another name or phone number, or clear your search to see all customers.{% else %}No customer is in "{{ filters[show] }}" right now.{% endif %}</p>
+      {% if total_customers %}
       <a class="customer-empty-action" href="{{ url_for('customers.list_customers') }}">Show all customers</a>
       {% else %}
       <a class="customer-empty-action" href="{{ url_for('customers.new_customer') }}"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add your first customer</a>
@@ -111,5 +90,14 @@
     </div>
     {% endif %}
   </div>
+  {% endif %}
 </section>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+{% if print_mode %}
+<script>
+  window.addEventListener("load", () => window.print());
+</script>
+{% endif %}
 {% endblock %}

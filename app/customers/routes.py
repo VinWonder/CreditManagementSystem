@@ -1,6 +1,9 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 
+from sqlalchemy import func
+
+from app import listing
 from app.extensions import db
 from app.models import CreditTransaction, Customer, Ledger, ReminderRule
 from app.customers.forms import CustomerForm
@@ -36,24 +39,114 @@ def _customer_ids_with_credit_sales(customers):
     return {customer_id for customer_id, in rows}
 
 
+CUSTOMER_FILTERS = {
+    "all": "All",
+    "owing": "Owing",
+    "overdue": "Overdue",
+    "clear": "Paid up",
+    "new": "No purchases",
+}
+CUSTOMER_SORTS = {"name": "A–Z", "balance": "Highest balance"}
+
+
+def _customer_filter(query, show):
+    """Narrow a customer query (already joined to Ledger) to one filter chip."""
+    has_sales = (
+        db.session.query(CreditTransaction.transaction_id)
+        .filter(CreditTransaction.customer_id == Customer.customer_id)
+        .exists()
+    )
+    balance = func.coalesce(Ledger.outstanding_balance, 0)
+    if show == "owing":
+        return query.filter(balance > 0)
+    if show == "overdue":
+        return query.filter(balance > 0, func.coalesce(Ledger.days_overdue, 0) > 0)
+    if show == "clear":
+        return query.filter(balance <= 0, has_sales)
+    if show == "new":
+        return query.filter(~has_sales)
+    return query
+
+
+def _first_letter(name):
+    letter = (name or "#").strip()[:1].upper()
+    return letter if letter.isalpha() else "#"
+
+
 @customers_bp.route("/")
 @login_required
 def list_customers():
-    query = request.args.get("q", "").strip()
-    base = Customer.query.filter_by(retailer_id=current_user.retailer_id)
+    query = request.args.get("q", "").strip()[:100]
+    show = request.args.get("show", "all")
+    show = show if show in CUSTOMER_FILTERS else "all"
+    sort = request.args.get("sort", "name")
+    sort = sort if sort in CUSTOMER_SORTS else "name"
+    print_mode = request.args.get("print") == "1"
+
+    base = Customer.query.filter_by(retailer_id=current_user.retailer_id).outerjoin(
+        Ledger, Ledger.customer_id == Customer.customer_id
+    )
     if query:
         base = base.filter(
             (Customer.full_name.ilike(f"%{query}%"))
             | (Customer.phone_number.ilike(f"%{query}%"))
             | (Customer.shop_name.ilike(f"%{query}%"))
         )
-    customers = base.order_by(Customer.full_name.asc()).all()
-    customers_with_purchases = _customer_ids_with_credit_sales(customers)
+    counts = {key: _customer_filter(base, key).count() for key in CUSTOMER_FILTERS}
+    filtered = _customer_filter(base, show)
+    first_letter = func.upper(func.substr(Customer.full_name, 1, 1))
+    letters = sorted(
+        {letter for letter, in filtered.with_entities(first_letter).distinct() if letter and letter.isalpha()}
+    )
+    letter = request.args.get("letter", "").strip().upper()[:1]
+    letter = letter if letter in letters else ""
+    if letter:
+        filtered = filtered.filter(first_letter == letter)
+    if sort == "balance":
+        ordered = filtered.order_by(
+            func.coalesce(Ledger.outstanding_balance, 0).desc(), func.lower(Customer.full_name)
+        )
+    else:
+        ordered = filtered.order_by(func.lower(Customer.full_name), Customer.customer_id)
+
+    if print_mode:
+        customers = ordered.all()
+        return render_template(
+            "customers/list.html",
+            print_mode=True,
+            customers=customers,
+            customers_with_purchases=_customer_ids_with_credit_sales(customers),
+            query=query,
+            show=show,
+            filters=CUSTOMER_FILTERS,
+        )
+
+    batch = listing.take_batch(ordered, filtered.count())
+    if sort == "name":
+        groups = []
+        for customer in batch.rows:
+            initial = _first_letter(customer.full_name)
+            if not groups or groups[-1]["key"] != initial:
+                groups.append({"key": initial, "title": initial, "rows": []})
+            groups[-1]["rows"].append(customer)
+    else:
+        groups = [{"key": "by-balance", "title": "Highest balance first", "rows": batch.rows}] if batch.rows else []
+    template = "customers/_rows.html" if listing.is_partial() else "customers/list.html"
     return render_template(
-        "customers/list.html",
-        customers=customers,
-        customers_with_purchases=customers_with_purchases,
+        template,
+        print_mode=False,
+        groups=groups,
+        batch=batch,
+        customers_with_purchases=_customer_ids_with_credit_sales(batch.rows),
         query=query,
+        show=show,
+        sort=sort,
+        filters=CUSTOMER_FILTERS,
+        sorts=CUSTOMER_SORTS,
+        counts=counts,
+        letters=letters,
+        letter=letter,
+        total_customers=Customer.query.filter_by(retailer_id=current_user.retailer_id).count(),
     )
 
 

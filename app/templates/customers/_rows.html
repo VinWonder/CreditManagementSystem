@@ -1,0 +1,44 @@
+{% from "_daybook.html" import group_open, group_close, batch_meta %}
+{% for group in groups %}
+{{ group_open(group.key, group.title) }}
+  {% for c in group.rows %}
+  {% set has_balance = c.ledger and c.ledger.outstanding_balance > 0 %}
+  <li class="daybook-row customer-row">
+    <span class="daybook-avatar{{ ' is-due' if has_balance }}" aria-hidden="true">{{ c.full_name | initials }}</span>
+    <span class="daybook-main">
+      <a class="daybook-name customer-name" href="{{ url_for('customers.view_customer', customer_id=c.customer_id) }}">{{ c.full_name }}</a>
+      <span class="daybook-sub customer-contact">
+        {% if c.shop_name %}<span><i class="bi bi-shop" aria-hidden="true"></i> {{ c.shop_name }}</span>{% endif %}
+        <a href="tel:{{ c.phone_number }}" aria-label="Call {{ c.full_name }}"><i class="bi bi-telephone" aria-hidden="true"></i> {{ c.phone_number }}</a>
+      </span>
+    </span>
+    <span class="customer-row-balance">
+      {% if has_balance %}
+      <strong class="daybook-amount customer-balance customer-balance-due">{{ c.ledger.outstanding_balance | kes }}</strong>
+      {% if c.ledger.days_overdue > 0 %}<span class="daybook-flag is-due">{{ c.ledger.days_overdue }} {{ 'day' if c.ledger.days_overdue == 1 else 'days' }} overdue</span>{% else %}<span class="daybook-meta">Owes</span>{% endif %}
+      {% elif c.customer_id in customers_with_purchases %}
+      <span class="daybook-flag is-clear customer-balance-clear"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Paid up</span>
+      {% else %}
+      <span class="daybook-meta customer-balance-unknown">No purchases yet</span>
+      {% endif %}
+    </span>
+    <span class="customer-row-actions">
+      <a href="{{ url_for('customers.view_customer', customer_id=c.customer_id) }}"
+        class="customer-portfolio-button{{ ' has-balance' if has_balance else '' }}"
+        aria-label="View portfolio for {{ c.full_name }}{{ ' (balance due)' if has_balance else '' }}">
+        <span class="customer-portfolio-button-icon" aria-hidden="true"><i class="bi bi-journal-text"></i></span>
+        <span>View portfolio</span>
+        <i class="bi bi-arrow-right customer-portfolio-button-arrow" aria-hidden="true"></i>
+      </a>
+      {% if current_user.is_admin %}
+      <a href="{{ url_for('customers.edit_customer', customer_id=c.customer_id) }}" class="customer-action customer-action-edit" aria-label="Edit {{ c.full_name }}" title="Edit customer"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+      <form action="{{ url_for('customers.delete_customer', customer_id=c.customer_id) }}" method="POST" onsubmit="return confirm('Delete this customer?');">
+        <button type="submit" class="customer-action customer-action-delete" aria-label="Delete {{ c.full_name }}" title="Delete customer"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+      </form>
+      {% endif %}
+    </span>
+  </li>
+  {% endfor %}
+{{ group_close() }}
+{% endfor %}
+{{ batch_meta(batch) }}
