@@ -22,13 +22,18 @@
     </div>
 
     {% if phone %}
+    {# Only the channels the customer chose are offered. #}
     <div class="receipt-actions">
+      {% if 'whatsapp' in links %}
       <a class="customer-reminder-channel is-whatsapp" id="receipt-whatsapp" href="{{ links.whatsapp }}" target="_blank" rel="noopener noreferrer">
         <i class="bi bi-whatsapp" aria-hidden="true"></i> Send on WhatsApp
       </a>
+      {% endif %}
+      {% if 'sms' in links %}
       <a class="customer-reminder-channel is-sms" id="receipt-sms" href="{{ links.sms }}">
         <i class="bi bi-chat-left-text" aria-hidden="true"></i> Send by SMS
       </a>
+      {% endif %}
     </div>
     <p class="customer-field-help receipt-to">To {{ payment.customer.phone_number }}</p>
     {% else %}
@@ -54,8 +59,8 @@
   const sms = document.getElementById("receipt-sms");
   const update = () => {
     const encoded = encodeURIComponent(text.value);
-    whatsapp.href = `https://wa.me/${phone}?text=${encoded}`;
-    sms.href = `sms:+${phone}?body=${encoded}`;
+    if (whatsapp) whatsapp.href = `https://wa.me/${phone}?text=${encoded}`;
+    if (sms) sms.href = `sms:+${phone}?body=${encoded}`;
   };
   text.addEventListener("input", update);
 })();

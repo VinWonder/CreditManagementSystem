@@ -38,21 +38,27 @@
     <p class="customer-reminder-eyebrow">{{ 'READY TO SEND' if matching_rule else 'REMINDER RULE NEEDED' }}</p>
     <h2 id="customer-personal-reminder-title">{{ 'Send a personal reminder' if matching_rule else 'This balance is not at a reminder trigger yet' }}</h2>
     {% if matching_rule %}
-    <p>Uses the <strong>{{ 'sale-day' if matching_rule.trigger_days_overdue == 0 else matching_rule.trigger_days_overdue ~ '-day' }}</strong> rule and its saved message. Open it in your own WhatsApp or SMS app and send it from <strong>{{ current_user.phone_number }}</strong>, the number on your shop account.</p>
+    {% set channel_names = {'whatsapp': 'WhatsApp', 'sms': 'SMS', 'both': 'SMS or WhatsApp'} %}
+    <p>Uses the <strong>{{ 'sale-day' if matching_rule.trigger_days_overdue == 0 else matching_rule.trigger_days_overdue ~ '-day' }}</strong> rule and its saved message. Open it in your own {{ channel_names.get(customer.preferred_channel, 'SMS') }} app and send it from <strong>{{ current_user.phone_number }}</strong>, the number on your shop account.</p>
+    {# Only the channels the customer chose are offered. #}
     <div class="customer-reminder-actions">
-      {% set wa_link = reminder_links.whatsapp|default(none) %}
-      {% set sms_href = reminder_links.sms|default(none) %}
+      {% if 'whatsapp' in reminder_links %}
+      {% set wa_link = reminder_links.whatsapp %}
       <a class="customer-reminder-channel is-whatsapp{{ ' is-disabled' if not wa_link else '' }}"
         href="{{ wa_link or '#' }}"
         target="_blank" rel="noopener noreferrer"
         {% if not wa_link %}aria-disabled="true" tabindex="-1"{% endif %}>
         <i class="bi bi-whatsapp" aria-hidden="true"></i> Send on WhatsApp
       </a>
+      {% endif %}
+      {% if 'sms' in reminder_links %}
+      {% set sms_href = reminder_links.sms %}
       <a class="customer-reminder-channel is-sms{{ ' is-disabled' if not sms_href else '' }}"
         href="{{ sms_href or '#' }}"
         {% if not sms_href %}aria-disabled="true" tabindex="-1"{% endif %}>
-        <i class="bi bi-flag-fill" aria-hidden="true"></i> Send by SMS
+        <i class="bi bi-chat-left-text" aria-hidden="true"></i> Send by SMS
       </a>
+      {% endif %}
     </div>
     <p class="customer-channel-explainer"><i class="bi bi-info-circle" aria-hidden="true"></i> The message is already written for {{ customer.full_name }}. Your phone will open the chat, and you press send there. Nothing is sent automatically.</p>
     {% else %}

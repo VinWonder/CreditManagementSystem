@@ -50,9 +50,22 @@ def sms_link(phone_number, message):
     return f"sms:+{msisdn}?body={quote(message, safe='')}"
 
 
+def allowed_channels(customer):
+    """The channels the customer chose to be contacted on: sms, whatsapp, or both."""
+    preference = (customer.preferred_channel or "sms").lower()
+    if preference == "both":
+        return ("whatsapp", "sms")
+    return (preference,) if preference in {"sms", "whatsapp"} else ("sms",)
+
+
 def reminder_links(customer, message):
-    """Both links for a customer, or None where the number is unusable."""
+    """Links for the customer's chosen channels only; None where the number is unusable.
+
+    A channel the customer did not choose is left out entirely, so the page
+    never offers it.
+    """
+    builders = {"whatsapp": whatsapp_link, "sms": sms_link}
     return {
-        "whatsapp": whatsapp_link(customer.phone_number, message),
-        "sms": sms_link(customer.phone_number, message),
+        channel: builders[channel](customer.phone_number, message)
+        for channel in allowed_channels(customer)
     }
