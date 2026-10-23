@@ -115,6 +115,16 @@ card per row, so nothing runs off the side of the screen.
 5. Optional: add it to the home screen (Chrome: ⋮ → **Add to Home screen**;
    Safari: Share → **Add to Home Screen**) so it opens like an app.
 
+**Install it like an app:** on a phone the app offers itself for installing.
+Android browsers (Chrome, Edge, Samsung Internet) show an *Install Duka Credit*
+banner whose Install button opens the phone's own install prompt; iPhone
+Safari shows the two taps instead (Share, then Add to Home Screen). Installed,
+it opens full screen from its own home-screen icon. The banner only appears
+on phones and tablets, never once installed, and "Not now" hides it for two
+weeks; *Install app* is also in the account menu. Installing needs HTTPS, so it
+works on Render but not over plain `http://` on your Wi-Fi. The service worker
+stores no pages or customer data, only a "You're offline" page.
+
 **From anywhere (mobile data, other networks):** the app has to be reachable
 on the internet. For a quick test, run `ngrok http 5000` and open the
 `https://…ngrok-free.app` address it shows on any phone. For real use, deploy
