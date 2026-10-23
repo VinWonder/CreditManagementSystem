@@ -1,0 +1,18 @@
+{# Invitation to install the app on phones; shown by static/js/install-prompt.js. #}
+<aside class="install-banner" id="install-banner" hidden aria-labelledby="install-banner-title">
+  <button type="button" class="install-banner-close" data-install-dismiss aria-label="Not now"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+  <img class="install-banner-icon" src="{{ url_for('static', filename='icons/icon-192.png') }}" alt="">
+  <div class="install-banner-body">
+    <strong id="install-banner-title">Install Duka Credit</strong>
+    <p data-install-variant="prompt">Add it to your home screen and open it like an app: faster, full screen, one tap away.</p>
+    <ol data-install-variant="ios" hidden>
+      <li>Tap <span class="install-banner-key"><i class="bi bi-box-arrow-up" aria-hidden="true"></i> Share</span> in Safari's toolbar.</li>
+      <li>Choose <span class="install-banner-key"><i class="bi bi-plus-square" aria-hidden="true"></i> Add to Home Screen</span>.</li>
+    </ol>
+    <div class="install-banner-actions">
+      <button type="button" class="install-banner-primary" data-install-accept data-install-variant="prompt"><i class="bi bi-download" aria-hidden="true"></i> Install</button>
+      <button type="button" class="install-banner-primary" data-install-dismiss data-install-variant="ios" hidden>Got it</button>
+      <button type="button" class="install-banner-secondary" data-install-dismiss data-install-variant="prompt">Not now</button>
+    </div>
+  </div>
+</aside>
