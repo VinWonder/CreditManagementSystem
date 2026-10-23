@@ -304,10 +304,23 @@ class SaleItem(db.Model):
     )
     position = db.Column(db.Integer, nullable=False, default=0)
     description = db.Column(db.String(150), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1, server_default="1")
+    # Price of one unit; amount = quantity x unit_price is the line total owed.
+    unit_price = db.Column(db.Numeric(10, 2), nullable=True)
     amount = db.Column(db.Numeric(10, 2), nullable=False)
 
+    @property
+    def price_each(self):
+        """Unit price, falling back to the line total for items saved before quantities."""
+        return self.unit_price if self.unit_price is not None else self.amount
+
+    @property
+    def label(self):
+        """'Soda x3' for several units, plain 'Soda' for one."""
+        return f"{self.description} ×{self.quantity}" if (self.quantity or 1) > 1 else self.description
+
     def __repr__(self):
-        return f"<SaleItem {self.description} KES {self.amount}>"
+        return f"<SaleItem {self.label} KES {self.amount}>"
 
 
 # How a customer paid. Keys are stored; labels are shown in the app.
@@ -376,8 +389,17 @@ class PaymentAllocation(db.Model):
         db.Integer, db.ForeignKey("sale_items.sale_item_id"), nullable=False, index=True
     )
     amount = db.Column(db.Numeric(10, 2), nullable=False)
+    # How many units of the item this payment was for, when the customer said.
+    quantity = db.Column(db.Integer, nullable=True)
 
     sale_item = db.relationship("SaleItem")
+
+    @property
+    def label(self):
+        """'Soda x2' when the customer paid for a number of units, else the item."""
+        if self.quantity and (self.sale_item.quantity or 1) > 1:
+            return f"{self.sale_item.description} ×{self.quantity}"
+        return self.sale_item.label
 
 
 class BalanceAdjustment(db.Model):

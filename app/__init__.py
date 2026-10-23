@@ -201,6 +201,8 @@ def _upgrade_local_auth_schema():
         local_table_additions = {
             "customers": {"shop_name": "VARCHAR(100)"},
             "message_dispatch_log": {"failure_reason": "VARCHAR(500)"},
+            "sale_items": {"quantity": "INTEGER NOT NULL DEFAULT 1", "unit_price": "NUMERIC(10, 2)"},
+            "payment_allocations": {"quantity": "INTEGER"},
             "stk_push_requests": {
                 "requested_by_shopkeeper_id": "INTEGER",
                 "sale_item_ids": "VARCHAR(500)",
