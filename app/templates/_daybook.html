@@ -1,0 +1,74 @@
+{# Building blocks shared by the history lists (sales, payments, customers, balances).
+   Rows sit in groups (a day, a letter, an age band) under sticky headings, and long
+   lists grow with "Show more" instead of one endless page. #}
+
+{% macro day_strip(bars, noun, selected_day=None, money_label="") %}
+{# The last 14 days as tappable bars: tap one to see only that day. #}
+<nav class="daystrip" aria-labelledby="daystrip-title">
+  <div class="daystrip-head">
+    <h2 id="daystrip-title" class="daystrip-title"><i class="bi bi-activity" aria-hidden="true"></i> Last 14 days</h2>
+    {% if selected_day %}
+    <a class="daystrip-clear" href="{{ list_url(day=None) }}"><i class="bi bi-x-lg" aria-hidden="true"></i> All days</a>
+    {% else %}
+    <span class="daystrip-hint">Tap a day to open it</span>
+    {% endif %}
+  </div>
+  <ol class="daystrip-bars">
+    {% for bar in bars %}
+    {% set chosen = selected_day == bar.day %}
+    <li>
+      <a class="daystrip-bar{{ ' is-selected' if chosen }}{{ ' is-empty' if not bar.count }}"
+         href="{{ list_url(day=None if chosen else bar.key, period=None) }}"
+         {% if chosen %}aria-current="date"{% endif %}
+         aria-label="{{ bar.weekday }} {{ bar.date }}: {% if bar.count %}{{ bar.count }} {{ noun if bar.count == 1 else noun ~ 's' }}, {{ bar.total | kes }}{% else %}no {{ noun }}s{% endif %}"
+         title="{{ bar.date }} · {{ bar.total | kes }}">
+        <span class="daystrip-bar-track" aria-hidden="true"><span class="daystrip-bar-fill" style="height: {{ [bar.height, 4 if bar.count else 0] | max }}%"></span></span>
+        <span class="daystrip-bar-day" aria-hidden="true">{{ bar.weekday[:3] if bar.weekday != 'Today' else 'Today' }}</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ol>
+</nav>
+{% endmacro %}
+
+{% macro period_chips(period, periods, label="Show") %}
+<div class="list-chips" role="group" aria-label="{{ label }}">
+  {% for key, (name, _) in periods.items() %}
+  <a class="list-chip{{ ' is-active' if period == key }}" href="{{ list_url(period=None if key == 'all' else key, day=None) }}"{% if period == key %} aria-current="true"{% endif %}>{{ name }}</a>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro chip(label, href, active=False, count=None, tone="") %}
+<a class="list-chip{{ ' is-active' if active }}{{ ' tone-' ~ tone if tone }}" href="{{ href }}"{% if active %} aria-current="true"{% endif %}>{{ label }}{% if count is not none %} <span class="list-chip-count">{{ count }}</span>{% endif %}</a>
+{% endmacro %}
+
+{% macro group_open(key, title, summary="", tone="", day=None, anchor="") %}
+<section class="daybook-group{{ ' tone-' ~ tone if tone }}" data-group-key="{{ key }}"{% if anchor %} id="{{ anchor }}" tabindex="-1"{% endif %}>
+  <h3 class="daybook-group-head">{% if day %}<time class="daybook-group-title" datetime="{{ day.isoformat() }}" title="{{ day.strftime('%A %d %b %Y') }}">{{ title }}<span class="visually-hidden"> ({{ day.strftime('%d %b %Y') }})</span></time>{% else %}<span class="daybook-group-title">{{ title }}</span>{% endif %}{% if summary %}<span class="daybook-group-summary">{{ summary }}</span>{% endif %}</h3>
+  <ul class="daybook-rows" role="list">
+{% endmacro %}
+
+{% macro group_close() %}
+  </ul>
+</section>
+{% endmacro %}
+
+{% macro batch_meta(batch) %}
+{# Read by list-kit.js after "Show more" to update the count and the button. #}
+<template data-batch-meta data-shown="{{ batch.shown }}" data-total="{{ batch.total }}"
+  data-next="{{ list_url(page=batch.page + 1) if batch.has_more else '' }}"
+  data-next-count="{{ [batch.remaining, 20] | min }}"></template>
+{% endmacro %}
+
+{% macro show_more(batch, noun_plural) %}
+<div class="daybook-more" data-daybook-more>
+  <p class="daybook-more-count" aria-live="polite">Showing <strong data-shown>{{ batch.shown }}</strong> of <span data-total>{{ batch.total }}</span> {{ noun_plural }}</p>
+  {% if batch.has_more %}
+  <a class="daybook-more-button" href="{{ list_url(page=batch.page + 1) }}" data-show-more>
+    <i class="bi bi-arrow-down-circle" aria-hidden="true"></i> <span>Show {{ [batch.remaining, 20] | min }} more</span>
+  </a>
+  {% endif %}
+  <a class="daybook-top" href="#main-content" data-back-to-top><i class="bi bi-arrow-up" aria-hidden="true"></i> Back to top</a>
+</div>
+{% endmacro %}

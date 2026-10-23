@@ -138,7 +138,7 @@
 </nav>
 {% endif %}
 
-<main class="container my-4">
+<main class="container my-4" id="main-content">
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <div class="app-flash-stack">
@@ -175,6 +175,7 @@
 {% include "_install_banner.html" %}
 <script src="{{ url_for('static', filename='js/flash-messages.js') }}"></script>
 <script src="{{ url_for('static', filename='js/install-prompt.js') }}"></script>
+<script src="{{ url_for('static', filename='js/list-kit.js') }}"></script>
 <script src="{{ url_for('static', filename='js/password-rules.js') }}"></script>
 <script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
 <script src="{{ url_for('static', filename='js/responsive-tables.js') }}"></script>

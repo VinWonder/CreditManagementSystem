@@ -1938,3 +1938,209 @@ body.install-banner-open .app-flash-stack { bottom: calc(10.5rem + env(safe-area
 .payment-item-units { align-items: center; color: #4c625d; display: flex; flex-wrap: wrap; font-size: 0.78rem; gap: 0.45rem; padding: 0 0.75rem 0.35rem 2.4rem; }
 .payment-item-units[hidden] { display: none; }
 .payment-item-units .form-control { font-size: 0.9rem; padding: 0.35rem 0.5rem; text-align: center; width: 4.5rem; }
+
+/* ---- History lists: day strip, chips, grouped rows and "Show more" ---- */
+.daystrip { background: #fff; border: 1px solid #e1ebe7; border-radius: 0.9rem; box-shadow: 0 0.45rem 1.3rem rgba(24, 52, 45, 0.045); margin-bottom: 0.85rem; padding: 0.75rem 0.85rem 0.6rem; }
+.daystrip-head { align-items: center; display: flex; gap: 0.5rem; justify-content: space-between; margin-bottom: 0.45rem; }
+.daystrip-title { align-items: center; color: #26443f; display: inline-flex; font-size: 0.78rem; font-weight: 800; gap: 0.35rem; margin: 0; }
+.daystrip-title i { color: var(--brand); }
+.daystrip-hint { color: #8a9995; font-size: 0.66rem; }
+.daystrip-clear { align-items: center; background: #eef6f3; border-radius: 2rem; color: #205b4b; display: inline-flex; font-size: 0.68rem; font-weight: 750; gap: 0.3rem; padding: 0.3rem 0.65rem; text-decoration: none; }
+.daystrip-clear:hover { background: #dfefe8; color: #174a3d; }
+.daystrip-bars { display: grid; gap: 0.3rem; grid-auto-columns: minmax(2.1rem, 1fr); grid-auto-flow: column; list-style: none; margin: 0; overflow-x: auto; padding: 0 0 0.2rem; scrollbar-width: none; scroll-snap-type: x proximity; }
+.daystrip-bars::-webkit-scrollbar { display: none; }
+.daystrip-bars li { scroll-snap-align: end; }
+.daystrip-bar { align-items: center; border-radius: 0.6rem; color: #5f736d; display: flex; flex-direction: column; gap: 0.25rem; padding: 0.3rem 0.1rem 0.25rem; text-decoration: none; transition: background-color 140ms ease; }
+.daystrip-bar:hover { background: #f1f7f4; color: #205b4b; }
+.daystrip-bar:focus-visible { outline: 3px solid #8dbeb0; outline-offset: 1px; }
+.daystrip-bar-track { align-items: flex-end; background: #f0f5f3; border-radius: 0.4rem; display: flex; height: 3.2rem; overflow: hidden; width: 1.1rem; }
+.daystrip-bar-fill { background: linear-gradient(180deg, #4fa48c, #2c7a7b); border-radius: 0.4rem 0.4rem 0 0; display: block; width: 100%; }
+.daystrip-bar.is-empty .daystrip-bar-track { background: repeating-linear-gradient(180deg, #f0f5f3 0 4px, #f7faf9 4px 8px); }
+.daystrip-bar-day { font-size: 0.6rem; font-weight: 750; white-space: nowrap; }
+.daystrip-bar.is-selected { background: #173c35; color: #fff; }
+.daystrip-bar.is-selected .daystrip-bar-track { background: rgba(255, 255, 255, 0.16); }
+.daystrip-bar.is-selected .daystrip-bar-fill { background: #d8ef9f; }
+.daystrip-bars li:last-child .daystrip-bar:not(.is-selected) .daystrip-bar-day { color: var(--brand-dark); }
+
+.list-chips { display: flex; gap: 0.35rem; overflow-x: auto; padding: 0.1rem 0.05rem; scrollbar-width: none; }
+.list-chips::-webkit-scrollbar { display: none; }
+.list-chip { align-items: center; background: #fff; border: 1px solid #dfe8e4; border-radius: 2rem; color: #4c6a60; display: inline-flex; flex: 0 0 auto; font-size: 0.7rem; font-weight: 750; gap: 0.35rem; min-height: 2.1rem; padding: 0.3rem 0.8rem; text-decoration: none; transition: background-color 140ms ease, border-color 140ms ease; white-space: nowrap; }
+.list-chip:hover { background: #f1f7f4; border-color: #c9ddd4; color: #205b4b; }
+.list-chip:focus-visible { outline: 3px solid #8dbeb0; outline-offset: 2px; }
+.list-chip.is-active { background: #173c35; border-color: #173c35; color: #fff; }
+.list-chip-count { background: rgba(23, 60, 53, 0.08); border-radius: 2rem; font-size: 0.62rem; padding: 0.05rem 0.42rem; }
+.list-chip.is-active .list-chip-count { background: rgba(255, 255, 255, 0.18); }
+.list-chip.tone-due:not(.is-active) .list-chip-count { background: #fff0eb; color: #ac4c3f; }
+.list-chip.tone-overdue:not(.is-active) .list-chip-count { background: #ffe6df; color: #a03b2c; }
+.list-chip.tone-clear:not(.is-active) .list-chip-count { background: #e6f5ec; color: #23704a; }
+.daybook-toolbar { align-items: center; border-bottom: 1px solid #e9efec; display: flex; gap: 0.5rem; justify-content: space-between; padding: 0.55rem 1rem; }
+.daybook-toolbar .list-chips { flex: 1; min-width: 0; }
+
+.daybook-group + .daybook-group { border-top: 1px solid #edf2f0; }
+.daybook-group-head { align-items: baseline; backdrop-filter: blur(6px); background: rgba(247, 250, 249, 0.94); border-bottom: 1px solid #edf2f0; display: flex; gap: 0.5rem; justify-content: space-between; margin: 0; padding: 0.5rem 1rem; position: sticky; top: var(--list-sticky-top, 0); z-index: 2; }
+.daybook-group-title { color: #23453e; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.01em; }
+.daybook-group-summary { color: #6c7f7a; font-size: 0.66rem; font-variant-numeric: tabular-nums; font-weight: 700; text-align: right; }
+.daybook-rows { list-style: none; margin: 0; padding: 0; }
+.daybook-row + .daybook-row { border-top: 1px solid #f0f4f2; }
+.daybook-row-link, .daybook-row-body { align-items: center; color: inherit; display: grid; gap: 0.7rem; grid-template-columns: 2.35rem minmax(0, 1fr) auto; padding: 0.62rem 1rem; text-decoration: none; transition: background-color 140ms ease; }
+a.daybook-row-link:hover { background: #f6faf8; color: inherit; }
+a.daybook-row-link:focus-visible { background: #f1f7f4; outline: 3px solid #8dbeb0; outline-offset: -3px; }
+.daybook-avatar { align-items: center; background: linear-gradient(135deg, #e3f1ec, #d2e8df); border-radius: 50%; color: #24604f; display: inline-flex; font-size: 0.7rem; font-weight: 800; height: 2.35rem; justify-content: center; width: 2.35rem; }
+.daybook-main { display: flex; flex-direction: column; min-width: 0; }
+.daybook-name { color: #1f3d37; font-size: 0.82rem; font-weight: 750; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+a.daybook-name { text-decoration: none; }
+a.daybook-name:hover { color: var(--brand-dark); text-decoration: underline; }
+.daybook-sub { color: #71847e; font-size: 0.7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.daybook-side { align-items: flex-end; display: flex; flex-direction: column; gap: 0.1rem; text-align: right; }
+.daybook-amount { color: #1f3d37; font-size: 0.82rem; font-variant-numeric: tabular-nums; font-weight: 800; white-space: nowrap; }
+.daybook-meta { align-items: center; color: #8a9995; display: inline-flex; flex-wrap: wrap; font-size: 0.64rem; gap: 0.3rem; justify-content: flex-end; white-space: nowrap; }
+.daybook-flag { align-items: center; border-radius: 2rem; display: inline-flex; font-size: 0.6rem; font-weight: 750; gap: 0.2rem; }
+.daybook-flag.is-ok { color: #2f8a62; }
+.daybook-flag.is-pending { background: #fff4dc; color: #8a5a12; padding: 0.08rem 0.45rem; }
+.daybook-flag.is-rejected { background: #f1f1f1; color: #6b6b6b; padding: 0.08rem 0.45rem; }
+.daybook-flag.is-due { background: #fff0eb; color: #ac4c3f; padding: 0.08rem 0.45rem; }
+.daybook-flag.is-clear { background: #e6f5ec; color: #23704a; padding: 0.08rem 0.45rem; }
+
+.daybook-more { align-items: center; border-top: 1px solid #e8efec; display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: space-between; padding: 0.8rem 1rem; }
+.daybook-more-count { color: #6c7f7a; font-size: 0.7rem; margin: 0; }
+.daybook-more-count strong { color: #23453e; }
+.daybook-more-button { align-items: center; background: #173c35; border-radius: 2rem; color: #fff; display: inline-flex; font-size: 0.74rem; font-weight: 800; gap: 0.4rem; min-height: 2.5rem; padding: 0.45rem 1.1rem; text-decoration: none; }
+.daybook-more-button:hover { background: #205b4b; color: #fff; }
+.daybook-more-button:focus-visible, .daybook-top:focus-visible { outline: 3px solid #8dbeb0; outline-offset: 2px; }
+.daybook-more-button[aria-busy="true"] { opacity: 0.75; pointer-events: none; }
+.daybook-top { color: #5b746c; font-size: 0.68rem; font-weight: 750; text-decoration: none; }
+.collapse-rows-toggle { align-items: center; background: #f4f8f6; border: 0; border-top: 1px solid #e8efec; color: #205b4b; display: flex; font-size: 0.72rem; font-weight: 800; gap: 0.35rem; justify-content: center; min-height: 2.6rem; width: 100%; }
+.collapse-rows-toggle:hover { background: #eaf3ef; }
+.collapse-rows-toggle:focus-visible { outline: 3px solid #8dbeb0; outline-offset: -3px; }
+
+@media (max-width: 760px) {
+  /* Summary figures become one short swipeable row instead of three tall cards. */
+  .transaction-history-stats, .payment-history-stats, .receivables-summary { display: flex; gap: 0.5rem; grid-template-columns: none; margin-left: -0.1rem; margin-right: -0.1rem; overflow-x: auto; padding: 0.1rem 0.1rem 0.3rem; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .transaction-history-stats::-webkit-scrollbar, .payment-history-stats::-webkit-scrollbar, .receivables-summary::-webkit-scrollbar { display: none; }
+  .transaction-history-stats > *, .payment-history-stats > *, .receivables-summary > * { flex: 0 0 auto; min-width: 0; scroll-snap-align: start; width: min(15rem, 72%); }
+  .transaction-history-header p:last-child, .payment-history-header p:last-child, .receivables-header p:last-child, .customer-directory-subtitle { display: none; }
+}
+@media (max-width: 576px) {
+  .transaction-history-header, .payment-history-header, .customer-directory-header { align-items: center; flex-wrap: nowrap; }
+  .transaction-history-actions { flex-wrap: nowrap; }
+  .transaction-history-add { width: auto; }
+  .transaction-history-print span { display: none; }
+  .daybook-toolbar { flex-wrap: wrap; padding: 0.5rem 0.8rem; }
+  .daybook-row-link, .daybook-row-body { gap: 0.6rem; padding: 0.58rem 0.8rem; }
+  .daybook-group-head { padding: 0.45rem 0.8rem; }
+  .daybook-more { justify-content: center; text-align: center; }
+  .daybook-more-count { flex-basis: 100%; }
+}
+@media print {
+  .daystrip, .daybook-toolbar, .daybook-more, .daybook-filters, .collapse-rows-toggle { display: none !important; }
+  .daybook-group-head { position: static; }
+}
+
+/* Payments: one-line method, and the review panel for pending payments. */
+.daybook-sub .payment-method { background: none; border: 0; color: inherit; display: inline; font: inherit; padding: 0; }
+.daybook-sub .payment-method.is-unrecorded { color: #a07a3a; font-style: italic; }
+.daybook-row.is-rejected .daybook-amount { color: #8b9692; text-decoration: line-through; }
+.payment-review-card { border-color: #f0e3ce; margin-bottom: 0.85rem; }
+.payment-review-card .payment-history-card-heading { background: linear-gradient(125deg, #fff, #fff8ed); }
+.payment-review-card h2 i { color: #aa7132; }
+.payment-review { border-top: 1px dashed #efe3cf; margin: 0 1rem; padding: 0.15rem 0 0.6rem 3.05rem; }
+.payment-review summary { align-items: center; color: #8a5a12; cursor: pointer; display: inline-flex; font-size: 0.72rem; font-weight: 800; gap: 0.35rem; list-style: none; min-height: 2.2rem; }
+.payment-review summary::-webkit-details-marker { display: none; }
+.payment-review summary::after { content: "\F282"; font-family: "bootstrap-icons"; font-size: 0.65rem; transition: transform 150ms ease; }
+.payment-review[open] summary::after { transform: rotate(180deg); }
+.payment-review summary:focus-visible { border-radius: 0.3rem; outline: 3px solid #e8c995; outline-offset: 2px; }
+.payment-review-actions { display: grid; gap: 0.5rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.payment-review-actions form { display: flex; gap: 0.35rem; }
+.payment-review-actions .form-control { min-width: 0; }
+.payment-review-actions .btn { flex: 0 0 auto; white-space: nowrap; }
+
+/* Customers: name, contact, balance, and the portfolio button on one compact row. */
+.customer-search { border-bottom: 1px solid #e9efec; border-radius: 0; margin: 0; }
+.customer-toolbar { flex-wrap: wrap; }
+.customer-sort { flex: 0 0 auto !important; align-items: center; }
+.customer-sort-label { color: #8a9995; font-size: 0.66rem; font-weight: 750; margin-right: 0.1rem; }
+.letter-jump { border-bottom: 1px solid #e9efec; display: flex; gap: 0.2rem; overflow-x: auto; padding: 0.45rem 1rem; scrollbar-width: none; }
+.letter-jump::-webkit-scrollbar { display: none; }
+.letter-jump a { align-items: center; border-radius: 0.5rem; color: #4c6a60; display: inline-flex; flex: 0 0 auto; font-size: 0.72rem; font-weight: 800; height: 2rem; justify-content: center; min-width: 2rem; padding: 0 0.45rem; text-decoration: none; }
+.letter-jump a:hover { background: #eef6f3; color: #205b4b; }
+.letter-jump a:focus-visible { outline: 3px solid #8dbeb0; outline-offset: 1px; }
+.letter-jump a.is-active { background: #173c35; color: #fff; }
+.customer-row { align-items: center; display: grid; gap: 0.25rem 0.7rem; grid-template-areas: "avatar main balance" "avatar actions actions"; grid-template-columns: 2.35rem minmax(0, 1fr) auto; padding: 0.65rem 1rem; }
+.customer-row > .daybook-avatar { align-self: start; grid-area: avatar; }
+.customer-row > .daybook-main { grid-area: main; }
+.customer-row-balance { align-items: flex-end; display: flex; flex-direction: column; gap: 0.15rem; grid-area: balance; text-align: right; }
+.customer-row-balance .customer-balance { background: none; border: 0; padding: 0; }
+.customer-row-actions { align-items: center; display: flex; gap: 0.4rem; grid-area: actions; justify-content: flex-start; }
+.customer-row-actions form { margin: 0; }
+.customer-row .customer-contact { display: flex; flex-wrap: wrap; gap: 0.1rem 0.6rem; }
+.customer-row .customer-contact a { color: inherit; text-decoration: none; }
+.customer-row .customer-contact a:hover { color: var(--brand-dark); text-decoration: underline; }
+.customer-row .customer-portfolio-button { min-height: 2.2rem; padding-bottom: 0.3rem; padding-top: 0.3rem; }
+.daybook-avatar.is-due { background: linear-gradient(135deg, #fff0eb, #fde0d6); color: #a3463a; }
+.is-print-view .customer-print-heading { display: block; margin-bottom: 1rem; }
+.customer-print-table { background: #fff; font-size: 0.8rem; }
+
+/* Balances: the ageing bar, its legend and the age bands. */
+.ageing-bar-wrap { border-bottom: 1px solid #e9efec; padding: 0.8rem 1rem 0.7rem; }
+.ageing-bar-caption { color: #71847e; font-size: 0.68rem; margin: 0 0 0.45rem; }
+.ageing-bar { border-radius: 0.6rem; display: flex; gap: 2px; height: 2rem; list-style: none; margin: 0; overflow: hidden; padding: 0; }
+.ageing-bar-segment { flex-basis: 0; min-width: 2.2rem; }
+.ageing-bar-segment a { align-items: center; color: #fff; display: flex; font-size: 0.66rem; font-weight: 800; height: 100%; justify-content: center; text-decoration: none; }
+.ageing-bar-segment a:hover { filter: brightness(1.08); }
+.ageing-bar-segment a:focus-visible { outline: 3px solid #173c35; outline-offset: -3px; }
+.tone-critical.ageing-bar-segment, .ageing-dot.tone-critical { background: #c2493b; }
+.tone-watch.ageing-bar-segment, .ageing-dot.tone-watch { background: #d98a2b; }
+.tone-recent.ageing-bar-segment, .ageing-dot.tone-recent { background: #d9b336; }
+.tone-recent.ageing-bar-segment a { color: #3d3205; }
+.tone-current.ageing-bar-segment, .ageing-dot.tone-current { background: #2f8a62; }
+.ageing-legend { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; list-style: none; margin: 0.55rem 0 0; padding: 0; }
+.ageing-legend a { align-items: center; color: #4c6a60; display: inline-flex; font-size: 0.68rem; gap: 0.35rem; text-decoration: none; }
+.ageing-legend a:hover { color: #173c35; text-decoration: underline; }
+.ageing-legend strong { color: #23453e; }
+.ageing-dot { border-radius: 50%; display: inline-block; height: 0.6rem; width: 0.6rem; }
+.daybook-group.tone-critical .daybook-group-title { color: #a03b2c; }
+.daybook-group.tone-watch .daybook-group-title { color: #95581a; }
+.daybook-group.tone-recent .daybook-group-title { color: #7a6311; }
+.daybook-group.tone-current .daybook-group-title { color: #23704a; }
+.daybook-group.tone-critical .daybook-group-head { box-shadow: inset 4px 0 0 #c2493b; }
+.daybook-group.tone-watch .daybook-group-head { box-shadow: inset 4px 0 0 #d98a2b; }
+.daybook-group.tone-recent .daybook-group-head { box-shadow: inset 4px 0 0 #d9b336; }
+.daybook-group.tone-current .daybook-group-head { box-shadow: inset 4px 0 0 #2f8a62; }
+.daybook-group:target .daybook-group-head, .daybook-group:focus .daybook-group-head { background: #eef6f3; }
+.daybook-group:focus { outline: none; }
+.daybook-avatar.tone-critical { background: #fde4df; color: #a03b2c; }
+.daybook-avatar.tone-watch { background: #fdebd3; color: #95581a; }
+.daybook-avatar.tone-recent { background: #faf1cf; color: #7a6311; }
+.receivables-row { align-items: center; display: flex; }
+.receivables-row .daybook-row-link { flex: 1; min-width: 0; padding-right: 0.4rem; }
+.receivables-age { border-radius: 2rem; font-size: 0.6rem; font-weight: 800; padding: 0.08rem 0.45rem; }
+.receivables-age.tone-critical { background: #fde4df; color: #a03b2c; }
+.receivables-age.tone-watch { background: #fdebd3; color: #95581a; }
+.receivables-age.tone-recent { background: #faf1cf; color: #7a6311; }
+.receivables-call { align-items: center; border: 1px solid #dfe8e4; border-radius: 50%; color: #2c7a7b; display: inline-flex; flex: 0 0 2.3rem; height: 2.3rem; justify-content: center; margin-right: 0.9rem; text-decoration: none; }
+.receivables-call:hover { background: #eef6f3; color: #205b4b; }
+.receivables-call:focus-visible { outline: 3px solid #8dbeb0; outline-offset: 2px; }
+
+@media (max-width: 576px) {
+  .transaction-history-header h1, .payment-history-header h1, .customer-directory-header h1 { font-size: 1.3rem; }
+  .transaction-history-header .eyebrow, .payment-history-header .eyebrow, .customer-directory-header .eyebrow { display: none; }
+  .transaction-history-add, .payment-history-add, .customer-add-button { white-space: nowrap; }
+  .customer-directory-actions { flex-wrap: nowrap; }
+  .customer-print-button span { display: none; }
+  .customer-row { padding: 0.6rem 0.8rem; }
+  .payment-review { margin: 0 0.8rem; padding-left: 0; }
+  .payment-review-actions { grid-template-columns: 1fr; }
+  .receivables-call { margin-right: 0.7rem; }
+  .ageing-bar-wrap { padding: 0.7rem 0.8rem 0.6rem; }
+}
+@media print {
+  .letter-jump, .customer-toolbar, .customer-search, .customer-row-actions, .receivables-call, .ageing-bar-caption { display: none !important; }
+  .is-print-view .customer-directory-header { display: none; }
+}
+.daybook-amount.payment-history-amount { background: none; border: 0; box-shadow: none; padding: 0; }
+.payment-history-count { white-space: nowrap; }
+@media (max-width: 760px) {
+  .customer-toolbar > .list-chips:first-child { flex: 1 1 100%; }
+}
+/* Sticky group headings need a card that clips without becoming a scroll box. */
+.daybook-card { overflow: clip; }

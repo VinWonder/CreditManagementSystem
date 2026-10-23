@@ -143,6 +143,26 @@ def create_app(config_class=Config):
     def nairobi_datetime(value, format_string="%d %b %Y %H:%M"):
         return format_nairobi_datetime(value, format_string)
 
+    from app.listing import initials
+
+    app.add_template_filter(initials, "initials")
+
+    @app.template_global()
+    def list_url(**changes):
+        """This list page's URL with some filters changed (None drops one).
+
+        Paging always restarts, since the rows change with the filters.
+        """
+        from flask import request, url_for
+
+        args = {key: value for key, value in request.args.items() if key not in {"page", "partial"}}
+        for key, value in changes.items():
+            if value is None or value == "":
+                args.pop(key, None)
+            else:
+                args[key] = value
+        return url_for(request.endpoint, **(request.view_args or {}), **args)
+
     with app.app_context():
         if app.config["AUTO_CREATE_DB"] and db.engine.url.drivername.startswith("sqlite"):
             _upgrade_local_auth_schema()
