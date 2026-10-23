@@ -125,6 +125,13 @@ weeks; *Install app* is also in the account menu. Installing needs HTTPS, so it
 works on Render but not over plain `http://` on your Wi-Fi. The service worker
 stores no pages or customer data, only a "You're offline" page.
 
+**Chrome logo when the app opens?** That icon is a Chrome *shortcut* (made
+with "Add to Home screen"), not the installed app, so Android shows Chrome's
+logo first. When the app is opened from a shortcut it says so and explains the
+fix: remove the icon, open the site in Chrome, then menu ⋮ → **Install app**.
+The full app opens with the Duka Credit logo. Phones without Google Play
+services, and some other browsers, can only make shortcuts.
+
 **From anywhere (mobile data, other networks):** the app has to be reachable
 on the internet. For a quick test, run `ngrok http 5000` and open the
 `https://…ngrok-free.app` address it shows on any phone. For real use, deploy
@@ -166,6 +173,18 @@ is for (for example only the Soda); with nothing ticked, the payment pays the
 oldest unpaid items first. The customer's page shows each item as paid, partly
 paid or due, payment lists show what a payment was for, and one reminder lists
 only what is still owed, item by item.
+
+**Long lists stay short on a phone.** Sales and payment history are grouped
+by day under headings that stay on screen while you scroll ("Today · 4 sales ·
+KES 2,310"), and show 20 at a time with **Show more**. A *Last 14 days* strip
+on top shows each day's total as a bar: tap a bar to open just that day, or use
+the Today / 7 days / 30 days chips. Payments waiting for approval sit in their
+own box at the top, with Approve and Reject tucked under *Review payment*.
+Customers have chips (Owing, Overdue, Paid up, No purchases) with counts, an
+A–Z strip and a balance sort; *Print list* still prints everyone. Balances are
+banded by age (over 30 days, 8–30, 1–7, current) under a coloured bar showing
+where the money owed sits, each with a call button. On a customer's page, long
+sale and payment lists show the newest five with *Show all*.
 
 Each item row has a quantity and the price of one, so 3 sodas at KES 100 are
 one line of KES 300 shown as "Soda ×3". When a ticked item was bought in a
