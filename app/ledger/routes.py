@@ -7,6 +7,14 @@ from app.models import Ledger
 
 ledger_bp = Blueprint("ledger", __name__, url_prefix="/ledger")
 
+# Age bands for the balances page: (key, heading, colour tone, from day, to day).
+AGE_BANDS = (
+    ("critical", "Needs attention · over 30 days", "critical", 31, 10**6),
+    ("watch", "Follow up · 8 to 30 days", "watch", 8, 30),
+    ("recent", "Recently overdue · 1 to 7 days", "recent", 1, 7),
+    ("current", "Current · not overdue", "current", 0, 0),
+)
+
 
 @ledger_bp.route("/report")
 @login_required
@@ -40,8 +48,25 @@ def receivables_report():
             reverse=True,
         )
 
+    buckets = []
+    for key, title, tone, low, high in AGE_BANDS:
+        if overdue_only and high == 0:
+            continue
+        members = [ledger for ledger in ledgers if low <= ledger.days_overdue <= high]
+        total = sum((Decimal(ledger.outstanding_balance) for ledger in members), Decimal("0"))
+        all_total = total_overdue if overdue_only else total_outstanding
+        buckets.append({
+            "key": key,
+            "title": title,
+            "tone": tone,
+            "ledgers": members,
+            "total": total,
+            "share": float(total * 100 / all_total) if all_total else 0,
+        })
+
     return render_template(
         "ledger/report.html",
+        buckets=buckets,
         ledgers=ledgers,
         total_outstanding=total_overdue if overdue_only else total_outstanding,
         total_overdue=total_overdue,

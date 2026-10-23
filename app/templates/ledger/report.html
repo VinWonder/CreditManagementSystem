@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_daybook.html" import group_open, group_close %}
 {% block title %}Receivables Report{% endblock %}
 {% block content %}
 <section class="receivables-page" aria-labelledby="receivables-title">
@@ -47,7 +48,7 @@
     </article>
   </div>
 
-  <div class="receivables-table-card">
+  <div class="receivables-table-card daybook-card">
     <div class="receivables-table-heading">
       <div>
         <h2>{{ 'Customers past due' if overdue_only else 'Customer balances' }}</h2>
@@ -65,51 +66,48 @@
     </div>
 
     {% if ledgers %}
-    <div class="table-responsive">
-      <table class="table table-stack receivables-table align-middle mb-0">
-        <thead>
-          <tr>
-            <th scope="col">Customer</th>
-            <th scope="col">Contact</th>
-            <th scope="col" class="text-end">Balance due</th>
-            <th scope="col">Age</th>
-            <th scope="col">Account status</th>
-          </tr>
-        </thead>
-        <tbody>
-        {% for ledger in ledgers %}
-          <tr>
-            <td class="stack-primary">
-              <a class="receivables-customer" href="{{ url_for('customers.view_customer', customer_id=ledger.customer_id) }}">
-                <span class="receivables-avatar" aria-hidden="true">{{ ledger.customer.full_name.split()[0][0]|upper }}{{ ledger.customer.full_name.split()[-1][0]|upper if ledger.customer.full_name.split()|length > 1 else '' }}</span>
-                <span><strong>{{ ledger.customer.full_name }}</strong><small>View customer account</small></span>
-                <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
-              </a>
-            </td>
-            <td><a class="receivables-phone" href="tel:{{ ledger.customer.phone_number }}"><i class="bi bi-telephone" aria-hidden="true"></i>{{ ledger.customer.phone_number }}</a></td>
-            <td class="text-end"><strong class="receivables-balance">{{ ledger.outstanding_balance | kes }}</strong></td>
-            <td>
+    <div class="ageing-bar-wrap">
+      <p class="ageing-bar-caption">Where the money owed sits, by age. Tap a colour to jump to it.</p>
+      <ul class="ageing-bar">
+        {% for bucket in buckets if bucket.ledgers %}
+        <li class="ageing-bar-segment tone-{{ bucket.tone }}" style="flex-grow: {{ '%.2f' % ([bucket.share, 3] | max) }}">
+          <a href="#age-{{ bucket.key }}" title="{{ bucket.total | kes }}"
+             aria-label="{{ bucket.title }}: {{ bucket.ledgers|length }} {{ 'account' if bucket.ledgers|length == 1 else 'accounts' }}, {{ bucket.total | kes }} ({{ bucket.share | round | int }}%)"><span aria-hidden="true">{{ bucket.share | round | int }}%</span></a>
+        </li>
+        {% endfor %}
+      </ul>
+      <ul class="ageing-legend">
+        {% for bucket in buckets if bucket.ledgers %}
+        <li><a href="#age-{{ bucket.key }}"><span class="ageing-dot tone-{{ bucket.tone }}" aria-hidden="true"></span>{{ bucket.title.split(' · ')[0] }} <strong>{{ bucket.total | kes }}</strong></a></li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="daybook">
+      {% for bucket in buckets if bucket.ledgers %}
+      {{ group_open(bucket.key, bucket.title, bucket.ledgers|length ~ (' account' if bucket.ledgers|length == 1 else ' accounts') ~ ' · ' ~ (bucket.total | kes), bucket.tone, anchor='age-' ~ bucket.key) }}
+        {% for ledger in bucket.ledgers %}
+        <li class="daybook-row receivables-row">
+          <a class="daybook-row-link" href="{{ url_for('customers.view_customer', customer_id=ledger.customer_id) }}">
+            <span class="daybook-avatar tone-{{ bucket.tone }}" aria-hidden="true">{{ ledger.customer.full_name | initials }}</span>
+            <span class="daybook-main">
+              <strong class="daybook-name">{{ ledger.customer.full_name }}</strong>
+              <span class="daybook-sub">{{ ledger.customer.phone_number }}{% if ledger.customer.shop_name %} · {{ ledger.customer.shop_name }}{% endif %}</span>
+            </span>
+            <span class="daybook-side">
+              <strong class="daybook-amount receivables-balance">{{ ledger.outstanding_balance | kes }}</strong>
               {% if ledger.days_overdue > 0 %}
-              <span class="receivables-age">{{ ledger.days_overdue }} {{ 'day' if ledger.days_overdue == 1 else 'days' }}</span>
+              <span class="receivables-age tone-{{ bucket.tone }}">{{ ledger.days_overdue }} {{ 'day' if ledger.days_overdue == 1 else 'days' }}</span>
               {% else %}
               <span class="receivables-age receivables-age-current">Not overdue</span>
               {% endif %}
-            </td>
-            <td>
-              {% if ledger.days_overdue > 30 %}
-              <span class="receivables-status receivables-status-critical"><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i> Needs attention</span>
-              {% elif ledger.days_overdue > 7 %}
-              <span class="receivables-status receivables-status-watch"><i class="bi bi-clock-history" aria-hidden="true"></i> Follow up</span>
-              {% elif ledger.days_overdue > 0 %}
-              <span class="receivables-status receivables-status-recent"><i class="bi bi-hourglass" aria-hidden="true"></i> Recently overdue</span>
-              {% else %}
-              <span class="receivables-status receivables-status-current"><i class="bi bi-check-circle" aria-hidden="true"></i> Current</span>
-              {% endif %}
-            </td>
-          </tr>
+            </span>
+          </a>
+          <a class="receivables-call" href="tel:{{ ledger.customer.phone_number }}" aria-label="Call {{ ledger.customer.full_name }}" title="Call"><i class="bi bi-telephone" aria-hidden="true"></i></a>
+        </li>
         {% endfor %}
-        </tbody>
-      </table>
+      {{ group_close() }}
+      {% endfor %}
     </div>
     {% else %}
     <div class="receivables-empty">
