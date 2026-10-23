@@ -1896,3 +1896,11 @@ body.duka-select-open { overflow: hidden; }
   .app-account-menu { max-width: none; }
 }
 .app-account-dropdown-shop { color: #2f6b58; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 0.15rem; text-transform: uppercase; }
+/* Show/hide button added to password boxes by password-toggle.js */
+.password-reveal { display: block; flex: 1; min-width: 0; position: relative; }
+.password-reveal > input { padding-right: 2.75rem !important; width: 100%; }
+.password-reveal-button { align-items: center; background: transparent; border: 0; border-radius: 0.5rem; color: #6c8380; cursor: pointer; display: inline-flex; height: 2.2rem; justify-content: center; position: absolute; right: 0.3rem; top: 50%; transform: translateY(-50%); width: 2.2rem; }
+.password-reveal-button:hover { background: rgba(44, 122, 123, 0.08); color: #1e5448; }
+.password-reveal-button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+/* Make the existing login/register eye easy to see on dark phone themes too. */
+.password-toggle { color: #5d7a74; }
