@@ -73,18 +73,23 @@ class SaleItemTests(unittest.TestCase):
 
     def _sell(self, items, customer=None):
         data = {"customer_id": str((customer or self.customer).customer_id)}
-        for index, (description, amount) in enumerate(items):
+        for index, item in enumerate(items):
+            description, quantity, price = item if len(item) == 3 else (item[0], "1", item[1])
             data[f"items-{index}-item_description"] = description
-            data[f"items-{index}-amount"] = amount
+            data[f"items-{index}-quantity"] = quantity
+            data[f"items-{index}-unit_price"] = price
         return self.client.post("/transactions/new", data=data)
 
-    def _pay(self, amount, item_ids=(), method="cash", customer=None):
+    def _pay(self, amount, item_ids=(), method="cash", customer=None, units=None, **extra):
         data = {
             "customer_id": str((customer or self.customer).customer_id),
             "amount_paid": amount,
             "payment_method": method,
             "sale_item_ids": [str(item_id) for item_id in item_ids],
+            **extra,
         }
+        for item_id, count in (units or {}).items():
+            data[f"units_{item_id}"] = str(count)
         return self.client.post("/payments/new", data=data)
 
     def _items(self):
@@ -115,7 +120,7 @@ class SaleItemTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Enter what the customer took.", page)
-        self.assertIn("Enter the item&#39;s price.", page)
+        self.assertIn("Enter the price of one.", page)
         self.assertEqual(CreditTransaction.query.count(), 0)
 
     def test_sale_page_has_item_rows_and_a_total(self):
@@ -274,6 +279,122 @@ class SaleItemTests(unittest.TestCase):
 
         self.assertEqual(self._status(), {"Chips": (Decimal("100.00"), "unpaid"),
                                           "Soda": (Decimal("0.00"), "paid")})
+
+    # Quantities
+
+    def test_quantity_times_unit_price_makes_the_line_total(self):
+        self._sell([("Soda", "3", "100"), ("Chips", "1", "50")])
+
+        sale = CreditTransaction.query.one()
+        self.assertEqual(sale.amount, Decimal("350.00"))
+        self.assertEqual(sale.item_description, "Soda ×3, Chips")
+        soda = self._items()["Soda"]
+        self.assertEqual((soda.quantity, soda.unit_price, soda.amount), (3, Decimal("100.00"), Decimal("300.00")))
+
+    def test_quantity_must_be_a_whole_number_of_at_least_one(self):
+        for quantity in ("0", "-2", "1.5", ""):
+            response = self._sell([("Soda", quantity, "100")])
+            self.assertEqual(response.status_code, 200, quantity)
+        self.assertEqual(CreditTransaction.query.count(), 0)
+
+    def test_sale_page_asks_for_quantity_and_price_of_one(self):
+        page = self.client.get("/transactions/new").get_data(as_text=True)
+
+        self.assertIn('name="items-0-quantity"', page)
+        self.assertIn('name="items-0-unit_price"', page)
+
+    def test_offline_sale_keeps_quantities_and_old_entries_still_sync(self):
+        response = self.client.post("/transactions/api/sync", json={"transactions": [
+            {"client_id": "local-q", "customer_id": self.customer.customer_id,
+             "items": [{"item_description": "Soda", "quantity": 4, "unit_price": "60.00"}]},
+            {"client_id": "local-old", "customer_id": self.customer.customer_id,
+             "items": [{"item_description": "Chips", "amount": "100.00"}]},
+        ]})
+
+        self.assertEqual([r["status"] for r in response.get_json()["results"]], ["synced", "synced"])
+        items = self._items()
+        self.assertEqual((items["Soda"].quantity, items["Soda"].amount), (4, Decimal("240.00")))
+        self.assertEqual((items["Chips"].quantity, items["Chips"].amount), (1, Decimal("100.00")))
+
+    def test_paying_for_two_of_three_units(self):
+        self._sell([("Soda", "3", "100")])
+        soda = self._items()["Soda"]
+
+        self._pay("200", [soda.sale_item_id], units={soda.sale_item_id: 2})
+
+        allocation = PaymentAllocation.query.one()
+        self.assertEqual((allocation.amount, allocation.quantity, allocation.label),
+                         (Decimal("200.00"), 2, "Soda ×2"))
+        balance = customer_item_balances(self.customer)[0]
+        self.assertEqual((balance.remaining, balance.units_left), (Decimal("100.00"), 1))
+        self.assertEqual(self._balance(), Decimal("100.00"))
+
+    def test_amount_cannot_exceed_the_chosen_units(self):
+        self._sell([("Soda", "3", "100")])
+        soda = self._items()["Soda"]
+
+        response = self._pay("300", [soda.sale_item_id], units={soda.sale_item_id: 2})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Payment.query.count(), 0)
+
+    def test_cannot_pay_for_more_units_than_are_left(self):
+        self._sell([("Soda", "3", "100")])
+        soda = self._items()["Soda"]
+        self._pay("200", [soda.sale_item_id], units={soda.sale_item_id: 2})
+
+        response = self._pay("200", [soda.sale_item_id], units={soda.sale_item_id: 2})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Payment.query.count(), 1)
+
+    def test_payment_page_offers_units_for_items_bought_in_numbers(self):
+        self._sell([("Soda", "3", "100"), ("Chips", "1", "50")])
+
+        page = self.client.get(f"/payments/new?customer_id={self.customer.customer_id}").get_data(as_text=True)
+
+        self.assertIn('"units_left": 3', page)
+        self.assertIn('units_', page)
+
+    def test_reminder_and_customer_page_show_quantities(self):
+        self._sell([("Soda", "3", "100")])
+
+        self.assertIn("Soda ×3 KES 300.00", unpaid_item_details(self.customer))
+        page = self.client.get(f"/customers/{self.customer.customer_id}").get_data(as_text=True)
+        self.assertIn("Soda ×3", page)
+        self.assertIn("3 × KES 100.00", page)
+
+    def test_prompt_for_some_units_applies_them_when_paid(self):
+        db.session.add(MpesaAccount(retailer_id=self.retailer.retailer_id, environment="sandbox",
+                                    account_type="paybill", shortcode="174379",
+                                    consumer_key_encrypted=encrypt_secret("k"),
+                                    consumer_secret_encrypted=encrypt_secret("s"),
+                                    passkey_encrypted=encrypt_secret("p")))
+        db.session.commit()
+        self._sell([("Soda", "3", "100")])
+        soda = self._items()["Soda"]
+        daraja._token_cache.clear()
+        self.addCleanup(daraja._token_cache.clear)
+        token = MagicMock(status_code=200)
+        token.json.return_value = {"access_token": "t", "expires_in": "3599"}
+        accepted = MagicMock(status_code=200)
+        accepted.json.return_value = {"ResponseCode": "0", "CheckoutRequestID": "ws_CO_2", "MerchantRequestID": "m2"}
+
+        with patch("app.mpesa.daraja.requests") as fake:
+            fake.RequestException = Exception
+            fake.get.return_value = token
+            fake.post.return_value = accepted
+            self._pay("100", [soda.sale_item_id], method="mpesa_stk", units={soda.sale_item_id: 1},
+                      stk_phone="0712345678")
+        stk = StkPushRequest.query.one()
+        self.assertEqual(stk.sale_item_ids, f"{soda.sale_item_id}:1")
+        self.client.post(f"/mpesa/callback/{stk.callback_token}", json={"Body": {"stkCallback": {
+            "CheckoutRequestID": "ws_CO_2", "ResultCode": 0, "ResultDesc": "ok",
+            "CallbackMetadata": {"Item": [{"Name": "Amount", "Value": 100},
+                                          {"Name": "MpesaReceiptNumber", "Value": "QFT4ABC124"}]}}}})
+
+        self.assertEqual(PaymentAllocation.query.one().quantity, 1)
+        self.assertEqual(customer_item_balances(self.customer)[0].units_left, 2)
 
 
 if __name__ == "__main__":

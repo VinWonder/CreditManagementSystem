@@ -109,6 +109,18 @@ class PaymentReceiptTests(unittest.TestCase):
         self.assertIn("For: Soda KES 300.00.", receipt_message(second))
         self.assertIn("Your account is fully paid.", receipt_message(second))
 
+    def test_receipt_names_the_units_paid_for(self):
+        self.soda.quantity, self.soda.unit_price = 3, Decimal("100")
+        db.session.commit()
+        self.client.post("/payments/new", data={
+            "customer_id": str(self.customer.customer_id), "amount_paid": "200", "payment_method": "cash",
+            "sale_item_ids": [str(self.soda.sale_item_id)], f"units_{self.soda.sale_item_id}": "2",
+        })
+
+        message = receipt_message(Payment.query.one())
+
+        self.assertIn("For: Soda ×2 of 3 KES 200.00 of 300.00.", message)
+
     def test_receipt_offers_only_the_customers_chosen_channel(self):
         self.customer.preferred_channel = "whatsapp"
         db.session.commit()
