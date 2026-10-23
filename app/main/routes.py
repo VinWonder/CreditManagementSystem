@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, current_app, jsonify, make_response, render_template, send_from_directory, url_for
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
@@ -15,6 +15,47 @@ RECENT_ACTIVITY_LIMIT = 2
 @main_bp.route("/")
 def index():
     return render_template("main/index.html")
+
+
+@main_bp.route("/manifest.webmanifest")
+def manifest():
+    """Lets phones install Duka Credit to the home screen like an app."""
+    response = jsonify(
+        name="Duka Credit",
+        short_name="Duka Credit",
+        description="Track credit sales, payments and reminders for your shop.",
+        id="/",
+        start_url=url_for("main.dashboard"),
+        scope="/",
+        display="standalone",
+        orientation="portrait",
+        background_color="#f4f7f6",
+        theme_color="#173c35",
+        icons=[
+            {"src": url_for("static", filename="icons/icon-192.png"), "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": url_for("static", filename="icons/icon-512.png"), "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": url_for("static", filename="icons/icon-512.png"), "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+        ],
+    )
+    response.mimetype = "application/manifest+json"
+    return response
+
+
+@main_bp.route("/service-worker.js")
+def service_worker():
+    """Served from the site root so it can cover every page of the app."""
+    response = make_response(
+        send_from_directory(current_app.static_folder, "js/service-worker.js", mimetype="text/javascript")
+    )
+    # Always check for a new version so updates reach installed apps quickly.
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["Service-Worker-Allowed"] = "/"
+    return response
+
+
+@main_bp.route("/offline")
+def offline():
+    return render_template("main/offline.html")
 
 
 @main_bp.route("/features")
