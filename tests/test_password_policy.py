@@ -94,11 +94,11 @@ class RegistrationPasswordTests(unittest.TestCase):
         self.assertIn(b"A symbol such as", response.data)
         self.assertIn(b"password-rules.js", response.data)
 
-
     def test_password_pages_load_the_show_password_button(self):
         for url in ("/auth/register", "/auth/login", "/auth/forgot-password"):
             with self.subTest(url=url):
                 self.assertIn(b"password-toggle.js", self.client.get(url).data)
+
 
 if __name__ == "__main__":
     unittest.main()
