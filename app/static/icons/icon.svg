@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Duka Credit app icon: a lime shopfront on the app's dark green.
+       Full-bleed background so it also works as a maskable icon; the shop
+       stays inside the central safe zone. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1d4a41"/>
+      <stop offset="1" stop-color="#123029"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g fill="none" stroke="#d8ef9f" stroke-width="20" stroke-linejoin="round" stroke-linecap="round">
+    <!-- awning -->
+    <path d="M150 196 L172 142 H340 L362 196"/>
+    <path d="M150 196 Q150 226 180 226 Q211 226 211 196 Q211 226 241 226 Q271 226 271 196 Q271 226 301 226 Q332 226 332 196 Q332 226 362 226 Q362 196 362 196"/>
+    <!-- shop body -->
+    <path d="M168 230 V368 H344 V230"/>
+    <!-- door -->
+    <path d="M224 368 V296 H268 V368"/>
+    <!-- window -->
+    <rect x="286" y="262" width="36" height="34" rx="6"/>
+  </g>
+  <!-- credit tick -->
+  <circle cx="356" cy="356" r="52" fill="#d8ef9f"/>
+  <path d="M332 356 L350 374 L382 340" fill="none" stroke="#173c35" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
