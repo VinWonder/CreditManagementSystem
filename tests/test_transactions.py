@@ -294,10 +294,20 @@ class TransactionHistoryPageTests(unittest.TestCase):
         self.assertNotIn(b"Item 00", first_page.data)
         self.assertIn(b"q=Item&amp;status=synced&amp;page=2", first_page.data)
 
+        # Without JavaScript, "Show more" opens the longer list.
         second_page = self.client.get("/transactions/?q=Item&status=synced&page=2")
         self.assertEqual(second_page.status_code, 200)
         self.assertIn(b"Item 00", second_page.data)
-        self.assertIn(b"Page 2 of 2", second_page.data)
+        self.assertIn(b"Item 25", second_page.data)
+        self.assertIn(b"Showing <strong data-shown>26</strong> of <span data-total>26</span>", second_page.data)
+        self.assertNotIn(b"data-show-more", second_page.data)
+
+        # With JavaScript it fetches only the next rows, to add under the first ones.
+        batch = self.client.get("/transactions/?q=Item&status=synced&page=2&partial=1")
+        self.assertIn(b"Item 00", batch.data)
+        self.assertNotIn(b"Item 25", batch.data)
+        self.assertNotIn(b"<html", batch.data)
+        self.assertIn(b'data-batch-meta data-shown="26"', batch.data)
 
     def test_print_view_includes_all_matching_sales_across_pages(self):
         start = datetime(2026, 10, 1)
@@ -319,7 +329,7 @@ class TransactionHistoryPageTests(unittest.TestCase):
         self.assertIn(b"Item 00", response.data)
         self.assertIn(b"Item 25", response.data)
         self.assertNotIn(b"Filtered item", response.data)
-        self.assertNotIn(b"Page 1 of 2", response.data)
+        self.assertNotIn(b"data-show-more", response.data)
         self.assertIn(b"window.print()", response.data)
 
 

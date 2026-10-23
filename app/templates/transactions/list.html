@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_daybook.html" import day_strip, period_chips, show_more %}
 {% block title %}Credit Transactions{% endblock %}
 {% block content %}
 <section class="transaction-history-page{% if print_mode %} is-print-view{% endif %}" aria-labelledby="transaction-history-title">
@@ -9,8 +10,8 @@
       <p>Review credit sales, find a customer purchase, and check offline sync status.</p>
     </div>
     <div class="transaction-history-actions">
-      <a href="{{ url_for('transactions.list_transactions', q=search, status=sync_status, print=1) }}" class="transaction-history-print">
-        <i class="bi bi-printer" aria-hidden="true"></i> Print all sales
+      <a href="{{ list_url(print=1) }}" class="transaction-history-print" aria-label="Print all matching sales">
+        <i class="bi bi-printer" aria-hidden="true"></i> <span>Print all sales</span>
       </a>
       <a href="{{ url_for('transactions.new_transaction') }}" class="transaction-history-add">
         <i class="bi bi-plus-lg" aria-hidden="true"></i> New Sale
@@ -49,17 +50,46 @@
   </div>
   {% endif %}
 
-  <section class="transaction-history-card" aria-labelledby="transaction-table-title">
+  {% if print_mode %}
+  <section class="transaction-history-card" aria-label="All matching sales">
+    {% if transactions %}
+    <div class="table-responsive">
+      <table class="table transaction-history-table align-middle mb-0">
+        <thead>
+          <tr><th scope="col">Date</th><th scope="col">Customer</th><th scope="col">Item</th><th scope="col" class="text-end">Amount</th><th scope="col">Sync status</th></tr>
+        </thead>
+        <tbody>
+        {% for transaction in transactions %}
+          <tr>
+            <td>{{ transaction.transaction_date|nairobi('%d %b %Y %H:%M') if transaction.transaction_date else 'Date unavailable' }}</td>
+            <td><strong>{{ transaction.customer.full_name }}</strong><br><small>{{ transaction.customer.phone_number }}</small></td>
+            <td>{{ transaction.item_description }}</td>
+            <td class="text-end">{{ transaction.amount | kes }}</td>
+            <td>{{ 'Awaiting sync' if transaction.sync_status == 'pending' else 'Synced' }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p>No matching sales.</p>
+    {% endif %}
+  </section>
+  {% else %}
+  {{ day_strip(pulse, 'sale', day) }}
+
+  <section class="transaction-history-card daybook-card" aria-labelledby="transaction-table-title">
     <div class="transaction-history-card-heading">
       <div class="transaction-history-card-copy">
-        <h2 id="transaction-table-title">Sales history</h2>
-        <p>Newest sales appear first. Search by customer or item description.</p>
+        <h2 id="transaction-table-title">{{ day_label ~ ' · Sales' if day else 'Sales history' }}</h2>
+        <p>Newest first, grouped by day. Tap a sale to open the customer.</p>
       </div>
       <span class="transaction-history-count">{{ filtered_count }} {{ 'result' if filtered_count == 1 else 'results' }}</span>
     </div>
 
-    {% if not print_mode %}
-    <form method="GET" action="{{ url_for('transactions.list_transactions') }}" class="transaction-history-filters" role="search">
+    <form method="GET" action="{{ url_for('transactions.list_transactions') }}" class="transaction-history-filters daybook-filters" role="search">
+      {% if day %}<input type="hidden" name="day" value="{{ day.isoformat() }}">{% endif %}
+      {% if period != 'all' %}<input type="hidden" name="period" value="{{ period }}">{% endif %}
       <label class="transaction-search-box">
         <i class="bi bi-search" aria-hidden="true"></i>
         <span class="visually-hidden">Search customer or item</span>
@@ -68,62 +98,32 @@
       <label class="transaction-status-select">
         <span class="visually-hidden">Filter by sync status</span>
         <i class="bi bi-cloud-check" aria-hidden="true"></i>
-        <select name="status" aria-label="Filter by sync status">
+        <select name="status" aria-label="Filter by sync status" data-auto-submit>
           <option value="all" {% if sync_status == 'all' %}selected{% endif %}>All sync statuses</option>
           <option value="synced" {% if sync_status == 'synced' %}selected{% endif %}>Synced</option>
           <option value="pending" {% if sync_status == 'pending' %}selected{% endif %}>Awaiting sync</option>
         </select>
       </label>
       <button type="submit" class="transaction-filter-submit"><i class="bi bi-funnel" aria-hidden="true"></i> Apply</button>
-      {% if search or sync_status != 'all' %}
+    </form>
+    <div class="daybook-toolbar">
+      {{ period_chips('day' if day else period, periods, 'Show sales from') }}
+      {% if search or sync_status != 'all' or period != 'all' or day %}
       <a href="{{ url_for('transactions.list_transactions') }}" class="transaction-filter-clear">Clear filters</a>
       {% endif %}
-    </form>
-    {% endif %}
-
-    {% if transactions %}
-    <div class="table-responsive">
-      <table class="table table-stack transaction-history-table align-middle mb-0">
-        <thead>
-          <tr><th scope="col">Date</th><th scope="col">Customer</th><th scope="col">Item</th><th scope="col" class="text-end">Amount</th><th scope="col">Sync status</th></tr>
-        </thead>
-        <tbody>
-        {% for transaction in transactions %}
-          <tr>
-            <td>
-              <span class="transaction-history-date">
-                <i class="bi bi-calendar3" aria-hidden="true"></i>
-                {{ transaction.transaction_date|nairobi('%d %b %Y') if transaction.transaction_date else 'Date unavailable' }}
-              </span>
-              {% if transaction.transaction_date %}<small class="transaction-history-time">{{ transaction.transaction_date|nairobi('%H:%M') }} EAT</small>{% endif %}
-            </td>
-            <td class="stack-primary">
-              <a class="transaction-history-customer" href="{{ url_for('customers.view_customer', customer_id=transaction.customer_id) }}">
-                <span class="transaction-history-avatar" aria-hidden="true">{{ transaction.customer.full_name.split()[0][0]|upper }}{{ transaction.customer.full_name.split()[-1][0]|upper if transaction.customer.full_name.split()|length > 1 else '' }}</span>
-                <span><strong>{{ transaction.customer.full_name }}</strong><small>{{ transaction.customer.phone_number }}</small></span>
-                <i class="bi bi-arrow-up-right transaction-history-customer-link" aria-hidden="true"></i>
-              </a>
-            </td>
-            <td><span class="transaction-history-item" title="{{ transaction.item_description }}">{{ transaction.item_description }}</span></td>
-            <td class="text-end"><span class="transaction-history-amount">{{ transaction.amount | kes }}</span></td>
-            <td>
-              {% if transaction.sync_status == 'pending' %}
-              <span class="transaction-sync-status is-pending" title="This sale is waiting to sync from the device that recorded it."><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Awaiting sync</span>
-              {% else %}
-              <span class="transaction-sync-status is-synced" title="This sale has been saved to your account."><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Synced</span>
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
     </div>
+
+    {% if groups %}
+    <div class="daybook" data-daybook>
+      {% include "transactions/_daybook.html" %}
+    </div>
+    {{ show_more(batch, 'sales') }}
     {% else %}
     <div class="transaction-history-empty">
       <span class="transaction-history-empty-icon"><i class="bi {{ 'bi-search' if total_count else 'bi-receipt-cutoff' }}" aria-hidden="true"></i></span>
       {% if total_count %}
       <h3>No matching sales</h3>
-      <p>Try another customer or item name, or clear your filters to see all recorded sales.</p>
+      <p>{% if day %}No sales on {{ day_label }}. Pick another day above, or show all days.{% else %}Try another customer or item name, or clear your filters to see all recorded sales.{% endif %}</p>
       <a href="{{ url_for('transactions.list_transactions') }}" class="transaction-history-empty-action"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Clear filters</a>
       {% else %}
       <h3>No credit sales yet</h3>
@@ -132,25 +132,8 @@
       {% endif %}
     </div>
     {% endif %}
-
-    {% if not print_mode and total_pages > 1 %}
-    <nav class="transaction-history-pagination" aria-label="Transaction pages">
-      <span>Page {{ page }} of {{ total_pages }}</span>
-      <div>
-        {% if page > 1 %}
-        <a href="{{ url_for('transactions.list_transactions', q=search, status=sync_status, page=page - 1) }}"><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</a>
-        {% else %}
-        <span class="is-disabled"><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</span>
-        {% endif %}
-        {% if page < total_pages %}
-        <a href="{{ url_for('transactions.list_transactions', q=search, status=sync_status, page=page + 1) }}">Next <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
-        {% else %}
-        <span class="is-disabled">Next <i class="bi bi-chevron-right" aria-hidden="true"></i></span>
-        {% endif %}
-      </div>
-    </nav>
-    {% endif %}
   </section>
+  {% endif %}
 </section>
 {% endblock %}
 {% block scripts %}

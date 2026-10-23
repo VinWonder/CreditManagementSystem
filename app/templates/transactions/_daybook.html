@@ -1,0 +1,29 @@
+{% from "_daybook.html" import group_open, group_close, batch_meta %}
+{% for group in groups %}
+{{ group_open(group.key, group.label, (group.count ~ (' sale' if group.count == 1 else ' sales') ~ ' · ' ~ (group.total | kes)) if group.count else '', day=group.day) }}
+  {% for transaction in group.rows %}
+  {% set pending = transaction.sync_status == 'pending' %}
+  <li class="daybook-row">
+    <a class="daybook-row-link" href="{{ url_for('customers.view_customer', customer_id=transaction.customer_id) }}">
+      <span class="daybook-avatar" aria-hidden="true">{{ transaction.customer.full_name | initials }}</span>
+      <span class="daybook-main">
+        <strong class="daybook-name">{{ transaction.customer.full_name }}</strong>
+        <span class="daybook-sub" title="{{ transaction.item_description }}">{{ transaction.item_description }}</span>
+      </span>
+      <span class="daybook-side">
+        <strong class="daybook-amount">{{ transaction.amount | kes }}</strong>
+        <span class="daybook-meta">
+          {% if transaction.transaction_date %}{{ transaction.transaction_date|nairobi('%H:%M') }} EAT{% endif %}
+          {% if pending %}
+          <span class="daybook-flag is-pending" title="This sale is waiting to sync from the device that recorded it."><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Awaiting sync</span>
+          {% else %}
+          <span class="daybook-flag is-ok" title="This sale has been saved to your account."><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span class="visually-hidden">Synced</span></span>
+          {% endif %}
+        </span>
+      </span>
+    </a>
+  </li>
+  {% endfor %}
+{{ group_close() }}
+{% endfor %}
+{{ batch_meta(batch) }}

@@ -2,10 +2,10 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-from math import ceil
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_, func
 
+from app import listing
 from app.extensions import db
 from app.models import Customer, CreditTransaction, Ledger, SaleItem
 from app.transactions.forms import (
@@ -148,16 +148,16 @@ def _apply_transaction(retailer_id, customer_id, items, sync_status="synced"):
 @transactions_bp.route("/")
 @login_required
 def list_transactions():
-    page_size = 25
     search = request.args.get("q", "").strip()[:100]
     sync_status = request.args.get("status", "all")
     print_mode = request.args.get("print") == "1"
     if sync_status not in {"all", "synced", "pending"}:
         sync_status = "all"
+    period = listing.read_period()
+    day = listing.parse_day(request.args.get("day"))
 
-    retailer_transactions = CreditTransaction.query.filter_by(
-        retailer_id=current_user.retailer_id
-    )
+    shop_sales = CreditTransaction.query.filter_by(retailer_id=current_user.retailer_id)
+    retailer_transactions = shop_sales
     if search:
         retailer_transactions = retailer_transactions.join(Customer).filter(
             or_(
@@ -169,52 +169,57 @@ def list_transactions():
         retailer_transactions = retailer_transactions.filter(
             CreditTransaction.sync_status == sync_status
         )
-
-    total_count = CreditTransaction.query.filter_by(
-        retailer_id=current_user.retailer_id
-    ).count()
-    total_amount = (
-        db.session.query(func.coalesce(func.sum(CreditTransaction.amount), 0))
-        .filter(CreditTransaction.retailer_id == current_user.retailer_id)
-        .scalar()
+    retailer_transactions = listing.filter_by_time(
+        retailer_transactions, CreditTransaction.transaction_date, period, day
     )
-    pending_count = CreditTransaction.query.filter_by(
-        retailer_id=current_user.retailer_id, sync_status="pending"
-    ).count()
+
     filtered_count = retailer_transactions.count()
-    total_pages = ceil(filtered_count / page_size)
-    page = request.args.get("page", 1, type=int) or 1
-    page = min(max(page, 1), max(total_pages, 1))
     ordered_transactions = retailer_transactions.order_by(
         CreditTransaction.transaction_date.desc(),
         CreditTransaction.transaction_id.desc(),
     )
     if print_mode:
-        transactions = ordered_transactions.all()
-        filtered_amount = (
-            retailer_transactions.with_entities(
+        return render_template(
+            "transactions/list.html",
+            print_mode=True,
+            transactions=ordered_transactions.all(),
+            filtered_count=filtered_count,
+            filtered_amount=retailer_transactions.with_entities(
                 func.coalesce(func.sum(CreditTransaction.amount), 0)
-            ).scalar()
+            ).scalar(),
+            search=search,
+            sync_status=sync_status,
         )
-    else:
-        transactions = (
-            ordered_transactions.offset((page - 1) * page_size).limit(page_size).all()
-        )
-        filtered_amount = 0
+
+    batch = listing.take_batch(ordered_transactions, filtered_count)
+    when = lambda sale: sale.transaction_date
+    days = {listing.nairobi_day(sale.transaction_date) for sale in batch.rows if sale.transaction_date}
+    groups = listing.group_by_day(
+        batch.rows,
+        when,
+        listing.day_totals(retailer_transactions, CreditTransaction.transaction_date, CreditTransaction.amount, days),
+    )
+    if listing.is_partial():
+        return render_template("transactions/_daybook.html", groups=groups, batch=batch)
 
     return render_template(
         "transactions/list.html",
-        transactions=transactions,
-        total_count=total_count,
-        total_amount=total_amount,
-        pending_count=pending_count,
+        print_mode=False,
+        groups=groups,
+        batch=batch,
+        total_count=shop_sales.count(),
+        total_amount=shop_sales.with_entities(
+            func.coalesce(func.sum(CreditTransaction.amount), 0)
+        ).scalar(),
+        pending_count=shop_sales.filter_by(sync_status="pending").count(),
         filtered_count=filtered_count,
         search=search,
         sync_status=sync_status,
-        page=page,
-        total_pages=total_pages,
-        print_mode=print_mode,
-        filtered_amount=filtered_amount,
+        period=period,
+        periods=listing.PERIODS,
+        day=day,
+        day_label=listing.day_label(day) if day else "",
+        pulse=listing.pulse(shop_sales, CreditTransaction.transaction_date, CreditTransaction.amount),
     )
 
 
