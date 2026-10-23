@@ -1801,6 +1801,7 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .payment-receipt-link:hover { text-decoration: underline; }
 /* Styled dropdowns (Tom Select, mouse/trackpad only; phones keep the system picker). */
 .duka-select { min-width: 0; width: 100%; }
+.ts-wrapper.duka-select.form-select { background: none; border: 0; box-shadow: none; padding: 0; }
 .duka-select .ts-control { align-items: center; background: #fff url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2364807a' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") no-repeat right 0.75rem center / 0.75rem; border: 1px solid #d9e4e0; border-radius: 0.65rem; box-shadow: none; color: var(--ink); cursor: pointer; display: flex; flex-wrap: nowrap; font-size: 0.8rem; min-height: 2.6rem; padding: 0.45rem 2.2rem 0.45rem 0.8rem; transition: border-color 150ms ease, box-shadow 150ms ease; }
 .duka-select .ts-control:hover { border-color: #b9d1c9; }
 .duka-select.focus .ts-control { border-color: var(--brand); box-shadow: 0 0 0 0.2rem rgba(44, 122, 123, 0.14); }
