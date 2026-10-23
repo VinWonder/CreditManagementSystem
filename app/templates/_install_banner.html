@@ -9,9 +9,20 @@
       <li>Tap <span class="install-banner-key"><i class="bi bi-box-arrow-up" aria-hidden="true"></i> Share</span> in Safari's toolbar.</li>
       <li>Choose <span class="install-banner-key"><i class="bi bi-plus-square" aria-hidden="true"></i> Add to Home Screen</span>.</li>
     </ol>
+    <ol data-install-variant="android" hidden>
+      <li>Tap <span class="install-banner-key"><i class="bi bi-three-dots-vertical" aria-hidden="true"></i> menu</span> at the top right of Chrome.</li>
+      <li>Choose <span class="install-banner-key"><i class="bi bi-phone" aria-hidden="true"></i> Install app</span>. Avoid "Add to Home screen": that only makes a shortcut with Chrome's logo.</li>
+    </ol>
+    <div data-install-variant="shortcut" hidden>
+      <p>This icon is a Chrome shortcut, so the Chrome logo shows first when it opens. To get the full app:</p>
+      <ol>
+        <li>Press and hold this Duka Credit icon on your home screen and remove it.</li>
+        <li>Open <strong>{{ request.host }}</strong> in Chrome, tap <span class="install-banner-key"><i class="bi bi-three-dots-vertical" aria-hidden="true"></i></span> and choose <span class="install-banner-key">Install app</span>.</li>
+      </ol>
+    </div>
     <div class="install-banner-actions">
       <button type="button" class="install-banner-primary" data-install-accept data-install-variant="prompt"><i class="bi bi-download" aria-hidden="true"></i> Install</button>
-      <button type="button" class="install-banner-primary" data-install-dismiss data-install-variant="ios" hidden>Got it</button>
+      <button type="button" class="install-banner-primary" data-install-dismiss data-install-variant="ios android shortcut" hidden>Got it</button>
       <button type="button" class="install-banner-secondary" data-install-dismiss data-install-variant="prompt">Not now</button>
     </div>
   </div>

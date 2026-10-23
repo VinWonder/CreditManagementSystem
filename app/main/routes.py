@@ -31,6 +31,8 @@ def manifest():
         orientation="portrait",
         background_color="#f4f7f6",
         theme_color="#173c35",
+        # Lets the app ask Chrome whether it was installed in full or only as a shortcut.
+        related_applications=[{"platform": "webapp", "url": url_for("main.manifest")}],
         icons=[
             {"src": url_for("static", filename="icons/icon-192.png"), "sizes": "192x192", "type": "image/png", "purpose": "any"},
             {"src": url_for("static", filename="icons/icon-512.png"), "sizes": "512x512", "type": "image/png", "purpose": "any"},

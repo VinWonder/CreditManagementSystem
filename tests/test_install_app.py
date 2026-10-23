@@ -30,6 +30,21 @@ class InstallableAppTests(unittest.TestCase):
         for icon in manifest["icons"]:
             self.assertEqual(self.client.get(icon["src"]).status_code, 200, icon["src"])
 
+    def test_manifest_lets_the_app_tell_a_full_install_from_a_shortcut(self):
+        manifest = self.client.get("/manifest.webmanifest").get_json()
+
+        self.assertIn({"platform": "webapp", "url": "/manifest.webmanifest"}, manifest["related_applications"])
+
+    def test_banner_steers_android_to_install_app_not_a_shortcut(self):
+        page = self.client.get("/").get_data(as_text=True)
+        script = self.client.get("/static/js/install-prompt.js").get_data(as_text=True)
+
+        self.assertIn('data-install-variant="android"', page)
+        self.assertIn("Install app", page)
+        self.assertIn('data-install-variant="shortcut"', page)
+        self.assertIn("getInstalledRelatedApps", script)
+        self.assertIn('isIos ? "ios" : "android"', script)
+
     def test_service_worker_is_served_from_the_root_and_always_rechecked(self):
         response = self.client.get("/service-worker.js")
 
