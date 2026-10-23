@@ -107,9 +107,9 @@
       <div class="table-responsive">
         <table class="table table-stack customer-history-table mb-0">
           <thead><tr><th>Date</th><th>Items</th><th class="text-end">Sale total</th></tr></thead>
-          <tbody>
+          <tbody data-collapse-rows="5" data-collapse-noun="sales">
           {% for t in transactions %}
-            <tr>
+            <tr data-collapse-row>
               <td>{{ t.transaction_date|nairobi('%d %b %Y · %H:%M') }} EAT</td>
               <td>
                 <ul class="sale-item-status-list">
@@ -137,9 +137,9 @@
       <div class="table-responsive">
         <table class="table table-stack customer-history-table mb-0">
           <thead><tr><th>Date</th><th>Method</th><th>Approval</th><th class="text-end">Amount</th></tr></thead>
-          <tbody>
+          <tbody data-collapse-rows="5" data-collapse-noun="payments">
           {% for p in payments %}
-            <tr>
+            <tr data-collapse-row>
               <td>{{ p.payment_date|nairobi('%d %b %Y · %H:%M') }} EAT</td>
               <td>{{ payment_method_badge(p) }}</td>
               <td><span class="customer-payment-status {{ 'is-approved' if p.approval_status == 'approved' else 'is-pending' if p.approval_status == 'pending' else 'is-rejected' }}">{{ p.approval_status|capitalize }}</span>{% if p.review_note %}<small class="customer-payment-note">{{ p.review_note }}</small>{% endif %}</td>
@@ -159,9 +159,9 @@
       <div class="table-responsive">
         <table class="table table-stack customer-history-table mb-0">
           <thead><tr><th>Date</th><th>Change</th><th>Reason</th></tr></thead>
-          <tbody>
+          <tbody data-collapse-rows="5" data-collapse-noun="corrections">
           {% for adjustment in adjustments %}
-            <tr><td>{{ adjustment.created_at|nairobi('%d %b %Y · %H:%M') }} EAT</td><td><strong>{{ adjustment.amount_change | kes }}</strong></td><td>{{ adjustment.reason }}</td></tr>
+            <tr data-collapse-row><td>{{ adjustment.created_at|nairobi('%d %b %Y · %H:%M') }} EAT</td><td><strong>{{ adjustment.amount_change | kes }}</strong></td><td>{{ adjustment.reason }}</td></tr>
           {% endfor %}
           </tbody>
         </table>
