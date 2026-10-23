@@ -53,7 +53,7 @@ def recent_pending_prompt(customer_id):
     ).first()
 
 
-def send_stk_prompt(customer, amount, phone, sale_item_ids=()):
+def send_stk_prompt(customer, amount, phone, sale_item_ids=(), units=None):
     """Ask Safaricom to prompt the customer's phone. Raises DarajaError with a showable reason.
 
     sale_item_ids are the items the payment is for; they are applied once M-Pesa
@@ -76,7 +76,11 @@ def send_stk_prompt(customer, amount, phone, sale_item_ids=()):
         callback_token=token,
         merchant_request_id=response.get("MerchantRequestID"),
         checkout_request_id=response.get("CheckoutRequestID"),
-        sale_item_ids=",".join(str(item_id) for item_id in sale_item_ids) or None,
+        # "12,15:2" = all of item 12 owed, 2 units of item 15.
+        sale_item_ids=",".join(
+            f"{item_id}:{(units or {})[item_id]}" if item_id in (units or {}) else str(item_id)
+            for item_id in sale_item_ids
+        ) or None,
     )
     db.session.add(stk)
     db.session.commit()
@@ -115,9 +119,14 @@ def finish_stk_request(stk, result_code, result_desc, receipt=None, paid_amount=
         review_note="Confirmed by M-Pesa",
     )
     if stk.sale_item_ids:
-        item_ids = [int(item_id) for item_id in stk.sale_item_ids.split(",")]
+        item_ids, units = [], {}
+        for part in stk.sale_item_ids.split(","):
+            item_id, _, count = part.partition(":")
+            item_ids.append(int(item_id))
+            if count:
+                units[int(item_id)] = int(count)
         try:
-            allocate_payment(payment, db.session.get(Customer, stk.customer_id), item_ids)
+            allocate_payment(payment, db.session.get(Customer, stk.customer_id), item_ids, units)
         except ValueError as exc:
             # The money arrived either way; it pays the oldest items instead.
             current_app.logger.warning("Prompt %s paid without its item choice: %s", stk.stk_request_id, exc)

@@ -10,7 +10,7 @@ uses before any manual balance corrections.
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal
+from decimal import ROUND_CEILING, Decimal
 
 from app.models import CreditTransaction, PaymentAllocation, SaleItem
 
@@ -39,6 +39,30 @@ class ItemBalance:
         if self.remaining == ZERO:
             return "paid"
         return "partly paid" if self.paid > ZERO else "unpaid"
+
+    @property
+    def quantity(self):
+        return (self.item.quantity or 1) if self.item is not None else 1
+
+    @property
+    def unit_price(self):
+        return Decimal(self.item.price_each) if self.item is not None else self.amount
+
+    @property
+    def label(self):
+        """'Soda x3' for several units, plain 'Soda' for one."""
+        return f"{self.description} ×{self.quantity}" if self.quantity > 1 else self.description
+
+    @property
+    def units_left(self):
+        """Units not yet fully paid for (a partly paid unit counts as left)."""
+        if self.remaining == ZERO or self.unit_price <= ZERO:
+            return 0
+        return min(self.quantity, int((self.remaining / self.unit_price).to_integral_value(rounding=ROUND_CEILING)))
+
+    def amount_for_units(self, units):
+        """What paying for `units` of this item costs now, never more than is owed."""
+        return min(self.remaining, Decimal(units) * self.unit_price)
 
 
 def summarize_items(descriptions):
@@ -133,12 +157,15 @@ def _settle(customer, statuses, balances, by_item_id):
     return balances, paid_by
 
 
-def allocate_payment(payment, customer, sale_item_ids):
+def allocate_payment(payment, customer, sale_item_ids, units=None):
     """Record which items a payment is for, filling each in the order chosen.
 
-    Raises ValueError when an item is not this customer's or is already paid, or
-    when the payment is larger than what the chosen items still owe.
+    units maps an item id to how many of its units the customer is paying for;
+    that caps the item at units x unit price. Raises ValueError when an item is
+    not this customer's or is already paid, or when the payment is larger than
+    what the chosen items (and units) still owe.
     """
+    units = units or {}
     if not sale_item_ids:
         return []
     owing = {
@@ -153,7 +180,15 @@ def allocate_payment(payment, customer, sale_item_ids):
             raise ValueError("One of the chosen items is not owed by this customer any more.")
         if balance not in chosen:
             chosen.append(balance)
-    total_owed = sum((balance.remaining for balance in chosen), ZERO)
+    caps = {}
+    for balance in chosen:
+        chosen_units = units.get(balance.item_id)
+        if chosen_units is not None and not 1 <= chosen_units <= balance.units_left:
+            raise ValueError(f"Choose 1 to {balance.units_left} of {balance.description}.")
+        caps[balance.item_id] = (
+            balance.amount_for_units(chosen_units) if chosen_units is not None else balance.remaining
+        )
+    total_owed = sum(caps.values(), ZERO)
     left = Decimal(payment.amount_paid)
     if left > total_owed:
         raise ValueError(
@@ -164,7 +199,14 @@ def allocate_payment(payment, customer, sale_item_ids):
     for balance in chosen:
         if left <= ZERO:
             break
-        applied = min(left, balance.remaining)
-        allocations.append(PaymentAllocation(payment=payment, sale_item_id=balance.item_id, amount=applied))
+        applied = min(left, caps[balance.item_id])
+        allocations.append(
+            PaymentAllocation(
+                payment=payment,
+                sale_item_id=balance.item_id,
+                amount=applied,
+                quantity=units.get(balance.item_id),
+            )
+        )
         left -= applied
     return allocations

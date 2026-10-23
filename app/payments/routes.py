@@ -136,9 +136,13 @@ def new_payment():
         customer.customer_id: [
             {
                 "id": balance.item_id,
-                "label": f"{balance.description} · {format_nairobi_datetime(balance.sale.transaction_date, '%d %b %Y')}",
+                "label": f"{balance.label} · {format_nairobi_datetime(balance.sale.transaction_date, '%d %b %Y')}",
+                "name": balance.description,
                 "remaining": f"{balance.remaining:.2f}",
                 "partly_paid": balance.status == "partly paid",
+                "quantity": balance.quantity,
+                "unit_price": f"{balance.unit_price:.2f}",
+                "units_left": balance.units_left,
             }
             for balance in customer_item_balances(customer, include_pending=True)
             if balance.item_id is not None and balance.remaining > 0
@@ -152,8 +156,14 @@ def new_payment():
 
     try:
         chosen_item_ids = [int(value) for value in request.form.getlist("sale_item_ids")]
+        # How many units of each chosen item, e.g. units_12=2; absent means "all that is owed".
+        chosen_units = {
+            item_id: int(request.form[f"units_{item_id}"])
+            for item_id in chosen_item_ids
+            if request.form.get(f"units_{item_id}", "").strip()
+        }
     except ValueError:
-        chosen_item_ids = None
+        chosen_item_ids, chosen_units = None, {}
 
     if form.validate_on_submit():
         customer = (
@@ -168,18 +178,34 @@ def new_payment():
             current_user.retailer_id, include_pending=True
         )
         current_balance = current_balances.get(form.customer_id.data, Decimal("0"))
-        chosen_owed = {
-            item["id"]: Decimal(item["remaining"])
-            for item in owing_items.get(form.customer_id.data, [])
-        }
+        owed_items = {item["id"]: item for item in owing_items.get(form.customer_id.data, [])}
+        units_problem = next(
+            (
+                f"Choose 1 to {owed_items[item_id]['units_left']} of {owed_items[item_id]['name']}."
+                for item_id, units in chosen_units.items()
+                if item_id in owed_items and not 1 <= units <= owed_items[item_id]["units_left"]
+            ),
+            None,
+        )
+        chosen_total = sum(
+            (
+                min(Decimal(owed_items[i]["remaining"]), chosen_units[i] * Decimal(owed_items[i]["unit_price"]))
+                if i in chosen_units
+                else Decimal(owed_items[i]["remaining"])
+                for i in set(chosen_item_ids or []) if i in owed_items
+            ),
+            Decimal("0"),
+        )
         if customer is None or current_balance <= 0:
             form.customer_id.errors.append("Choose a customer with an outstanding balance.")
-        elif chosen_item_ids is None or any(item_id not in chosen_owed for item_id in chosen_item_ids):
+        elif chosen_item_ids is None or any(item_id not in owed_items for item_id in chosen_item_ids):
             form.amount_paid.errors.append("One of the chosen items is not owed by this customer any more.")
-        elif chosen_item_ids and form.amount_paid.data > sum(chosen_owed[i] for i in set(chosen_item_ids)):
+        elif units_problem:
+            form.amount_paid.errors.append(units_problem)
+        elif chosen_item_ids and form.amount_paid.data > chosen_total:
             form.amount_paid.errors.append(
-                f"The chosen items only have KES {sum(chosen_owed[i] for i in set(chosen_item_ids)):,.2f} "
-                "left to pay. Lower the amount or choose more items."
+                f"The chosen items only have KES {chosen_total:,.2f} left to pay. "
+                "Lower the amount or choose more items or units."
             )
         elif form.amount_paid.data > current_balance:
             form.amount_paid.errors.append(
@@ -196,7 +222,7 @@ def new_payment():
             else:
                 try:
                     stk = send_stk_prompt(
-                        customer, int(form.amount_paid.data), form.stk_phone.data, chosen_item_ids
+                        customer, int(form.amount_paid.data), form.stk_phone.data, chosen_item_ids, chosen_units
                     )
                 except DarajaError as exc:
                     form.payment_method.errors.append(str(exc))
@@ -221,7 +247,7 @@ def new_payment():
             )
             # Name the chosen items before adding the payment, so their balances
             # are worked out without this payment counted twice.
-            allocate_payment(payment, customer, chosen_item_ids)
+            allocate_payment(payment, customer, chosen_item_ids, chosen_units)
             db.session.add(payment)
 
             ledger = Ledger.query.filter_by(customer_id=customer.customer_id).first()
@@ -259,6 +285,7 @@ def new_payment():
         customer_phones={customer.customer_id: customer.phone_number for customer in owing_customers},
         owing_items=owing_items,
         chosen_item_ids=chosen_item_ids or [],
+        chosen_units=chosen_units,
         stk_enabled=stk_enabled,
     )
 

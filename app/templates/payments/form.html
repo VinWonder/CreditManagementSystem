@@ -254,6 +254,7 @@
   // Items the payment can be for. Ticking items fills in what they still owe.
   const owingItems = {{ owing_items | tojson }};
   const chosenItemIds = new Set({{ chosen_item_ids | tojson }});
+  const chosenUnits = {{ chosen_units | tojson }};
   const itemsBox = document.getElementById("payment-items");
   const itemList = document.getElementById("payment-item-list");
 
@@ -278,17 +279,52 @@
       due.className = "payment-item-due";
       due.textContent = `${formatKes(item.remaining)} ${item.partly_paid ? "left" : "due"}`;
       label.append(box, name, due);
-      itemList.append(label);
+      const row = document.createElement("div");
+      row.className = "payment-item-row";
+      row.append(label);
+      if (item.quantity > 1 && item.units_left > 0) {
+        // Bought several: let the customer pay for some of them.
+        const units = document.createElement("label");
+        units.className = "payment-item-units";
+        units.hidden = !box.checked;
+        const count = document.createElement("input");
+        count.type = "number";
+        count.className = "form-control";
+        count.name = `units_${item.id}`;
+        count.min = "1";
+        count.max = String(item.units_left);
+        count.step = "1";
+        count.value = String(chosenUnits[item.id] || item.units_left);
+        count.dataset.unitPrice = item.unit_price;
+        count.dataset.remaining = item.remaining;
+        count.disabled = !box.checked;
+        units.append("Paying for", count, `of ${item.units_left} ${item.name} at ${formatKes(item.unit_price)} each`);
+        box.addEventListener("change", () => { units.hidden = !box.checked; count.disabled = !box.checked; });
+        row.append(units);
+      }
+      itemList.append(row);
     });
   }
 
-  itemList.addEventListener("change", () => {
-    const checked = [...itemList.querySelectorAll("input:checked")];
+  function chosenAmount(box) {
+    const count = box.closest(".payment-item-row").querySelector(".payment-item-units input");
+    if (!count) return Number(box.dataset.remaining);
+    const units = Math.min(Math.max(Math.floor(Number(count.value) || 0), 0), Number(count.max));
+    return Math.min(Number(count.dataset.remaining), units * Number(count.dataset.unitPrice));
+  }
+
+  function updateFromItems() {
+    const checked = [...itemList.querySelectorAll('input[name="sale_item_ids"]:checked')];
     if (!checked.length) return;
-    let total = checked.reduce((sum, box) => sum + Number(box.dataset.remaining), 0);
+    let total = checked.reduce((sum, box) => sum + chosenAmount(box), 0);
     if (method.value === "mpesa_stk") total = Math.floor(total);
     amount.value = total.toFixed(method.value === "mpesa_stk" ? 0 : 2);
     updateBalance();
+  }
+
+  itemList.addEventListener("change", updateFromItems);
+  itemList.addEventListener("input", (event) => {
+    if (event.target.closest(".payment-item-units")) updateFromItems();
   });
   customer.addEventListener("change", () => { chosenItemIds.clear(); renderItems(); });
   renderItems();
