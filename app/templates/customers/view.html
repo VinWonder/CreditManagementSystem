@@ -115,7 +115,7 @@
                 <ul class="sale-item-status-list">
                   {% for b in item_balances_by_sale.get(t.transaction_id, []) %}
                   <li>
-                    <span class="sale-item-status-name">{{ b.description }} <small>{{ b.amount | kes }}</small></span>
+                    <span class="sale-item-status-name">{{ b.label }} <small>{% if b.quantity > 1 %}{{ b.quantity }} × {{ b.unit_price | kes }} = {% endif %}{{ b.amount | kes }}</small></span>
                     {% if b.status == 'paid' %}<span class="sale-item-status is-paid"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Paid</span>
                     {% elif b.status == 'partly paid' %}<span class="sale-item-status is-partial">{{ b.remaining | kes }} left</span>
                     {% else %}<span class="sale-item-status is-due">{{ b.remaining | kes }} due</span>{% endif %}

@@ -34,7 +34,7 @@ def select_matching_rule(rules, days_overdue):
 def unpaid_item_details(customer):
     """What the customer still owes, one purchase at a time, for the reminder text.
 
-    "Chips KES 100.00, Soda KES 300.00 (taken 21 Oct 2026); Sugar (taken 23 Oct 2026)".
+    "Chips KES 100.00, Soda ×3 KES 300.00 (taken 21 Oct 2026); Sugar (taken 23 Oct 2026)".
     Items already paid are left out; a partly paid item shows what is left.
     """
     purchases = {}
@@ -48,11 +48,11 @@ def unpaid_item_details(customer):
         parts = []
         for balance in unpaid:
             if balance.status == "partly paid":
-                parts.append(f"{balance.description} (KES {balance.remaining:,.2f} left)")
-            elif several:
-                parts.append(f"{balance.description} KES {balance.amount:,.2f}")
+                parts.append(f"{balance.label} (KES {balance.remaining:,.2f} left)")
+            elif several or balance.quantity > 1:
+                parts.append(f"{balance.label} KES {balance.amount:,.2f}")
             else:
-                parts.append(balance.description)
+                parts.append(balance.label)
         details.append(
             f"{', '.join(parts)} (taken {format_nairobi_datetime(sale.transaction_date, '%d %b %Y')})"
         )

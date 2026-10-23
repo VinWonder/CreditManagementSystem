@@ -7,13 +7,19 @@ from app.transactions.items import payment_item_breakdown
 
 
 def paid_items_text(payment):
-    """'Chips KES 100.00, Soda KES 50.00 of 300.00' for the items this payment covered."""
+    """'Chips KES 100.00, Soda ×2 of 3 KES 200.00 of 300.00' for the items this payment covered."""
+    units_paid = {a.sale_item_id: a.quantity for a in payment.allocations if a.quantity}
     parts = []
     for balance, applied in payment_item_breakdown(payment.customer).get(payment.payment_id, []):
-        if applied >= balance.amount:
-            parts.append(f"{balance.description} KES {applied:,.2f}")
+        units = units_paid.get(balance.item_id)
+        if units and units < balance.quantity:
+            name = f"{balance.description} ×{units} of {balance.quantity}"
         else:
-            parts.append(f"{balance.description} KES {applied:,.2f} of {balance.amount:,.2f}")
+            name = balance.label
+        if applied >= balance.amount:
+            parts.append(f"{name} KES {applied:,.2f}")
+        else:
+            parts.append(f"{name} KES {applied:,.2f} of {balance.amount:,.2f}")
     return ", ".join(parts)
 
 

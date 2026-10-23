@@ -14,5 +14,5 @@
   <span>{{ payment.payment_method_label }}</span>
 </span>
 {% if payment.payment_reference %}<small class="payment-method-reference">Ref {{ payment.payment_reference }}</small>{% endif %}
-{% if payment.allocations %}<small class="payment-method-items">For {{ payment.allocations | map(attribute='sale_item.description') | join(', ') }}</small>{% endif %}
+{% if payment.allocations %}<small class="payment-method-items">For {{ payment.allocations | map(attribute='label') | join(', ') }}</small>{% endif %}
 {% endmacro %}
