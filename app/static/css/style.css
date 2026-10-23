@@ -1755,7 +1755,7 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 /* Credit sale item rows */
 .sale-items { border: 0; margin: 0; min-width: 0; padding: 0; }
 .sale-item-list { display: grid; gap: 0.65rem; margin-top: 0.6rem; }
-.sale-item-row { align-items: end; background: #f8fbfa; border: 1px solid #e2ebe8; border-radius: 0.8rem; display: grid; gap: 0.55rem; grid-template-columns: minmax(0, 1fr) 7.5rem 8.5rem 2.25rem; padding: 0.7rem; }
+.sale-item-row { align-items: end; background: #f8fbfa; border: 1px solid #e2ebe8; border-radius: 0.8rem; display: grid; gap: 0.55rem; grid-template-columns: minmax(0, 1fr) 7rem 4.5rem 7.5rem 2.25rem; padding: 0.7rem; }
 .sale-item-field { min-width: 0; }
 .sale-item-field .form-label { font-size: 0.7rem; margin-bottom: 0.25rem; }
 .sale-item-remove { align-items: center; background: #fff; border: 1px solid #e0e8e6; border-radius: 0.55rem; color: #8a5a54; display: inline-flex; height: 2.35rem; justify-content: center; width: 2.25rem; }
@@ -1768,8 +1768,8 @@ html:has(.welcome-page) { scroll-behavior: smooth; }
 .sale-items-total span { color: #6c7f82; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
 .sale-items-total strong { color: #1e5448; font-size: 1.1rem; }
 @media (max-width: 575.98px) {
-  .sale-item-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 2.25rem; }
-  .sale-item-name { grid-column: 1 / -1; }
+  .sale-item-row { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) 2.25rem; }
+  .sale-item-name, .sale-item-size { grid-column: 1 / -1; }
 }
 /* Choosing which items a payment is for */
 .payment-items { border: 0; margin: 0 0 1rem; min-width: 0; padding: 0; }
@@ -1925,3 +1925,15 @@ body.duka-select-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .install-banner { animation: none; } }
 /* Keep notifications above the banner while it is open. */
 body.install-banner-open .app-flash-stack { bottom: calc(10.5rem + env(safe-area-inset-bottom, 0px)); }
+.sale-item-line-total { color: #2f6b58; font-size: 0.74rem; font-weight: 700; grid-column: 1 / -1; margin: -0.15rem 0 0; }
+.sale-item-line-total:empty { display: none; }
+/* Medium screens: name across the top, the rest below. */
+@media (min-width: 576px) and (max-width: 991.98px) {
+  .sale-item-row { grid-template-columns: minmax(0, 1fr) 4.5rem 7.5rem 2.25rem; }
+  .sale-item-name { grid-column: 1 / -1; }
+}
+/* Paying for some units of an item */
+.payment-item-row { display: grid; gap: 0.35rem; }
+.payment-item-units { align-items: center; color: #4c625d; display: flex; flex-wrap: wrap; font-size: 0.78rem; gap: 0.45rem; padding: 0 0.75rem 0.35rem 2.4rem; }
+.payment-item-units[hidden] { display: none; }
+.payment-item-units .form-control { font-size: 0.9rem; padding: 0.35rem 0.5rem; text-align: center; width: 4.5rem; }

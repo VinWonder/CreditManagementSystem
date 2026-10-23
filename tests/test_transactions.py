@@ -36,7 +36,8 @@ class TransactionValidationTests(unittest.TestCase):
                     "customer_id": customer_id,
                     "items-0-item_description": description,
                     "items-0-item_size_inches": size_inches,
-                    "items-0-amount": amount,
+                    "items-0-quantity": "1",
+                    "items-0-unit_price": amount,
                 }
             )
         )
@@ -48,7 +49,7 @@ class TransactionValidationTests(unittest.TestCase):
             form = self._form()
 
             self.assertTrue(form.validate(), form.errors)
-            self.assertEqual(form.sale_items, [("Rice", Decimal("0.01"))])
+            self.assertEqual(form.sale_items, [("Rice", 1, Decimal("0.01"))])
 
     def test_form_rejects_zero_amount_and_missing_customer(self):
         with self.app.test_request_context():
@@ -56,14 +57,14 @@ class TransactionValidationTests(unittest.TestCase):
 
             self.assertFalse(form.validate())
             self.assertIn("customer_id", form.errors)
-            self.assertIn("amount", form.items[0].form.errors)
+            self.assertIn("unit_price", form.items[0].form.errors)
 
     def test_form_rejects_amounts_with_more_than_two_decimal_places(self):
         with self.app.test_request_context():
             form = self._form(amount="1.001")
 
             self.assertFalse(form.validate())
-            self.assertIn("2 decimal places", form.items[0].form.amount.errors[0])
+            self.assertIn("2 decimal places", form.items[0].form.unit_price.errors[0])
 
     def test_item_size_options_include_requested_fractional_and_whole_inches(self):
         with self.app.test_request_context():
@@ -211,7 +212,8 @@ class TransactionHistoryPageTests(unittest.TestCase):
                 "customer_id": str(self.customer.customer_id),
                 "items-0-item_description": "PVC pipe",
                 "items-0-item_size_inches": "1/2",
-                "items-0-amount": "125.00",
+                "items-0-quantity": "1",
+                "items-0-unit_price": "125.00",
             },
         )
 

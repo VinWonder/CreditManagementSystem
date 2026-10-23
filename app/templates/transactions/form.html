@@ -54,7 +54,7 @@
         <div class="sale-item-row" data-item-row>
           <div class="sale-item-field sale-item-name">
             <label class="form-label" for="items-{{ index }}-item_description">Item</label>
-            <input class="form-control" id="items-{{ index }}-item_description" name="items-{{ index }}-item_description" maxlength="150" placeholder="e.g. Chips" required value="{{ entry.form.item_description.data if entry else '' }}">
+            <input class="form-control" id="items-{{ index }}-item_description" name="items-{{ index }}-item_description" maxlength="150" placeholder="e.g. Chips" required value="{{ (entry.form.item_description.data or '') if entry else '' }}">
           </div>
           <div class="sale-item-field sale-item-size">
             <label class="form-label" for="items-{{ index }}-item_size_inches">Size</label>
@@ -62,11 +62,16 @@
               {% for value, label in size_choices %}<option value="{{ value }}"{% if entry and entry.form.item_size_inches.data == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
             </select>
           </div>
+          <div class="sale-item-field sale-item-qty">
+            <label class="form-label" for="items-{{ index }}-quantity">Qty</label>
+            <input class="form-control" id="items-{{ index }}-quantity" name="items-{{ index }}-quantity" type="number" inputmode="numeric" min="1" max="10000" step="1" required value="{{ (entry.form.quantity.raw_data[0] if entry.form.quantity.raw_data else entry.form.quantity.data) if entry else 1 }}" data-item-quantity>
+          </div>
           <div class="sale-item-field sale-item-amount">
-            <label class="form-label" for="items-{{ index }}-amount">Price (KES)</label>
-            <input class="form-control" id="items-{{ index }}-amount" name="items-{{ index }}-amount" type="number" inputmode="decimal" min="0.01" max="99999999.99" step="0.01" placeholder="0.00" required value="{{ entry.form.amount.raw_data[0] if entry and entry.form.amount.raw_data else (entry.form.amount.data if entry and entry.form.amount.data is not none else '') }}" data-item-amount>
+            <label class="form-label" for="items-{{ index }}-unit_price">Unit price (KES)</label>
+            <input class="form-control" id="items-{{ index }}-unit_price" name="items-{{ index }}-unit_price" type="number" inputmode="decimal" min="0.01" max="99999999.99" step="0.01" placeholder="0.00" required value="{{ entry.form.unit_price.raw_data[0] if entry and entry.form.unit_price.raw_data else (entry.form.unit_price.data if entry and entry.form.unit_price.data is not none else '') }}" data-item-price>
           </div>
           <button type="button" class="sale-item-remove" data-remove-item aria-label="Remove this item"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+          <p class="sale-item-line-total" data-item-line-total aria-live="polite"></p>
           {% if entry and entry.form.errors %}
           <div class="transaction-field-errors sale-item-errors" role="alert">
             {% for errors in entry.form.errors.values() %}{% for error in errors %}<span><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>{{ error }}</span>{% endfor %}{% endfor %}
@@ -159,8 +164,15 @@
   }
 
   function updateTotal() {
-    const total = [...list.querySelectorAll("[data-item-amount]")]
-      .reduce((sum, input) => sum + (Number(input.value) > 0 ? Number(input.value) : 0), 0);
+    let total = 0;
+    list.querySelectorAll("[data-item-row]").forEach((row) => {
+      const quantity = Math.max(0, Math.floor(Number(row.querySelector("[data-item-quantity]").value) || 0));
+      const price = Math.max(0, Number(row.querySelector("[data-item-price]").value) || 0);
+      const line = quantity * price;
+      total += line;
+      row.querySelector("[data-item-line-total]").textContent =
+        quantity > 1 && price > 0 ? `${quantity} × ${formatKes(price)} = ${formatKes(line)}` : "";
+    });
     totalOutput.textContent = formatKes(total);
   }
 
@@ -221,17 +233,21 @@
       const items = [...list.querySelectorAll("[data-item-row]")].map((row) => ({
         item_description: row.querySelector('[name$="-item_description"]').value.trim(),
         item_size_inches: row.querySelector('[name$="-item_size_inches"]').value,
-        amount: Number(row.querySelector("[data-item-amount]").value),
+        quantity: Number(row.querySelector("[data-item-quantity]").value),
+        unit_price: Number(row.querySelector("[data-item-price]").value),
       }));
       if (!items.length || items.some((item) => !item.item_description || item.item_description.length > 150)) {
         throw new Error("Give every item a name of 150 characters or fewer.");
       }
-      if (items.some((item) => !Number.isFinite(item.amount) || item.amount < 0.01)) {
+      if (items.some((item) => !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 10000)) {
+        throw new Error("Give every item a whole-number quantity from 1 to 10,000.");
+      }
+      if (items.some((item) => !Number.isFinite(item.unit_price) || item.unit_price < 0.01)) {
         throw new Error("Give every item a price of at least KES 0.01.");
       }
       await DukaOfflineDB.addPendingTransaction({
         customer_id: customerId,
-        items: items.map((item) => ({ ...item, amount: item.amount.toFixed(2) })),
+        items: items.map((item) => ({ ...item, unit_price: item.unit_price.toFixed(2) })),
       });
       offlineNote.innerHTML = '<i class="bi bi-cloud-slash" aria-hidden="true"></i><span>Sale saved on this device. It will sync automatically when you are back online.</span>';
       offlineNote.classList.remove("d-none");

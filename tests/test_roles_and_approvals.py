@@ -341,7 +341,8 @@ class RoleAndApprovalTests(unittest.TestCase):
             data={
                 "customer_id": str(added_customer.customer_id),
                 "items-0-item_description": "Cooking oil",
-                "items-0-amount": "25.00",
+                "items-0-quantity": "1",
+                "items-0-unit_price": "25.00",
             },
         )
         self.assertEqual(sale_response.status_code, 302)

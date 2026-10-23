@@ -11,6 +11,7 @@ from app.models import Customer, CreditTransaction, Ledger, SaleItem
 from app.transactions.forms import (
     ITEM_SIZE_CHOICES,
     ITEM_SIZES_INCHES,
+    MAX_ITEM_QUANTITY,
     MAX_SALE_ITEMS,
     TransactionForm,
     format_item_description,
@@ -21,7 +22,11 @@ transactions_bp = Blueprint("transactions", __name__, url_prefix="/transactions"
 
 
 def _normalize_offline_item(item):
-    """Validate one product from a locally queued sale. Returns ((description, amount), error)."""
+    """Validate one product from a locally queued sale.
+
+    Returns ((description, quantity, unit_price), error). Sales queued before
+    quantities existed send only `amount`, which is the price of one.
+    """
     if not isinstance(item, dict):
         return None, "invalid item"
     description = item.get("item_description")
@@ -34,7 +39,14 @@ def _normalize_offline_item(item):
     if len(description) > 150:
         return None, "item description and size must be 150 characters or fewer"
 
-    raw_amount = item.get("amount")
+    raw_quantity = item.get("quantity", 1)
+    if isinstance(raw_quantity, bool) or not str(raw_quantity).strip().isdigit():
+        return None, "enter a whole-number quantity"
+    quantity = int(str(raw_quantity).strip())
+    if not 1 <= quantity <= MAX_ITEM_QUANTITY:
+        return None, f"quantity must be 1 to {MAX_ITEM_QUANTITY:,}"
+
+    raw_amount = item.get("unit_price", item.get("amount"))
     if isinstance(raw_amount, bool):
         return None, "enter a valid amount"
     try:
@@ -45,7 +57,7 @@ def _normalize_offline_item(item):
         return None, "amount must be at least KES 0.01"
     if amount > Decimal("99999999.99") or amount.as_tuple().exponent < -2:
         return None, "amount must be no more than KES 99,999,999.99 with up to 2 decimal places"
-    return (description, amount), None
+    return (description, quantity, amount), None
 
 
 def _normalize_offline_transaction(item):
@@ -75,14 +87,16 @@ def _normalize_offline_transaction(item):
         if error:
             return None, error
         items.append(normalized)
-    total = sum((amount for _description, amount in items), Decimal("0"))
+    total = sum((quantity * price for _description, quantity, price in items), Decimal("0"))
     if total > Decimal("99999999.99"):
         return None, "the sale total must be KES 99,999,999.99 or less"
 
     return {
         "customer_id": customer_id,
         "items": items,
-        "item_description": summarize_items([description for description, _amount in items]),
+        "item_description": summarize_items(
+            [f"{d} ×{q}" if q > 1 else d for d, q, _price in items]
+        ),
         "amount": total,
     }, None
 
@@ -97,20 +111,27 @@ def _populate_customer_choices(form):
 
 
 def _apply_transaction(retailer_id, customer_id, items, sync_status="synced"):
-    """Save one sale of one or more (description, amount) items.
+    """Save one sale of one or more (description, quantity, unit_price) items.
 
     Shared by the normal form AND the offline-sync API.
     """
+    rows = [
+        SaleItem(
+            position=position,
+            description=description,
+            quantity=quantity,
+            unit_price=Decimal(unit_price),
+            amount=Decimal(quantity) * Decimal(unit_price),
+        )
+        for position, (description, quantity, unit_price) in enumerate(items)
+    ]
     txn = CreditTransaction(
         retailer_id=retailer_id,
         customer_id=customer_id,
-        item_description=summarize_items([description for description, _amount in items]),
-        amount=sum((Decimal(amount) for _description, amount in items), Decimal("0")),
+        item_description=summarize_items([row.label for row in rows]),
+        amount=sum((row.amount for row in rows), Decimal("0")),
         sync_status=sync_status,
-        items=[
-            SaleItem(position=position, description=description, amount=amount)
-            for position, (description, amount) in enumerate(items)
-        ],
+        items=rows,
     )
     db.session.add(txn)
 

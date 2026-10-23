@@ -1,10 +1,11 @@
 from decimal import Decimal, InvalidOperation
 
 from flask_wtf import FlaskForm
-from wtforms import DecimalField, FieldList, Form, FormField, SelectField, StringField, SubmitField
-from wtforms.validators import DataRequired, Length, Optional, ValidationError
+from wtforms import DecimalField, FieldList, Form, FormField, IntegerField, SelectField, StringField, SubmitField
+from wtforms.validators import DataRequired, Length, NumberRange, Optional, ValidationError
 
 MAX_SALE_ITEMS = 30
+MAX_ITEM_QUANTITY = 10000
 
 
 ITEM_SIZE_CHOICES = [
@@ -79,11 +80,25 @@ class SaleItemForm(Form):
         choices=[("", "No size")] + ITEM_SIZE_CHOICES,
         validators=[Optional(), _validate_item_size_description],
     )
-    amount = DecimalField(
-        "Amount (KES)",
-        places=2,
-        validators=[DataRequired(message="Enter the item's price."), _validate_amount],
+    quantity = IntegerField(
+        "Qty",
+        default=1,
+        validators=[
+            DataRequired(message="Enter how many the customer took."),
+            NumberRange(min=1, max=MAX_ITEM_QUANTITY, message=f"Quantity must be 1 to {MAX_ITEM_QUANTITY:,}."),
+        ],
     )
+    unit_price = DecimalField(
+        "Unit price (KES)",
+        places=2,
+        validators=[DataRequired(message="Enter the price of one."), _validate_amount],
+    )
+
+    @property
+    def line_total(self):
+        if self.quantity.data is None or self.unit_price.data is None:
+            return None
+        return Decimal(self.quantity.data) * self.unit_price.data
 
     @property
     def description(self):
@@ -102,11 +117,14 @@ class TransactionForm(FlaskForm):
     submit = SubmitField("Record Credit Sale")
 
     def validate_items(self, field):
-        total = sum((entry.form.amount.data or Decimal("0")) for entry in field.entries)
+        total = sum((entry.form.line_total or Decimal("0")) for entry in field.entries)
         if total > Decimal("99999999.99"):
             raise ValidationError("The sale total must be KES 99,999,999.99 or less.")
 
     @property
     def sale_items(self):
-        """(description, amount) for each row."""
-        return [(entry.form.description, entry.form.amount.data) for entry in self.items.entries]
+        """(description, quantity, unit_price) for each row."""
+        return [
+            (entry.form.description, entry.form.quantity.data, entry.form.unit_price.data)
+            for entry in self.items.entries
+        ]
