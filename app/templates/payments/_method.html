@@ -16,3 +16,10 @@
 {% if payment.payment_reference %}<small class="payment-method-reference">Ref {{ payment.payment_reference }}</small>{% endif %}
 {% if payment.allocations %}<small class="payment-method-items">For {{ payment.allocations | map(attribute='label') | join(', ') }}</small>{% endif %}
 {% endmacro %}
+
+{# One line for list rows: "M-Pesa Till · Ref QFT4ABC123 · For Soda ×2". #}
+{% macro payment_method_inline(payment) -%}
+<span class="payment-method{{ ' is-unrecorded' if not payment.payment_method else '' }}">{{ payment.payment_method_label }}</span>
+{%- if payment.payment_reference %} · Ref {{ payment.payment_reference }}{% endif %}
+{%- if payment.allocations %} · For {{ payment.allocations | map(attribute='label') | join(', ') }}{% endif %}
+{%- endmacro %}

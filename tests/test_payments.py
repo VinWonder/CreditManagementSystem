@@ -183,11 +183,7 @@ class PaymentFlowTests(unittest.TestCase):
         response = self.client.get("/payments/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(
-            b'<span class="payment-history-amount" aria-label="Amount received KES 500.00">KES 500.00</span>',
-            response.data,
-        )
-        self.assertIn(b"payment-history-amount-cell", response.data)
+        self.assertIn(b'<strong class="daybook-amount payment-history-amount">KES 500.00</strong>', response.data)
 
 
 if __name__ == "__main__":

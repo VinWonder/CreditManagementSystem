@@ -1,0 +1,35 @@
+{% from "_daybook.html" import group_open, group_close, batch_meta %}
+{% from "payments/_method.html" import payment_method_inline %}
+{% for group in groups %}
+{{ group_open(group.key, group.label, ('Received ' ~ (group.total | kes)) if group.count else 'Nothing received', day=group.day) }}
+  {% for payment in group.rows %}
+  {% set approved = payment.approval_status == 'approved' %}
+  {% set receipt = approved and current_user.is_admin %}
+  <li class="daybook-row{{ ' is-rejected' if not approved }}">
+    <a class="daybook-row-link" href="{{ url_for('payments.payment_receipt', payment_id=payment.payment_id) if receipt else url_for('customers.view_customer', customer_id=payment.customer_id) }}"
+       {% if receipt %}aria-label="Send receipt: {{ payment.customer.full_name }}, {{ payment.amount_paid | kes }}"{% endif %}>
+      <span class="daybook-avatar" aria-hidden="true">{{ payment.customer.full_name | initials }}</span>
+      <span class="daybook-main">
+        <strong class="daybook-name">{{ payment.customer.full_name }}</strong>
+        <span class="daybook-sub">{{ payment_method_inline(payment) }}</span>
+        {% if not approved and payment.review_note %}<span class="daybook-sub">Rejected: {{ payment.review_note }}</span>{% endif %}
+      </span>
+      <span class="daybook-side">
+        <strong class="daybook-amount payment-history-amount">{{ payment.amount_paid | kes }}</strong>
+        <span class="daybook-meta">
+          {% if payment.payment_date %}{{ payment.payment_date|nairobi('%H:%M') }} EAT{% endif %}
+          {% if receipt %}
+          <span class="daybook-flag is-ok"{% if payment.reviewed_at %} title="Reviewed {{ payment.reviewed_at|nairobi('%d %b %Y · %H:%M') }} EAT"{% endif %}><i class="bi bi-send" aria-hidden="true"></i> Send receipt</span>
+          {% elif approved %}
+          <span class="daybook-flag is-ok"{% if payment.reviewed_at %} title="Reviewed {{ payment.reviewed_at|nairobi('%d %b %Y · %H:%M') }} EAT"{% endif %}><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Approved</span>
+          {% else %}
+          <span class="daybook-flag is-rejected"{% if payment.reviewed_at %} title="Reviewed {{ payment.reviewed_at|nairobi('%d %b %Y · %H:%M') }} EAT"{% endif %}>Rejected</span>
+          {% endif %}
+        </span>
+      </span>
+    </a>
+  </li>
+  {% endfor %}
+{{ group_close() }}
+{% endfor %}
+{{ batch_meta(batch) }}

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% from "payments/_method.html" import payment_method_badge %}
+{% from "payments/_method.html" import payment_method_inline %}
+{% from "_daybook.html" import day_strip, period_chips, show_more %}
 {% block title %}Payments{% endblock %}
 {% block content %}
 <section class="payment-history" aria-labelledby="payment-history-title">
@@ -24,8 +25,8 @@
     <article class="payment-history-stat">
       <span class="payment-history-stat-icon"><i class="bi bi-receipt" aria-hidden="true"></i></span>
       <span class="payment-history-stat-label">Payments logged</span>
-      <strong>{{ payments|length }}</strong>
-      <small>{{ 'payment' if payments|length == 1 else 'payments' }} recorded</small>
+      <strong>{{ payment_count }}</strong>
+      <small>{{ 'payment' if payment_count == 1 else 'payments' }} recorded</small>
     </article>
     <article class="payment-history-stat">
       <span class="payment-history-stat-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
@@ -35,79 +36,96 @@
     </article>
   </div>
 
-  <div class="payment-history-card">
+  {% if pending_payments %}
+  <section class="payment-history-card payment-review-card" aria-labelledby="payment-review-title">
     <div class="payment-history-card-heading">
       <div>
-        <h2>Payment history</h2>
-        <p>Most recent payments appear first.</p>
+        <h2 id="payment-review-title"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Waiting for approval</h2>
+        <p>{% if current_user.is_admin %}Check each one, then approve it or give a reason to reject it.{% else %}The shop admin will check these. They count once approved.{% endif %}</p>
       </div>
-      {% if payments %}
-      <span class="payment-history-count">{{ payments|length }} {{ 'entry' if payments|length == 1 else 'entries' }}</span>
+      <span class="payment-history-count">{{ pending_count }} · {{ pending_total | kes }}</span>
+    </div>
+    <ul class="daybook-rows" role="list">
+      {% for payment in pending_payments %}
+      <li class="daybook-row is-pending">
+        <div class="daybook-row-body">
+          <span class="daybook-avatar" aria-hidden="true">{{ payment.customer.full_name | initials }}</span>
+          <span class="daybook-main">
+            <a class="daybook-name" href="{{ url_for('customers.view_customer', customer_id=payment.customer_id) }}">{{ payment.customer.full_name }}</a>
+            <span class="daybook-sub">{{ payment_method_inline(payment) }}</span>
+            {% if payment.submitted_by_shopkeeper %}<span class="daybook-sub">Logged by {{ payment.submitted_by_shopkeeper.full_name }}</span>{% endif %}
+          </span>
+          <span class="daybook-side">
+            <strong class="daybook-amount payment-history-amount">{{ payment.amount_paid | kes }}</strong>
+            <span class="daybook-meta">{{ payment.payment_date|nairobi('%d %b · %H:%M') }} EAT</span>
+          </span>
+        </div>
+        {% if current_user.is_admin %}
+        {% set decision_form = decision_forms[payment.payment_id] %}
+        <details class="payment-review">
+          <summary><i class="bi bi-shield-check" aria-hidden="true"></i> Review payment</summary>
+          <div class="payment-review-actions">
+            <form method="POST" action="{{ url_for('payments.approve_payment', payment_id=payment.payment_id) }}">
+              {{ decision_form.hidden_tag() }}
+              <label class="visually-hidden" for="approval-note-{{ payment.payment_id }}">Optional approval note</label>
+              {{ decision_form.review_note(id="approval-note-" ~ payment.payment_id, class="form-control form-control-sm", placeholder="Optional approval note", maxlength="255") }}
+              <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-lg" aria-hidden="true"></i> Approve</button>
+            </form>
+            <form method="POST" action="{{ url_for('payments.reject_payment', payment_id=payment.payment_id) }}">
+              {{ decision_form.hidden_tag() }}
+              <label class="visually-hidden" for="rejection-note-{{ payment.payment_id }}">Reason required to reject</label>
+              {{ decision_form.review_note(id="rejection-note-" ~ payment.payment_id, class="form-control form-control-sm", placeholder="Reason required to reject", maxlength="255", required=true) }}
+              <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-x-lg" aria-hidden="true"></i> Reject</button>
+            </form>
+          </div>
+        </details>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {{ day_strip(pulse, 'payment', day) }}
+
+  <section class="payment-history-card daybook-card" aria-labelledby="payment-history-list-title">
+    <div class="payment-history-card-heading">
+      <div>
+        <h2 id="payment-history-list-title">{{ day_label ~ ' · Payments' if day else 'Payment history' }}</h2>
+        <p>Newest first, grouped by day.{% if current_user.is_admin %} Tap an approved payment to send its receipt.{% endif %}</p>
+      </div>
+      <span class="payment-history-count">{{ filtered_count }} {{ 'entry' if filtered_count == 1 else 'entries' }}</span>
+    </div>
+    {% if payment_count %}
+    <form method="GET" action="{{ url_for('payments.list_payments') }}" class="transaction-history-filters daybook-filters" role="search">
+      {% if day %}<input type="hidden" name="day" value="{{ day.isoformat() }}">{% endif %}
+      {% if period != 'all' %}<input type="hidden" name="period" value="{{ period }}">{% endif %}
+      <label class="transaction-search-box">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <span class="visually-hidden">Search customer or reference</span>
+        <input type="search" name="q" value="{{ search }}" maxlength="100" placeholder="Search customer or M-Pesa code..." aria-label="Search customer or reference">
+      </label>
+      <button type="submit" class="transaction-filter-submit"><i class="bi bi-search" aria-hidden="true"></i> Search</button>
+    </form>
+    <div class="daybook-toolbar">
+      {{ period_chips('day' if day else period, periods, 'Show payments from') }}
+      {% if search or period != 'all' or day %}
+      <a href="{{ url_for('payments.list_payments') }}" class="transaction-filter-clear">Clear filters</a>
       {% endif %}
     </div>
-    {% if payments %}
-    <div class="table-responsive">
-      <table class="table table-stack payment-history-table align-middle mb-0">
-        <thead>
-          <tr><th scope="col">Date received</th><th scope="col">Customer</th><th scope="col" class="text-end">Amount paid</th><th scope="col">Method</th><th scope="col">Approval</th>{% if current_user.is_admin %}<th scope="col">Admin action</th>{% endif %}</tr>
-        </thead>
-        <tbody>
-        {% for payment in payments %}
-          <tr>
-            <td>
-              <span class="payment-history-date">
-                <i class="bi bi-calendar3" aria-hidden="true"></i>
-                {{ payment.payment_date|nairobi('%d %b %Y') if payment.payment_date else 'Date unavailable' }}
-              </span>
-              {% if payment.payment_date %}
-              <small class="payment-history-time">{{ payment.payment_date|nairobi('%H:%M') }} EAT</small>
-              {% endif %}
-            </td>
-            <td class="stack-primary">
-              <a class="payment-history-customer" href="{{ url_for('customers.view_customer', customer_id=payment.customer_id) }}">
-                <span class="payment-history-avatar" aria-hidden="true">{{ payment.customer.full_name.split()[0][0]|upper }}{{ payment.customer.full_name.split()[-1][0]|upper if payment.customer.full_name.split()|length > 1 else '' }}</span>
-                <span><strong>{{ payment.customer.full_name }}</strong><small>{{ payment.customer.phone_number }}</small></span>
-                <i class="bi bi-arrow-up-right payment-history-customer-link" aria-hidden="true"></i>
-              </a>
-            </td>
-            <td class="text-end payment-history-amount-cell">
-              <span class="payment-history-amount" aria-label="Amount received {{ payment.amount_paid | kes }}">{{ payment.amount_paid | kes }}</span>
-              {% if payment.submitted_by_shopkeeper %}<small class="d-block text-muted">Submitted by {{ payment.submitted_by_shopkeeper.full_name }}</small>{% endif %}
-            </td>
-            <td class="payment-history-method-cell">{{ payment_method_badge(payment) }}</td>
-            <td class="payment-history-approval-cell">
-              <span class="badge {{ 'text-bg-warning' if payment.approval_status == 'pending' else 'text-bg-success' if payment.approval_status == 'approved' else 'text-bg-secondary' }}">{{ payment.approval_status|capitalize }}</span>
-              {% if payment.review_note %}<small class="d-block text-muted">{{ payment.review_note }}</small>{% endif %}
-            </td>
-            {% if current_user.is_admin %}
-            <td class="stack-actions">
-              {% if payment.approval_status == 'pending' %}
-              {% set decision_form = decision_forms[payment.payment_id] %}
-              <form method="POST" action="{{ url_for('payments.approve_payment', payment_id=payment.payment_id) }}" class="mb-1">
-                {{ decision_form.hidden_tag() }}
-                <label class="visually-hidden" for="approval-note-{{ payment.payment_id }}">Optional approval note</label>
-                {{ decision_form.review_note(id="approval-note-" ~ payment.payment_id, class="form-control form-control-sm mb-1", placeholder="Optional approval note", maxlength="255") }}
-                <button type="submit" class="btn btn-sm btn-success">Approve</button>
-              </form>
-              <form method="POST" action="{{ url_for('payments.reject_payment', payment_id=payment.payment_id) }}">
-                {{ decision_form.hidden_tag() }}
-                <label class="visually-hidden" for="rejection-note-{{ payment.payment_id }}">Reason required to reject</label>
-                {{ decision_form.review_note(id="rejection-note-" ~ payment.payment_id, class="form-control form-control-sm mb-1", placeholder="Reason required to reject", maxlength="255", required=true) }}
-                <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
-              </form>
-              {% else %}
-              <span class="small text-muted">{% if payment.reviewed_at %}Reviewed {{ payment.reviewed_at|nairobi('%d %b %Y · %H:%M') }} EAT{% else %}—{% endif %}</span>
-              {% if payment.approval_status == 'approved' %}<a class="payment-receipt-link d-flex" href="{{ url_for('payments.payment_receipt', payment_id=payment.payment_id) }}"><i class="bi bi-send" aria-hidden="true"></i> Send receipt</a>{% endif %}
-              {% endif %}
-            </td>
-            {% endif %}
-          </tr>
-        {% endfor %}
-        </tbody>
-        <tfoot>
-          <tr><th scope="row" colspan="2">Approved total collected</th><td class="text-end"><strong>{{ total_paid | kes }}</strong></td><td colspan="{{ 3 if current_user.is_admin else 2 }}"></td></tr>
-        </tfoot>
-      </table>
+    {% endif %}
+
+    {% if groups %}
+    <div class="daybook" data-daybook>
+      {% include "payments/_daybook.html" %}
+    </div>
+    {{ show_more(batch, 'payments') }}
+    {% elif payment_count %}
+    <div class="payment-history-empty">
+      <span class="payment-history-empty-icon"><i class="bi bi-search" aria-hidden="true"></i></span>
+      <h3>No matching payments</h3>
+      <p>{% if day %}No payments on {{ day_label }}. Pick another day above, or show all days.{% elif pending_count and not (search or period != 'all') %}Every payment so far is still waiting for approval above.{% else %}Try another name or code, or clear your filters.{% endif %}</p>
+      <a href="{{ url_for('payments.list_payments') }}" class="payment-history-empty-action"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Clear filters</a>
     </div>
     {% else %}
     <div class="payment-history-empty">
@@ -119,6 +137,6 @@
       </a>
     </div>
     {% endif %}
-  </div>
+  </section>
 </section>
 {% endblock %}

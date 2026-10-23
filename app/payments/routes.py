@@ -3,8 +3,9 @@ from decimal import Decimal
 from datetime import datetime
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
+from app import listing
 from app.extensions import db
 from app.models import (
     BalanceAdjustment,
@@ -74,43 +75,58 @@ def _outstanding_balances(retailer_id, include_pending=False):
 @payments_bp.route("/")
 @login_required
 def list_payments():
-    payments = (
-        Payment.query.filter_by(retailer_id=current_user.retailer_id)
-        .order_by(Payment.payment_date.desc())
-        .all()
+    search = request.args.get("q", "").strip()[:100]
+    period = listing.read_period()
+    day = listing.parse_day(request.args.get("day"))
+
+    shop_payments = Payment.query.filter_by(retailer_id=current_user.retailer_id)
+    approved = shop_payments.filter(Payment.approval_status == "approved")
+    pending = shop_payments.filter(Payment.approval_status == "pending")
+
+    history = shop_payments.filter(Payment.approval_status != "pending")
+    if search:
+        history = history.join(Customer).filter(
+            or_(
+                Customer.full_name.ilike(f"%{search}%"),
+                Payment.payment_reference.ilike(f"%{search}%"),
+            )
+        )
+    history = listing.filter_by_time(history, Payment.payment_date, period, day)
+    filtered_count = history.count()
+    batch = listing.take_batch(
+        history.order_by(Payment.payment_date.desc(), Payment.payment_id.desc()), filtered_count
     )
+    days = {listing.nairobi_day(payment.payment_date) for payment in batch.rows if payment.payment_date}
+    # Day totals count only money actually received (approved payments).
+    groups = listing.group_by_day(
+        batch.rows,
+        lambda payment: payment.payment_date,
+        listing.day_totals(
+            history.filter(Payment.approval_status == "approved"), Payment.payment_date, Payment.amount_paid, days
+        ),
+    )
+    if listing.is_partial():
+        return render_template("payments/_daybook.html", groups=groups, batch=batch)
+
+    pending_payments = pending.order_by(Payment.payment_date.desc(), Payment.payment_id.desc()).all()
     return render_template(
         "payments/list.html",
-        payments=payments,
-        total_paid=sum(
-            (
-                payment.amount_paid
-                for payment in payments
-                if payment.approval_status == "approved"
-            ),
-            Decimal("0"),
-        ),
-        customer_count=len(
-            {
-                payment.customer_id
-                for payment in payments
-                if payment.approval_status == "approved"
-            }
-        ),
-        pending_count=sum(payment.approval_status == "pending" for payment in payments),
-        pending_total=sum(
-            (
-                payment.amount_paid
-                for payment in payments
-                if payment.approval_status == "pending"
-            ),
-            Decimal("0"),
-        ),
-        decision_forms={
-            payment.payment_id: PaymentDecisionForm()
-            for payment in payments
-            if payment.approval_status == "pending"
-        },
+        groups=groups,
+        batch=batch,
+        pending_payments=pending_payments,
+        payment_count=shop_payments.count(),
+        filtered_count=filtered_count,
+        total_paid=approved.with_entities(func.coalesce(func.sum(Payment.amount_paid), 0)).scalar(),
+        customer_count=approved.with_entities(func.count(func.distinct(Payment.customer_id))).scalar(),
+        pending_count=len(pending_payments),
+        pending_total=sum((payment.amount_paid for payment in pending_payments), Decimal("0")),
+        decision_forms={payment.payment_id: PaymentDecisionForm() for payment in pending_payments},
+        search=search,
+        period=period,
+        periods=listing.PERIODS,
+        day=day,
+        day_label=listing.day_label(day) if day else "",
+        pulse=listing.pulse(approved, Payment.payment_date, Payment.amount_paid),
     )
 
 
