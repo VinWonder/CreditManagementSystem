@@ -50,6 +50,7 @@ class RoleAndApprovalTests(unittest.TestCase):
             retailer_id=self.retailer.retailer_id,
             full_name="Amina Hassan",
             phone_number="+254700000042",
+            preferred_channel="both",
         )
         db.session.add(self.customer)
         db.session.flush()

@@ -35,7 +35,7 @@ class PaymentReceiptTests(unittest.TestCase):
         db.session.add(self.retailer)
         db.session.flush()
         self.customer = Customer(retailer_id=self.retailer.retailer_id, full_name="Amina Hassan",
-                                 phone_number="+254712345678")
+                                 phone_number="+254712345678", preferred_channel="both")
         self.shopkeeper = Shopkeeper(retailer_id=self.retailer.retailer_id, full_name="Clerk",
                                      phone_number="+254700000082", password_hash="x")
         db.session.add_all([self.customer, self.shopkeeper])
@@ -108,6 +108,15 @@ class PaymentReceiptTests(unittest.TestCase):
         self.assertIn("For: Chips KES 100.00.", receipt_message(first))
         self.assertIn("For: Soda KES 300.00.", receipt_message(second))
         self.assertIn("Your account is fully paid.", receipt_message(second))
+
+    def test_receipt_offers_only_the_customers_chosen_channel(self):
+        self.customer.preferred_channel = "whatsapp"
+        db.session.commit()
+        response = self._pay("100")
+        page = self.client.get(response.headers["Location"]).get_data(as_text=True)
+
+        self.assertIn("Send on WhatsApp", page)
+        self.assertNotIn("Send by SMS", page)
 
     def test_page_shows_the_customer_message_in_the_links(self):
         response = self._pay("300", [self.soda])

@@ -67,7 +67,7 @@ class ReminderLinkTests(unittest.TestCase):
         self.assertEqual(unquote(link.split("body=", 1)[1]), "Reminder body")
 
     def test_invalid_customer_number_yields_no_links(self):
-        customer = SimpleNamespace(phone_number="")
+        customer = SimpleNamespace(phone_number="", preferred_channel="both")
         self.assertEqual(reminder_links(customer, "Hi"), {"whatsapp": None, "sms": None})
 
 
@@ -152,6 +152,30 @@ class CustomerReminderPageTests(unittest.TestCase):
         self.assertIn("https://wa.me/254712345678?text=", html)
         self.assertIn("sms:+254712345678?body=", html)
         self.assertNotIn("is-disabled", html)
+
+    def test_only_the_customers_chosen_channel_is_offered(self):
+        customer = self._customer_with_balance()
+        url = f"/customers/{customer.customer_id}"
+
+        customer.preferred_channel = "whatsapp"
+        db.session.commit()
+        whatsapp_only = self.client.get(url).get_data(as_text=True)
+        self.assertIn("Send on WhatsApp", whatsapp_only)
+        self.assertNotIn("Send by SMS", whatsapp_only)
+        self.assertNotIn("sms:+254", whatsapp_only)
+
+        customer.preferred_channel = "sms"
+        db.session.commit()
+        sms_only = self.client.get(url).get_data(as_text=True)
+        self.assertIn("Send by SMS", sms_only)
+        self.assertNotIn("Send on WhatsApp", sms_only)
+        self.assertNotIn("https://wa.me/", sms_only)
+
+    def test_link_helper_follows_the_preference(self):
+        for preference, expected in (("whatsapp", {"whatsapp"}), ("sms", {"sms"}), ("both", {"whatsapp", "sms"})):
+            with self.subTest(preference=preference):
+                customer = SimpleNamespace(phone_number="+254712345678", preferred_channel=preference)
+                self.assertEqual(set(reminder_links(customer, "Hi")), expected)
 
     def test_no_links_are_offered_when_the_balance_is_cleared(self):
         customer = self._customer_with_balance()
