@@ -167,6 +167,13 @@ oldest unpaid items first. The customer's page shows each item as paid, partly
 paid or due, payment lists show what a payment was for, and one reminder lists
 only what is still owed, item by item.
 
+Each item row has a quantity and the price of one, so 3 sodas at KES 100 are
+one line of KES 300 shown as "Soda ×3". When a ticked item was bought in a
+number, the payment page asks how many the customer is paying for (for example
+2 of the 3 sodas) and fills in the amount; the rest stays due, and the receipt
+says "Soda ×2 of 3". This works for M-Pesa prompts too. Items saved before
+quantities existed count as one of each, so old totals do not change.
+
 After the admin logs or approves a payment (or an M-Pesa prompt is paid), a
 receipt page offers a ready-written confirmation for the customer: the amount,
 the date and time in EAT, how they paid and the reference, the items the
