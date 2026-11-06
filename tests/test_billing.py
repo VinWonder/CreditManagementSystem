@@ -9,7 +9,7 @@ from app import create_app
 from app.billing.cli import billing_cli
 from app.billing.plans import PLANS, TRIAL_DAYS
 from app.extensions import db
-from app.models import Retailer, Shopkeeper, SubscriptionPayment
+from app.models import C2BReceipt, Retailer, Shopkeeper, SubscriptionPayment
 from app.mpesa import daraja
 
 
@@ -340,7 +340,7 @@ class PaybillClaimTests(BillingTestCase):
         runner.invoke(billing_cli, ["reject", "SKL4ABC123"])
         db.session.refresh(self.retailer)
         self.assertIsNone(self.retailer.paid_until)
-        self.assertIn(b"was not found on our statement", self.client.get("/billing/").data)
+        self.assertIn(b"Not found on the bank statement", self.client.get("/billing/").data)
 
     def test_bad_or_repeated_codes_are_refused(self):
         self.assertEqual(self._claim(code="12345").status_code, 400)
@@ -353,6 +353,98 @@ class PaybillClaimTests(BillingTestCase):
         payment = SubscriptionPayment.query.one()
         response = self.client.get(f"/billing/payments/{payment.subscription_payment_id}/status")
         self.assertEqual(response.status_code, 404)
+
+
+class OwnPaybillConfig(BillingConfig):
+    BILLING_C2B_TOKEN = "c2b-secret"
+
+
+class AutomaticPaybillTests(BillingTestCase):
+    """Pay Bill payments to the app's own Paybill confirm themselves."""
+
+    config = OwnPaybillConfig
+
+    def _confirmation(self, trans_id="SKL4AUTO01", amount="1000.00", account=None, token="c2b-secret"):
+        self.user = None
+        response = self.client.post(
+            f"/billing/c2b/{token}/confirmation",
+            json={
+                "TransactionType": "Pay Bill",
+                "TransID": trans_id,
+                "TransTime": "20261106143000",
+                "TransAmount": amount,
+                "BusinessShortCode": "174379",
+                "BillRefNumber": account if account is not None else self.retailer.billing_account,
+                "FirstName": "NJERI",
+            },
+        )
+        self.user = self.retailer
+        self.assertEqual(response.get_json()["ResultCode"], 0)
+        db.session.refresh(self.retailer)
+        return response
+
+    def test_page_shows_the_shops_own_account_number(self):
+        page = self.client.get("/billing/").data.decode()
+        self.assertIn(f"Account number: <strong>{self.retailer.billing_account}</strong>", page)
+        self.assertIn("Business number: <strong>174379</strong>", page)
+
+    def test_payment_with_the_shop_account_starts_the_plan_by_itself(self):
+        self.expire()
+        self._confirmation()
+        payment = SubscriptionPayment.query.one()
+        self.assertEqual((payment.method, payment.plan, payment.status), ("c2b", "monthly", "paid"))
+        self.assertEqual(self.retailer.subscription_status, "active")
+        self.assertEqual(self.client.get("/dashboard").status_code, 200)
+
+    def test_shop_phone_number_works_as_the_account_and_amount_picks_the_plan(self):
+        self._confirmation(amount="10000", account="0700 000 041")
+        self.assertEqual(SubscriptionPayment.query.one().plan, "yearly")
+
+    def test_repeated_confirmation_counts_once(self):
+        self._confirmation()
+        first_end = self.retailer.paid_until
+        self._confirmation()
+        self.assertEqual(SubscriptionPayment.query.count(), 1)
+        self.assertEqual(self.retailer.paid_until, first_end)
+
+    def test_wrong_token_is_ignored(self):
+        self._confirmation(token="guess")
+        self.assertEqual(C2BReceipt.query.count(), 0)
+        self.assertIsNone(self.retailer.paid_until)
+
+    def test_unknown_account_is_kept_until_the_shop_sends_its_code(self):
+        self._confirmation(account="WRONG")
+        receipt = C2BReceipt.query.one()
+        self.assertIsNone(receipt.subscription_payment_id)
+        self.assertIsNone(self.retailer.paid_until)
+        self.assertIn("SKL4AUTO01", self.app.test_cli_runner().invoke(billing_cli, ["pending"]).output)
+
+        self.client.post("/billing/claim", data={"plan": "monthly", "mpesa_code": "skl4auto01"})
+        self.assertIn(b"Payment confirmed", self.client.get("/billing/").data)
+        db.session.refresh(self.retailer)
+        self.assertEqual(self.retailer.subscription_status, "active")
+        self.assertIsNotNone(C2BReceipt.query.one().subscription_payment_id)
+
+    def test_code_sent_first_is_confirmed_when_safaricom_reports_it(self):
+        self.client.post("/billing/claim", data={"plan": "quarterly", "mpesa_code": "SKL4AUTO01"})
+        self.assertIsNone(self.retailer.paid_until)
+        self._confirmation(amount="2700", account="WRONG")
+        claim = SubscriptionPayment.query.one()
+        self.assertEqual((claim.status, claim.plan), ("paid", "quarterly"))
+
+    def test_amount_below_the_cheapest_plan_starts_nothing(self):
+        self._confirmation(amount="50")
+        self.assertEqual(SubscriptionPayment.query.count(), 0)
+        self.assertEqual(C2BReceipt.query.one().amount, 50)
+
+    def test_register_command_sends_the_confirmation_address(self):
+        result = self.app.test_cli_runner().invoke(billing_cli, ["register-c2b"])
+        self.assertEqual(result.exit_code, 0, result.output)
+        sent = self.requests.post.call_args.kwargs["json"]
+        self.assertEqual(sent["ShortCode"], "174379")
+        self.assertEqual(
+            sent["ConfirmationURL"], "https://duka.example.com/billing/c2b/c2b-secret/confirmation"
+        )
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@
     flask --app run billing pending
     flask --app run billing confirm <mpesa code>
     flask --app run billing reject <mpesa code>
+    flask --app run billing register-c2b
 
 <shop> is the shop name, retailer id, phone number or email.
 """
@@ -14,12 +15,15 @@
 from datetime import datetime, timedelta
 
 import click
+from flask import current_app, url_for
 from flask.cli import AppGroup
 
 from app.billing.plans import PLANS
-from app.billing.service import confirm_paybill_claim, days_left, grant_plan
+from app.billing.service import billing_client, confirm_paybill_claim, days_left, grant_plan
 from app.extensions import db
-from app.models import Retailer, SubscriptionPayment
+from app.models import C2BReceipt, Retailer, SubscriptionPayment
+from app.mpesa.daraja import DarajaError
+from app.mpesa.routes import callback_base_url
 from app.mpesa.cli import find_retailer
 
 billing_cli = AppGroup("billing", help="Manage shop subscriptions.")
@@ -85,6 +89,10 @@ def activate(shop, plan, receipt):
     )
     db.session.add(payment)
     grant_plan(retailer, payment, now=now)
+    if payment.mpesa_receipt:
+        receipt = C2BReceipt.query.filter_by(trans_id=payment.mpesa_receipt).first()
+        if receipt is not None:
+            receipt.subscription_payment = payment
     db.session.commit()
     click.echo(
         f"Recorded {chosen.name} (KES {chosen.price:,}) for {retailer.business_name}: {describe(retailer)}"
@@ -121,9 +129,15 @@ def pending_claims():
         .order_by(SubscriptionPayment.created_at)
         .all()
     )
-    if not claims:
+    unmatched = C2BReceipt.query.filter_by(subscription_payment_id=None).order_by(C2BReceipt.received_at).all()
+    if not claims and not unmatched:
         click.echo("No codes waiting.")
         return
+    for receipt in unmatched:
+        click.echo(
+            f"{receipt.trans_id:<12}  KES {receipt.amount:>7,}  PAID, NO SHOP  account '{receipt.bill_ref or '-'}'  "
+            f"from {receipt.payer_name or '-'}  (fix: billing activate <shop> <plan> --receipt {receipt.trans_id})"
+        )
     for claim in claims:
         click.echo(
             f"{claim.mpesa_receipt:<12}  KES {claim.amount:>7,}  {PLANS[claim.plan].name:<9}  "
@@ -151,3 +165,23 @@ def reject_claim(code):
     payment.completed_at = datetime.utcnow()
     db.session.commit()
     click.echo(f"Rejected {payment.mpesa_receipt} from {payment.retailer.business_name}.")
+
+
+@billing_cli.command("register-c2b")
+def register_c2b():
+    """Ask Safaricom to report every payment to the app's own Paybill (run once after going live)."""
+    client = billing_client()
+    token = current_app.config.get("BILLING_C2B_TOKEN")
+    base = callback_base_url()
+    if client is None or not token or not base:
+        raise click.ClickException(
+            "Set BILLING_MPESA_* keys, BILLING_C2B_TOKEN and PUBLIC_BASE_URL (https) first."
+        )
+    with current_app.test_request_context(base_url=base):
+        confirmation = base + url_for("billing.c2b_confirmation", token=token)
+        validation = base + url_for("billing.c2b_validation", token=token)
+    try:
+        client.register_c2b_urls(confirmation, validation)
+    except DarajaError as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"Safaricom will report payments to Paybill {client.shortcode} at {base}/billing/c2b/...")

@@ -214,3 +214,20 @@ class DarajaClient:
             message = body.get("errorMessage") or "Unknown error"
             raise DarajaError(f"Safaricom could not report the status: {message}")
         return str(body["ResultCode"]), body.get("ResultDesc", "")
+
+    def register_c2b_urls(self, confirmation_url, validation_url):
+        """Tell Safaricom where to report every Pay Bill / Buy Goods payment to this shortcode."""
+        status, body = self._post(
+            "/mpesa/c2b/v2/registerurl",
+            {
+                "ShortCode": self.shortcode,
+                # Complete payments even if the validation address cannot be reached.
+                "ResponseType": "Completed",
+                "ConfirmationURL": confirmation_url,
+                "ValidationURL": validation_url,
+            },
+        )
+        if status != 200 or str(body.get("ResponseCode", "0")) not in ("0", "00000000"):
+            message = body.get("errorMessage") or body.get("ResponseDescription") or "Unknown error"
+            raise DarajaError(f"Safaricom did not register the payment addresses: {message}")
+        return body

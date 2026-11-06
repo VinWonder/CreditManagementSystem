@@ -102,6 +102,9 @@ class Config:
     BILLING_MPESA_CONSUMER_KEY = os.environ.get("BILLING_MPESA_CONSUMER_KEY", "").strip()
     BILLING_MPESA_CONSUMER_SECRET = os.environ.get("BILLING_MPESA_CONSUMER_SECRET", "").strip()
     BILLING_MPESA_PASSKEY = os.environ.get("BILLING_MPESA_PASSKEY", "").strip()
+    # Secret path segment for Safaricom's Pay Bill confirmations to the app's own
+    # Paybill; registered with `flask billing register-c2b`. Any long random text.
+    BILLING_C2B_TOKEN = os.environ.get("BILLING_C2B_TOKEN", "").strip()
     # A bank Paybill shops pay into by hand, e.g. I&M Bank: 542542 and your
     # 14-digit account number. Shops then submit their M-Pesa code and you
     # confirm it with `flask billing confirm <code>`.

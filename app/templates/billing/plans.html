@@ -32,7 +32,7 @@
       {% if claim.status == 'pending' %}
       <p class="billing-note"><i class="bi bi-hourglass-split" aria-hidden="true"></i> <span>Checking M-Pesa code <strong>{{ claim.mpesa_receipt }}</strong> (KES {{ '{:,}'.format(claim.amount) }}, sent {{ claim.created_at|nairobi('%d %b %H:%M') }}). Your plan starts as soon as the payment is confirmed.</span></p>
       {% else %}
-      <p class="billing-note is-rejected"><i class="bi bi-x-circle" aria-hidden="true"></i> <span>M-Pesa code <strong>{{ claim.mpesa_receipt }}</strong> was not found on our statement for KES {{ '{:,}'.format(claim.amount) }}. Check the code in your M-Pesa messages{% if support_phone %} or call <a href="tel:{{ support_phone }}">{{ support_phone }}</a>{% endif %}.</span></p>
+      <p class="billing-note is-rejected"><i class="bi bi-x-circle" aria-hidden="true"></i> <span>M-Pesa code <strong>{{ claim.mpesa_receipt }}</strong> was not accepted for KES {{ '{:,}'.format(claim.amount) }}: {{ claim.result_desc or 'not found on our statement' }} Check the code in your M-Pesa messages{% if support_phone %} or call <a href="tel:{{ support_phone }}">{{ support_phone }}</a>{% endif %}.</span></p>
       {% endif %}
       {% endfor %}
       {% set use_paybill = paybill and not prompts_ready %}
@@ -65,6 +65,22 @@
         <div class="customer-form-actions">
           <button class="customer-save-button" type="submit"><i class="bi bi-phone-vibrate" aria-hidden="true"></i> Pay with M-Pesa</button>
         </div>
+        {% if own_paybill %}
+        {% set chosen = plans|selectattr('code', 'equalto', form.plan.data)|first or plans[0] %}
+        <div class="billing-note">
+          <i class="bi bi-phone" aria-hidden="true"></i>
+          <div>
+            <strong>Or pay from your M-Pesa menu</strong>
+            <ol class="billing-steps">
+              <li>Lipa na M-Pesa, then <strong>Pay Bill</strong>.</li>
+              <li>Business number: <strong>{{ own_paybill }}</strong></li>
+              <li>Account number: <strong>{{ shop.billing_account }}</strong> (or your shop phone number)</li>
+              <li>Amount: <strong>KES <span data-plan-amount>{{ '{:,}'.format(chosen.price) }}</span></strong>, then your PIN.</li>
+            </ol>
+            Your plan starts by itself within a minute of paying.
+          </div>
+        </div>
+        {% endif %}
         {% elif use_paybill %}
         {% set chosen = plans|selectattr('code', 'equalto', form.plan.data)|first or plans[0] %}
         <div class="billing-note">

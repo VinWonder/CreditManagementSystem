@@ -113,6 +113,11 @@ class Retailer(UserMixin, db.Model):
     def has_access(self):
         return self.subscription_status != "expired"
 
+    @property
+    def billing_account(self):
+        """The account number this shop types when paying the app's Paybill."""
+        return f"DC{self.retailer_id}"
+
     def set_password(self, raw_password):
         self.password_hash = generate_password_hash(raw_password)
 
@@ -698,3 +703,31 @@ class SubscriptionPayment(db.Model):
 
     def __repr__(self):
         return f"<SubscriptionPayment {self.subscription_payment_id} {self.plan} KES {self.amount} {self.status}>"
+
+
+class C2BReceipt(db.Model):
+    """A Pay Bill payment Safaricom reported to the app's own Paybill.
+
+    Kept whether or not it could be matched to a shop, so no money is lost:
+    an unmatched one is matched later when the shop sends its M-Pesa code.
+    """
+
+    __tablename__ = "c2b_receipts"
+
+    c2b_receipt_id = db.Column(db.Integer, primary_key=True)
+    trans_id = db.Column(db.String(20), nullable=False, unique=True)  # the M-Pesa code
+    amount = db.Column(db.Integer, nullable=False)
+    bill_ref = db.Column(db.String(40), nullable=True)  # the account number the payer typed
+    payer_name = db.Column(db.String(100), nullable=True)
+    paid_at = db.Column(db.DateTime, nullable=True)
+    received_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    subscription_payment_id = db.Column(
+        db.Integer,
+        db.ForeignKey("subscription_payments.subscription_payment_id"),
+        nullable=True,
+    )
+
+    subscription_payment = db.relationship("SubscriptionPayment")
+
+    def __repr__(self):
+        return f"<C2BReceipt {self.trans_id} KES {self.amount}>"

@@ -308,21 +308,49 @@ queued on the phone until the shop renews.
 marks them by shop name; shops that existed before subscriptions get a fresh
 7-day trial from the day the migration runs.
 
-**Getting paid**, in order of preference (see `.env.example`):
+**Getting paid.** The plans page offers whichever of these is set up (see
+`.env.example`):
 
-1. **Your own Paybill/Till on Daraja** (`BILLING_MPESA_*`): the shop gets an
-   M-Pesa prompt, Safaricom confirms the payment and the plan starts at once.
-   A Paybill from Safaricom can settle into any bank account, I&M included.
-2. **A bank Paybill such as I&M Bank** (`BILLING_PAYBILL_NUMBER=542542`,
-   `BILLING_PAYBILL_ACCOUNT=` your 14-digit I&M account number,
-   `BILLING_PAYBILL_NAME=I&M Bank`). The bank owns that Paybill, so the app
-   cannot send prompts to it. The page shows the Pay Bill steps with the
-   chosen plan's amount; the shop types the M-Pesa code from its confirmation
-   SMS. Check the code and amount on your I&M statement or alerts, then run
-   `billing confirm <code>` (or `billing reject <code>`). `billing pending`
-   lists the codes waiting.
-3. **Anything else:** the page shows `BILLING_PAY_INSTRUCTIONS` (for example
-   "Send to Till 123456") and you record each payment with `billing activate`. Commands (run against Render as in *Manage
+1. **Your own Safaricom Paybill (automatic).** Shops pay by an M-Pesa prompt,
+   or from the M-Pesa menu with Pay Bill, your number and their own account
+   number (`DC` + shop id, shown on the page, or their shop phone number).
+   Safaricom tells the app about every payment and the plan starts within a
+   minute; the amount picks the plan (the dearest one it pays for in full).
+   The money settles into your bank account, for example at I&M.
+2. **I&M Bank Paybill 542542 (checked by you).** I&M owns that Paybill, so
+   only I&M hears about payments. Set `BILLING_PAYBILL_NUMBER=542542`,
+   `BILLING_PAYBILL_ACCOUNT` (your 14-digit I&M account) and
+   `BILLING_PAYBILL_NAME=I&M Bank`. Shops pay, then type their M-Pesa code;
+   check it against your I&M statement or alerts and run `billing confirm`
+   or `billing reject`.
+3. **Anything else:** `BILLING_PAY_INSTRUCTIONS` (for example "Send to Till
+   123456") and record each payment with `billing activate`.
+
+**Making payments confirm themselves (route 1), step by step:**
+
+1. **Get a Paybill settled into your I&M account.** Apply to Safaricom for an
+   M-Pesa Paybill (M-Pesa for Business, or ask your I&M relationship manager,
+   who can help with the forms). Typically needed: business registration
+   certificate, KRA PIN, the director's ID, and a bank letter or cancelled
+   cheque for the I&M account. Name I&M as the settlement bank.
+2. **Go live on Daraja.** At developer.safaricom.co.ke create an app with
+   M-Pesa Express (STK Push) and C2B, then use *Go Live* with your Paybill.
+   Safaricom emails the passkey; the app shows the consumer key and secret.
+3. **Set these on Render** (Environment): `BILLING_MPESA_ENVIRONMENT=production`,
+   `BILLING_MPESA_ACCOUNT_TYPE=paybill`, `BILLING_MPESA_SHORTCODE` (your
+   Paybill), `BILLING_MPESA_CONSUMER_KEY`, `BILLING_MPESA_CONSUMER_SECRET`,
+   `BILLING_MPESA_PASSKEY`, `BILLING_C2B_TOKEN` (long random text), and
+   `PUBLIC_BASE_URL` (your `https://…onrender.com` address).
+4. **Register the payment address once**, from your computer against Render
+   (as in *Manage accounts on Render*, with the same `BILLING_*` values set):
+   `flask --app run billing register-c2b`.
+5. **Test with KES 300** (weekly) from your own phone, using a test shop's
+   account number. `billing list` should show the shop active within a minute.
+
+Payments Safaricom reports that match no shop (a mistyped account number) are
+kept: they show in `billing pending`, and start the plan as soon as the shop
+types that M-Pesa code on the plans page, or when you run `billing activate
+<shop> <plan> --receipt <code>`. Commands (run against Render as in *Manage
 accounts on Render*); `<shop>` is the shop name, id, phone or email:
 
 ```powershell
@@ -333,6 +361,7 @@ venv\Scripts\python.exe -m flask --app run billing reject SKL4ABC123         # c
 venv\Scripts\python.exe -m flask --app run billing activate "<shop>" monthly --receipt QX12AB34
 venv\Scripts\python.exe -m flask --app run billing free "<shop>"             # free forever (--remove to undo)
 venv\Scripts\python.exe -m flask --app run billing extend-trial "<shop>" --days 7
+venv\Scripts\python.exe -m flask --app run billing register-c2b                # once, after your own Paybill goes live
 ```
 
 ### Set up M-Pesa payment prompts (STK Push)

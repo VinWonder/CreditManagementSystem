@@ -1,12 +1,13 @@
 """Subscription access, payments and the app's own M-Pesa account."""
 
 import math
+import re
 from datetime import datetime
 
 from flask import current_app
 
 from app.billing.plans import PLANS, RENEWAL_NOTICE_DAYS
-from app.mpesa.daraja import CANCELLED_CODES, DarajaClient
+from app.mpesa.daraja import CANCELLED_CODES, DarajaClient, safaricom_msisdn
 
 # Daraja result codes, worded for the shop owner paying their own subscription.
 RESULT_MESSAGES = {
@@ -117,3 +118,82 @@ def finish_subscription_payment(payment, result_code, result_desc, receipt=None)
     payment.mpesa_receipt = receipt
     grant_plan(payment.retailer, payment)
     return True
+
+
+def own_paybill():
+    """The app's own Daraja Paybill number shops can pay by hand, or None.
+
+    Payments to it are reported by Safaricom and confirm themselves.
+    """
+    config = current_app.config
+    if billing_client() is None or config.get("BILLING_MPESA_ACCOUNT_TYPE", "paybill") != "paybill":
+        return None
+    return config["BILLING_MPESA_SHORTCODE"]
+
+
+def plan_for_amount(amount):
+    """The dearest plan the amount pays for in full, or None if it is below every price."""
+    affordable = [plan for plan in PLANS.values() if plan.price <= amount]
+    return max(affordable, key=lambda plan: plan.price) if affordable else None
+
+
+def shop_for_account(bill_ref):
+    """The shop a Pay Bill account number points to: its DC code or its phone number."""
+    from app.models import Retailer
+
+    ref = re.sub(r"[\s-]", "", bill_ref or "").upper()
+    match = re.fullmatch(r"DC(\d{1,9})", ref)
+    if match:
+        from app.extensions import db
+
+        return db.session.get(Retailer, int(match.group(1)))
+    msisdn = safaricom_msisdn(ref)
+    if msisdn:
+        return Retailer.query.filter_by(phone_number=f"+{msisdn}").first()
+    return None
+
+
+def apply_receipt(receipt, claim=None):
+    """Turn a reported Pay Bill payment into paid time, if a shop and plan fit.
+
+    A code the shop already sent wins; otherwise the account number names the
+    shop and the amount picks the plan. Returns the paid SubscriptionPayment or None.
+    """
+    from app.extensions import db
+    from app.models import SubscriptionPayment
+
+    if receipt.subscription_payment_id:
+        return None
+    if claim is None:
+        claim = SubscriptionPayment.query.filter_by(
+            mpesa_receipt=receipt.trans_id, method="paybill", status="pending"
+        ).first()
+    if claim is not None and receipt.amount >= claim.amount:
+        confirm_paybill_claim(claim)
+        receipt.subscription_payment = claim
+        return claim
+
+    shop = shop_for_account(receipt.bill_ref) or (claim.retailer if claim else None)
+    plan = plan_for_amount(receipt.amount)
+    if shop is None or plan is None or shop.billing_exempt:
+        return None
+    payment = SubscriptionPayment(
+        retailer_id=shop.retailer_id,
+        plan=plan.code,
+        amount=receipt.amount,
+        method="c2b",
+        status="paid",
+        mpesa_receipt=receipt.trans_id,
+        result_desc="Confirmed by M-Pesa",
+        completed_at=datetime.utcnow(),
+    )
+    payment.retailer = shop
+    db.session.add(payment)
+    grant_plan(shop, payment)
+    if claim is not None:
+        # The shop sent this code but paid less than its plan; the money still counts.
+        claim.status = "failed"
+        claim.result_desc = "Paid less than the plan; the amount paid was applied instead."
+        claim.completed_at = datetime.utcnow()
+    receipt.subscription_payment = payment
+    return payment

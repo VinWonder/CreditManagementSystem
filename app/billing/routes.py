@@ -18,12 +18,14 @@ from app.billing.plans import DEFAULT_PLAN, PLANS, TRIAL_DAYS
 from app.billing.service import (
     billing_client,
     days_left,
+    apply_receipt,
     finish_subscription_payment,
+    own_paybill,
     paybill_details,
     shop_of,
 )
 from app.extensions import db
-from app.models import SubscriptionPayment
+from app.models import C2BReceipt, SubscriptionPayment
 from app.mpesa.daraja import DarajaError, account_reference_for, safaricom_msisdn
 from app.mpesa.routes import PROMPT_COOLDOWN, PROMPT_EXPIRY, UNREACHABLE_CALLBACK_BASE, callback_base_url
 from app.permissions import admin_required
@@ -99,6 +101,7 @@ def _plans_page(shop, form, claim_form=None):
         claim_form=claim_form or PaybillClaimForm(plan=form.plan.data),
         claims=claims,
         paybill=paybill_details(),
+        own_paybill=own_paybill(),
         plans=list(PLANS.values()),
         payments=payments,
         trial_days=TRIAL_DAYS,
@@ -177,7 +180,7 @@ def claim_paybill_payment():
     """The shop paid the Paybill by hand and sends its M-Pesa code for checking."""
     shop = current_user
     form = PaybillClaimForm()
-    if shop.billing_exempt or paybill_details() is None:
+    if shop.billing_exempt or not (paybill_details() or own_paybill()):
         return redirect(url_for("billing.plans"))
     if not form.validate_on_submit():
         for errors in form.errors.values():
@@ -188,15 +191,23 @@ def claim_paybill_payment():
         return redirect(url_for("billing.plans", plan=form.plan.data))
 
     plan = PLANS[form.plan.data]
-    db.session.add(
-        SubscriptionPayment(
-            retailer_id=shop.retailer_id,
-            plan=plan.code,
-            amount=plan.price,
-            method="paybill",
-            mpesa_receipt=form.mpesa_code.data,
-        )
+    claim = SubscriptionPayment(
+        retailer_id=shop.retailer_id,
+        plan=plan.code,
+        amount=plan.price,
+        method="paybill",
+        mpesa_receipt=form.mpesa_code.data,
     )
+    claim.retailer = shop
+    db.session.add(claim)
+    receipt = C2BReceipt.query.filter_by(trans_id=form.mpesa_code.data).first()
+    if receipt is not None:
+        # Safaricom already reported this payment: no need to wait.
+        applied = apply_receipt(receipt, claim=claim)
+        db.session.commit()
+        if applied is not None:
+            flash(f"Payment confirmed. Duka Credit is yours until {applied.period_end:%d %b %Y}.", "success")
+            return redirect(url_for("billing.plans"))
     db.session.commit()
     flash(
         f"Thank you. We will check M-Pesa code {form.mpesa_code.data} and start your "
@@ -291,5 +302,50 @@ def callback(token):
         body.get("ResultDesc"),
         receipt=items.get("MpesaReceiptNumber"),
     )
+    db.session.commit()
+    return accepted
+
+
+def _c2b_token_ok(token):
+    expected = current_app.config.get("BILLING_C2B_TOKEN") or ""
+    return bool(expected) and secrets.compare_digest(token, expected)
+
+
+@billing_bp.route("/c2b/<token>/validation", methods=["POST"])
+def c2b_validation(token):
+    """Safaricom asks before completing a payment; accept every one."""
+    return jsonify(ResultCode="0", ResultDesc="Accepted")
+
+
+@billing_bp.route("/c2b/<token>/confirmation", methods=["POST"])
+def c2b_confirmation(token):
+    """Safaricom reports a completed Pay Bill payment to the app's own Paybill."""
+    accepted = jsonify(ResultCode=0, ResultDesc="Accepted")
+    data = request.get_json(silent=True) or {}
+    trans_id = str(data.get("TransID") or "").strip().upper()
+    if not _c2b_token_ok(token) or not trans_id:
+        current_app.logger.warning("Ignored a Pay Bill confirmation with a wrong address or no code.")
+        return accepted
+    if C2BReceipt.query.filter_by(trans_id=trans_id).first():
+        return accepted  # Safaricom sent it twice.
+    try:
+        amount = int(float(data.get("TransAmount") or 0))
+    except (TypeError, ValueError):
+        amount = 0
+    try:
+        # Safaricom gives Nairobi time (UTC+3); the app stores UTC.
+        paid_at = datetime.strptime(str(data.get("TransTime")), "%Y%m%d%H%M%S") - timedelta(hours=3)
+    except ValueError:
+        paid_at = None
+    receipt = C2BReceipt(
+        trans_id=trans_id[:20],
+        amount=amount,
+        bill_ref=(str(data.get("BillRefNumber") or "").strip()[:40] or None),
+        payer_name=(str(data.get("FirstName") or "").strip()[:100] or None),
+        paid_at=paid_at,
+    )
+    db.session.add(receipt)
+    if apply_receipt(receipt) is None:
+        current_app.logger.info("Pay Bill payment %s matched no shop yet.", trans_id)
     db.session.commit()
     return accepted
