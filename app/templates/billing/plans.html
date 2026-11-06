@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Subscription{% endblock %}
+{% block content %}
+{% set status = shop.subscription_status %}
+<section class="customer-form-layout billing-page" aria-labelledby="billing-title">
+  <div class="customer-form-card">
+    <div class="customer-form-intro">
+      <span class="customer-form-mark"><i class="bi bi-stars" aria-hidden="true"></i></span>
+      <p class="eyebrow mb-1">Subscription</p>
+      <h1 id="billing-title">
+        {% if status == "free" %}Free forever
+        {% elif status == "trial" %}Free trial: {{ days_left }} day{{ '' if days_left == 1 else 's' }} left
+        {% elif status == "active" %}Active until {{ shop.paid_until|nairobi('%d %b %Y') }}
+        {% else %}Your subscription has ended
+        {% endif %}
+      </h1>
+      <p>
+        {% if status == "free" %}{{ shop.business_name }} uses Duka Credit free of charge. There is nothing to pay.
+        {% elif status == "trial" %}Every new shop gets {{ trial_days }} days free. Your trial ends on {{ shop.trial_ends_at|nairobi('%d %b %Y at %H:%M') }}. Pay now and the new time starts when the trial ends, so you lose no free days.
+        {% elif status == "active" %}{{ days_left }} day{{ '' if days_left == 1 else 's' }} left. Paying again adds the new time after your current plan ends.
+        {% else %}Your customers, sales and payments are safe. Choose a plan to keep using Duka Credit.
+        {% endif %}
+      </p>
+    </div>
+
+    {% if status != "free" %}
+    <div class="customer-form">
+      {% if not current_user.is_admin %}
+      <p class="billing-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Only the shop owner, {{ shop.owner_name }}, can pay for Duka Credit. Ask them to renew it.</p>
+      {% else %}
+      <form method="POST" action="{{ url_for('billing.subscribe') }}" novalidate>
+        {{ form.csrf_token }}
+        <fieldset class="billing-plans">
+          <legend class="form-label">Choose a plan</legend>
+          {% for plan in plans %}
+          <label class="billing-plan">
+            <input type="radio" name="plan" value="{{ plan.code }}"{% if form.plan.data == plan.code %} checked{% endif %}>
+            <span class="billing-plan-body">
+              <span class="billing-plan-name">{{ plan.name }}{% if plan.saving %} <span class="billing-plan-saving">Save KES {{ '{:,}'.format(plan.saving) }}</span>{% endif %}</span>
+              <span class="billing-plan-price">KES {{ '{:,}'.format(plan.price) }}</span>
+              <span class="billing-plan-day">About KES {{ '%.0f'|format(plan.per_day) }} a day · {{ plan.days }} days</span>
+              <span class="billing-plan-summary">{{ plan.summary }}</span>
+            </span>
+          </label>
+          {% endfor %}
+        </fieldset>
+
+        {% if prompts_ready %}
+        <div class="customer-form-field">
+          {{ form.phone_number.label(class="form-label") }}
+          <div class="customer-input-wrap">
+            <i class="bi bi-phone" aria-hidden="true"></i>
+            {{ form.phone_number(class="form-control", inputmode="tel", autocomplete="tel", placeholder="0712 345 678") }}
+          </div>
+          <small class="customer-field-help">Your phone shows an M-Pesa prompt. Enter your PIN to pay.</small>
+        </div>
+        <div class="customer-form-actions">
+          <button class="customer-save-button" type="submit"><i class="bi bi-phone-vibrate" aria-hidden="true"></i> Pay with M-Pesa</button>
+        </div>
+        {% else %}
+        <div class="billing-note">
+          <i class="bi bi-cash-coin" aria-hidden="true"></i>
+          <span>
+            {% if pay_instructions %}{{ pay_instructions }}{% else %}To pay, send the plan amount by M-Pesa and share the confirmation message with us.{% endif %}
+            Use your shop name, <strong>{{ shop.business_name }}</strong>, as the account. Your plan starts as soon as we confirm the payment.
+            {% if support_phone %}Call or WhatsApp <a href="tel:{{ support_phone }}">{{ support_phone }}</a> for help.{% endif %}
+          </span>
+        </div>
+        {% endif %}
+      </form>
+      {% endif %}
+
+      {% if payments %}
+      <h2 class="billing-history-title">Payments</h2>
+      <div class="table-responsive">
+        <table class="table table-sm table-stack align-middle">
+          <thead><tr><th>Date</th><th>Plan</th><th>Amount</th><th>Covers</th><th>Reference</th></tr></thead>
+          <tbody>
+            {% for payment in payments %}
+            <tr>
+              <td>{{ payment.completed_at|nairobi('%d %b %Y') }}</td>
+              <td>{{ plans|selectattr('code', 'equalto', payment.plan)|map(attribute='name')|first or payment.plan }}</td>
+              <td>KES {{ '{:,}'.format(payment.amount) }}</td>
+              <td>{% if payment.period_start %}{{ payment.period_start|nairobi('%d %b %Y') }} – {{ payment.period_end|nairobi('%d %b %Y') }}{% endif %}</td>
+              <td>{{ payment.mpesa_receipt or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

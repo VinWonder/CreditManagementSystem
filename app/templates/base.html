@@ -121,6 +121,7 @@
           <li><a class="dropdown-item{% if request.endpoint == 'account.profile' %} active{% endif %}" href="{{ url_for('account.profile') }}"><i class="bi bi-person-gear" aria-hidden="true"></i> Profile</a></li>
           <li><a class="dropdown-item{% if request.endpoint == 'account.change_password' %} active{% endif %}" href="{{ url_for('account.change_password') }}"><i class="bi bi-key" aria-hidden="true"></i> Change password</a></li>
           <li data-install-app hidden><a class="dropdown-item" href="#"><i class="bi bi-phone" aria-hidden="true"></i> Install app</a></li>
+          <li><a class="dropdown-item{% if request.blueprint == 'billing' %} active{% endif %}" href="{{ url_for('billing.plans') }}"><i class="bi bi-stars" aria-hidden="true"></i> Subscription</a></li>
           {% if current_user.is_admin %}
           <li><a class="dropdown-item{% if request.endpoint in ('account.change_email', 'account.confirm_email') %} active{% endif %}" href="{{ url_for('account.change_email') }}"><i class="bi bi-envelope" aria-hidden="true"></i> Change email</a></li>
           {% endif %}
@@ -139,6 +140,16 @@
 {% endif %}
 
 <main class="container my-4" id="main-content">
+  {% if subscription_notice and request.blueprint != 'billing' %}
+  <a class="billing-banner{% if subscription_notice.days <= 2 %} is-urgent{% endif %}" href="{{ url_for('billing.plans') }}">
+    <i class="bi bi-stars" aria-hidden="true"></i>
+    <span>
+      {% set days = subscription_notice.days %}
+      {% if subscription_notice.status == 'trial' %}Free trial: {{ days }} day{{ '' if days == 1 else 's' }} left.{% else %}Your plan ends in {{ days }} day{{ '' if days == 1 else 's' }}.{% endif %}
+      <strong>Choose a plan</strong>
+    </span>
+  </a>
+  {% endif %}
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <div class="app-flash-stack">

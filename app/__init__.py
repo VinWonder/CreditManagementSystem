@@ -1,5 +1,6 @@
 import os
 import secrets
+from datetime import datetime
 
 from flask import Flask, render_template
 from flask_login import user_logged_in
@@ -89,6 +90,7 @@ def create_app(config_class=Config):
     from app.reminders.routes import reminders_bp
     from app.mpesa.routes import mpesa_bp
     from app.account.routes import account_bp
+    from app.billing.routes import billing_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -99,6 +101,7 @@ def create_app(config_class=Config):
     app.register_blueprint(reminders_bp)
     app.register_blueprint(mpesa_bp)
     app.register_blueprint(account_bp)
+    app.register_blueprint(billing_bp)
 
     from app.auth.email import send_test_email_command
 
@@ -109,6 +112,9 @@ def create_app(config_class=Config):
     from app.auth.cli import accounts_cli
 
     app.cli.add_command(accounts_cli)
+    from app.billing.cli import billing_cli
+
+    app.cli.add_command(billing_cli)
 
     @app.context_processor
     def inject_logout_form():
@@ -127,6 +133,17 @@ def create_app(config_class=Config):
             retailer_id=current_user.retailer_id, approval_status="pending"
         ).count()
         return {"pending_approval_count": count}
+
+    @app.context_processor
+    def inject_subscription_notice():
+        """The trial or plan end date, for the banner shown to shop admins."""
+        from flask_login import current_user
+
+        from app.billing.service import renewal_notice
+
+        if not current_user.is_authenticated or not getattr(current_user, "is_admin", False):
+            return {"subscription_notice": None}
+        return {"subscription_notice": renewal_notice(current_user)}
 
     # The reminder scan scheduler was removed: retailers send reminders
     # themselves from their own WhatsApp or SMS app.
@@ -188,11 +205,22 @@ def _upgrade_local_auth_schema():
         "email_verified_at": "DATETIME",
         "email_canonical": "VARCHAR(255)",
         "pending_email": "VARCHAR(255)",
+        "trial_ends_at": "DATETIME",
+        "paid_until": "DATETIME",
+        "billing_exempt": "BOOLEAN NOT NULL DEFAULT 0",
     }
     with db.engine.begin() as connection:
         for name, definition in additions.items():
             if name not in columns:
                 connection.execute(text(f"ALTER TABLE retailers ADD COLUMN {name} {definition}"))
+        if "trial_ends_at" not in columns:
+            # Shops from before subscriptions get a full free week from now.
+            from app.billing.plans import TRIAL_PERIOD
+
+            connection.execute(
+                text("UPDATE retailers SET trial_ends_at = :ends"),
+                {"ends": datetime.utcnow() + TRIAL_PERIOD},
+            )
         if "email_verified_at" not in columns:
             # Accounts created before email verification keep working.
             connection.execute(

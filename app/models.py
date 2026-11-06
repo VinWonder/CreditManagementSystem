@@ -2,8 +2,13 @@ from datetime import datetime
 from decimal import Decimal
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from app.billing.plans import TRIAL_PERIOD
 from app.extensions import db
 from app.timezones import days_since_nairobi_date
+
+
+def _trial_end():
+    return datetime.utcnow() + TRIAL_PERIOD
 
 
 class Retailer(UserMixin, db.Model):
@@ -26,6 +31,13 @@ class Retailer(UserMixin, db.Model):
     logo_filename = db.Column(db.String(255), nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Subscription: the app works until the trial or the paid time runs out,
+    # whichever is later. Free-forever shops never pay.
+    trial_ends_at = db.Column(db.DateTime, nullable=True, default=_trial_end)
+    paid_until = db.Column(db.DateTime, nullable=True)
+    billing_exempt = db.Column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
 
     customers = db.relationship(
         "Customer", backref="retailer", lazy="dynamic", cascade="all, delete-orphan"
@@ -79,6 +91,28 @@ class Retailer(UserMixin, db.Model):
         """A retailer who signed up with an email must confirm it before signing in."""
         return bool(self.email) and self.email_verified_at is None
 
+    @property
+    def access_ends_at(self):
+        """When the trial or paid time runs out, whichever is later (None if never set)."""
+        ends = [moment for moment in (self.trial_ends_at, self.paid_until) if moment]
+        return max(ends) if ends else None
+
+    @property
+    def subscription_status(self):
+        """free | trial | active | expired"""
+        if self.billing_exempt:
+            return "free"
+        now = datetime.utcnow()
+        if self.paid_until and self.paid_until > now:
+            return "active"
+        if self.trial_ends_at and self.trial_ends_at > now:
+            return "trial"
+        return "expired"
+
+    @property
+    def has_access(self):
+        return self.subscription_status != "expired"
+
     def set_password(self, raw_password):
         self.password_hash = generate_password_hash(raw_password)
 
@@ -122,6 +156,10 @@ class Shopkeeper(UserMixin, db.Model):
     @property
     def logo_filename(self):
         return self.retailer.logo_filename
+
+    @property
+    def has_access(self):
+        return self.retailer.has_access
 
     def set_password(self, raw_password):
         self.password_hash = generate_password_hash(raw_password)
@@ -620,3 +658,43 @@ class StkPushRequest(db.Model):
 
     def __repr__(self):
         return f"<StkPushRequest {self.stk_request_id} KES {self.amount} {self.status}>"
+
+
+class SubscriptionPayment(db.Model):
+    """One payment a shop made for its Duka Credit subscription.
+
+    Paid by an M-Pesa prompt to the app's own Paybill/Till, or recorded by the
+    developer with `flask billing activate` for money received another way.
+    """
+
+    __tablename__ = "subscription_payments"
+
+    subscription_payment_id = db.Column(db.Integer, primary_key=True)
+    retailer_id = db.Column(
+        db.Integer, db.ForeignKey("retailers.retailer_id"), nullable=False, index=True
+    )
+    plan = db.Column(db.String(20), nullable=False)
+    amount = db.Column(db.Integer, nullable=False)  # whole shillings
+    method = db.Column(db.String(10), nullable=False, default="mpesa_stk")  # mpesa_stk | manual
+    phone_number = db.Column(db.String(15), nullable=True)
+    # Unguessable path segment that Safaricom's callback must present.
+    callback_token = db.Column(db.String(64), nullable=True, unique=True)
+    merchant_request_id = db.Column(db.String(64), nullable=True)
+    checkout_request_id = db.Column(db.String(64), nullable=True, unique=True)
+    status = db.Column(db.String(10), nullable=False, default="pending")  # pending | paid | cancelled | failed
+    result_code = db.Column(db.String(10), nullable=True)
+    result_desc = db.Column(db.String(255), nullable=True)
+    mpesa_receipt = db.Column(db.String(40), nullable=True)
+    # The paid time this payment added, set once it is paid.
+    period_start = db.Column(db.DateTime, nullable=True)
+    period_end = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    retailer = db.relationship(
+        "Retailer",
+        backref=db.backref("subscription_payments", lazy="dynamic", cascade="all, delete-orphan"),
+    )
+
+    def __repr__(self):
+        return f"<SubscriptionPayment {self.subscription_payment_id} {self.plan} KES {self.amount} {self.status}>"

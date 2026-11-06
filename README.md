@@ -155,6 +155,7 @@ IndexedDB and synced when the connection comes back.
 | Credit sales and payments | `app/transactions` and `app/payments` |
 | Balance updates and receivables report | `Ledger.recalculate()` and `app/ledger` |
 | Reminder rules and delivery | `app/reminders` |
+| Subscriptions, free trial and plan prices | `app/billing` |
 | Offline sale queue and sync | `app/static/js/offline-db.js`, `app/static/js/sync.js`, and `/transactions/api/sync` |
 
 Retailer owners are shop admins. Admins create and deactivate shopkeeper
@@ -282,6 +283,44 @@ venv\Scripts\python.exe -m flask --app run accounts delete <shop>            # d
 
 Close that PowerShell window afterwards so your local app uses your own
 database again.
+
+### Subscriptions
+
+Every new shop gets **7 days free**. After that the shop owner picks a plan
+from **Subscription** in the account menu and pays with an M-Pesa prompt:
+
+| Plan | Price | About a day |
+|---|---|---|
+| Weekly | KES 99 | KES 14 |
+| Monthly | KES 299 | KES 10 |
+| 3 months | KES 799 (save KES 98) | KES 9 |
+| Yearly | KES 2,999 (save KES 639) | KES 8 |
+
+Prices live in one place, `app/billing/plans.py`; change a number there and
+the page, the M-Pesa prompt and the "save" labels follow. Paying early never
+loses days: new time starts when the trial or current plan ends. A banner
+counts down the trial, and the last 3 days of a paid plan. When time runs out,
+the shop's admin and shopkeepers are sent to the plans page (only the owner
+can pay); their customers, sales and payments are kept, and offline sales stay
+queued on the phone until the shop renews.
+
+**Marion Plumbing Services** and **Rahaher** are free forever. The migration
+marks them by shop name; shops that existed before subscriptions get a fresh
+7-day trial from the day the migration runs.
+
+**Getting paid:** put your own Daraja Paybill or Till in the `BILLING_MPESA_*`
+settings (see `.env.example`) and shops pay themselves; the payment is
+confirmed by Safaricom and the plan starts at once. Without those keys the page
+shows `BILLING_PAY_INSTRUCTIONS` (for example "Send to Till 123456") and you
+record each payment yourself. Commands (run against Render as in *Manage
+accounts on Render*); `<shop>` is the shop name, id, phone or email:
+
+```powershell
+venv\Scripts\python.exe -m flask --app run billing list                      # who is on trial, paid, free or expired
+venv\Scripts\python.exe -m flask --app run billing activate "<shop>" monthly --receipt QX12AB34
+venv\Scripts\python.exe -m flask --app run billing free "<shop>"             # free forever (--remove to undo)
+venv\Scripts\python.exe -m flask --app run billing extend-trial "<shop>" --days 7
+```
 
 ### Set up M-Pesa payment prompts (STK Push)
 

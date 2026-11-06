@@ -92,5 +92,19 @@ class Config:
     PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").strip().rstrip("/")
     MPESA_REQUEST_TIMEOUT_SECONDS = int(os.environ.get("MPESA_REQUEST_TIMEOUT_SECONDS", 30))
 
+    # Subscriptions: shops pay into the app's own Paybill/Till by M-Pesa prompt.
+    # Plans and prices live in app/billing/plans.py. Leave the keys empty to
+    # take payments by hand and record them with `flask billing activate`.
+    BILLING_MPESA_ENVIRONMENT = os.environ.get("BILLING_MPESA_ENVIRONMENT", "production").strip().lower()
+    BILLING_MPESA_ACCOUNT_TYPE = os.environ.get("BILLING_MPESA_ACCOUNT_TYPE", "paybill").strip().lower()
+    BILLING_MPESA_SHORTCODE = os.environ.get("BILLING_MPESA_SHORTCODE", "").strip()
+    BILLING_MPESA_TILL_NUMBER = os.environ.get("BILLING_MPESA_TILL_NUMBER", "").strip()
+    BILLING_MPESA_CONSUMER_KEY = os.environ.get("BILLING_MPESA_CONSUMER_KEY", "").strip()
+    BILLING_MPESA_CONSUMER_SECRET = os.environ.get("BILLING_MPESA_CONSUMER_SECRET", "").strip()
+    BILLING_MPESA_PASSKEY = os.environ.get("BILLING_MPESA_PASSKEY", "").strip()
+    # Shown on the plans page when prompts are off, e.g. "Pay to Till 123456".
+    BILLING_PAY_INSTRUCTIONS = os.environ.get("BILLING_PAY_INSTRUCTIONS", "").strip()
+    BILLING_SUPPORT_PHONE = os.environ.get("BILLING_SUPPORT_PHONE", "").strip()
+
     # Ageing buckets (days overdue) used in receivables report
     AGEING_BUCKETS = [(0, 7), (8, 14), (15, 30), (31, 60), (61, 10_000)]
