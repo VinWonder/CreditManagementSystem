@@ -291,10 +291,10 @@ from **Subscription** in the account menu and pays with an M-Pesa prompt:
 
 | Plan | Price | About a day |
 |---|---|---|
-| Weekly | KES 99 | KES 14 |
-| Monthly | KES 299 | KES 10 |
-| 3 months | KES 799 (save KES 98) | KES 9 |
-| Yearly | KES 2,999 (save KES 639) | KES 8 |
+| Weekly | KES 300 | KES 43 |
+| Monthly | KES 1,000 | KES 33 |
+| 3 months | KES 2,700 (save KES 333) | KES 30 |
+| Yearly | KES 10,000 (save KES 2,167) | KES 27 |
 
 Prices live in one place, `app/billing/plans.py`; change a number there and
 the page, the M-Pesa prompt and the "save" labels follow. Paying early never
@@ -308,15 +308,28 @@ queued on the phone until the shop renews.
 marks them by shop name; shops that existed before subscriptions get a fresh
 7-day trial from the day the migration runs.
 
-**Getting paid:** put your own Daraja Paybill or Till in the `BILLING_MPESA_*`
-settings (see `.env.example`) and shops pay themselves; the payment is
-confirmed by Safaricom and the plan starts at once. Without those keys the page
-shows `BILLING_PAY_INSTRUCTIONS` (for example "Send to Till 123456") and you
-record each payment yourself. Commands (run against Render as in *Manage
+**Getting paid**, in order of preference (see `.env.example`):
+
+1. **Your own Paybill/Till on Daraja** (`BILLING_MPESA_*`): the shop gets an
+   M-Pesa prompt, Safaricom confirms the payment and the plan starts at once.
+   A Paybill from Safaricom can settle into any bank account, I&M included.
+2. **A bank Paybill such as I&M Bank** (`BILLING_PAYBILL_NUMBER=542542`,
+   `BILLING_PAYBILL_ACCOUNT=` your 14-digit I&M account number,
+   `BILLING_PAYBILL_NAME=I&M Bank`). The bank owns that Paybill, so the app
+   cannot send prompts to it. The page shows the Pay Bill steps with the
+   chosen plan's amount; the shop types the M-Pesa code from its confirmation
+   SMS. Check the code and amount on your I&M statement or alerts, then run
+   `billing confirm <code>` (or `billing reject <code>`). `billing pending`
+   lists the codes waiting.
+3. **Anything else:** the page shows `BILLING_PAY_INSTRUCTIONS` (for example
+   "Send to Till 123456") and you record each payment with `billing activate`. Commands (run against Render as in *Manage
 accounts on Render*); `<shop>` is the shop name, id, phone or email:
 
 ```powershell
 venv\Scripts\python.exe -m flask --app run billing list                      # who is on trial, paid, free or expired
+venv\Scripts\python.exe -m flask --app run billing pending                   # Paybill codes waiting to be checked
+venv\Scripts\python.exe -m flask --app run billing confirm SKL4ABC123        # code is on the statement: start the plan
+venv\Scripts\python.exe -m flask --app run billing reject SKL4ABC123         # code not found: the shop is told
 venv\Scripts\python.exe -m flask --app run billing activate "<shop>" monthly --receipt QX12AB34
 venv\Scripts\python.exe -m flask --app run billing free "<shop>"             # free forever (--remove to undo)
 venv\Scripts\python.exe -m flask --app run billing extend-trial "<shop>" --days 7

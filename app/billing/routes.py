@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import (
     Blueprint,
@@ -13,12 +13,13 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
-from app.billing.forms import SubscribeForm
+from app.billing.forms import PaybillClaimForm, SubscribeForm
 from app.billing.plans import DEFAULT_PLAN, PLANS, TRIAL_DAYS
 from app.billing.service import (
     billing_client,
     days_left,
     finish_subscription_payment,
+    paybill_details,
     shop_of,
 )
 from app.extensions import db
@@ -64,21 +65,40 @@ def require_active_subscription():
 @login_required
 def plans():
     shop = shop_of(current_user)
-    form = SubscribeForm(plan=request.args.get("plan", DEFAULT_PLAN), phone_number=shop.phone_number)
-    return _plans_page(shop, form)
+    plan = request.args.get("plan", DEFAULT_PLAN)
+    form = SubscribeForm(plan=plan, phone_number=shop.phone_number)
+    return _plans_page(shop, form, PaybillClaimForm(plan=plan))
 
 
-def _plans_page(shop, form):
+def _plans_page(shop, form, claim_form=None):
     payments = (
         shop.subscription_payments.filter(SubscriptionPayment.status == "paid")
         .order_by(SubscriptionPayment.completed_at.desc())
         .limit(12)
         .all()
     )
+    # Codes still being checked, and any turned down this past week.
+    claims = (
+        shop.subscription_payments.filter(
+            SubscriptionPayment.method == "paybill",
+            db.or_(
+                SubscriptionPayment.status == "pending",
+                db.and_(
+                    SubscriptionPayment.status == "failed",
+                    SubscriptionPayment.completed_at > datetime.utcnow() - timedelta(days=7),
+                ),
+            ),
+        )
+        .order_by(SubscriptionPayment.created_at.desc())
+        .all()
+    )
     return render_template(
         "billing/plans.html",
         shop=shop,
         form=form,
+        claim_form=claim_form or PaybillClaimForm(plan=form.plan.data),
+        claims=claims,
+        paybill=paybill_details(),
         plans=list(PLANS.values()),
         payments=payments,
         trial_days=TRIAL_DAYS,
@@ -109,6 +129,7 @@ def subscribe():
         return redirect(url_for("billing.plans", plan=form.plan.data))
 
     waiting = shop.subscription_payments.filter(
+        SubscriptionPayment.method == "mpesa_stk",
         SubscriptionPayment.status == "pending",
         SubscriptionPayment.created_at > datetime.utcnow() - PROMPT_COOLDOWN,
     ).first()
@@ -149,9 +170,46 @@ def subscribe():
     return redirect(url_for("billing.payment_status", payment_id=payment.subscription_payment_id))
 
 
+@billing_bp.route("/claim", methods=["POST"])
+@login_required
+@admin_required
+def claim_paybill_payment():
+    """The shop paid the Paybill by hand and sends its M-Pesa code for checking."""
+    shop = current_user
+    form = PaybillClaimForm()
+    if shop.billing_exempt or paybill_details() is None:
+        return redirect(url_for("billing.plans"))
+    if not form.validate_on_submit():
+        for errors in form.errors.values():
+            flash(errors[0], "danger")
+        return _plans_page(shop, SubscribeForm(plan=form.plan.data, phone_number=shop.phone_number), form), 400
+    if SubscriptionPayment.query.filter_by(mpesa_receipt=form.mpesa_code.data).first():
+        flash("That M-Pesa code has already been sent.", "warning")
+        return redirect(url_for("billing.plans", plan=form.plan.data))
+
+    plan = PLANS[form.plan.data]
+    db.session.add(
+        SubscriptionPayment(
+            retailer_id=shop.retailer_id,
+            plan=plan.code,
+            amount=plan.price,
+            method="paybill",
+            mpesa_receipt=form.mpesa_code.data,
+        )
+    )
+    db.session.commit()
+    flash(
+        f"Thank you. We will check M-Pesa code {form.mpesa_code.data} and start your "
+        f"{plan.name} plan as soon as the payment is confirmed.",
+        "success",
+    )
+    return redirect(url_for("billing.plans"))
+
+
 def _own_payment_or_404(payment_id):
+    """One of this shop's M-Pesa prompt payments."""
     return SubscriptionPayment.query.filter_by(
-        subscription_payment_id=payment_id, retailer_id=current_user.retailer_id
+        subscription_payment_id=payment_id, retailer_id=current_user.retailer_id, method="mpesa_stk"
     ).first_or_404()
 
 

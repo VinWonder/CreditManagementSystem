@@ -28,13 +28,21 @@
       {% if not current_user.is_admin %}
       <p class="billing-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Only the shop owner, {{ shop.owner_name }}, can pay for Duka Credit. Ask them to renew it.</p>
       {% else %}
-      <form method="POST" action="{{ url_for('billing.subscribe') }}" novalidate>
+      {% for claim in claims %}
+      {% if claim.status == 'pending' %}
+      <p class="billing-note"><i class="bi bi-hourglass-split" aria-hidden="true"></i> <span>Checking M-Pesa code <strong>{{ claim.mpesa_receipt }}</strong> (KES {{ '{:,}'.format(claim.amount) }}, sent {{ claim.created_at|nairobi('%d %b %H:%M') }}). Your plan starts as soon as the payment is confirmed.</span></p>
+      {% else %}
+      <p class="billing-note is-rejected"><i class="bi bi-x-circle" aria-hidden="true"></i> <span>M-Pesa code <strong>{{ claim.mpesa_receipt }}</strong> was not found on our statement for KES {{ '{:,}'.format(claim.amount) }}. Check the code in your M-Pesa messages{% if support_phone %} or call <a href="tel:{{ support_phone }}">{{ support_phone }}</a>{% endif %}.</span></p>
+      {% endif %}
+      {% endfor %}
+      {% set use_paybill = paybill and not prompts_ready %}
+      <form method="POST" action="{{ url_for('billing.claim_paybill_payment') if use_paybill else url_for('billing.subscribe') }}" novalidate data-billing-form>
         {{ form.csrf_token }}
         <fieldset class="billing-plans">
           <legend class="form-label">Choose a plan</legend>
           {% for plan in plans %}
           <label class="billing-plan">
-            <input type="radio" name="plan" value="{{ plan.code }}"{% if form.plan.data == plan.code %} checked{% endif %}>
+            <input type="radio" name="plan" value="{{ plan.code }}" data-price="{{ '{:,}'.format(plan.price) }}"{% if form.plan.data == plan.code %} checked{% endif %}>
             <span class="billing-plan-body">
               <span class="billing-plan-name">{{ plan.name }}{% if plan.saving %} <span class="billing-plan-saving">Save KES {{ '{:,}'.format(plan.saving) }}</span>{% endif %}</span>
               <span class="billing-plan-price">KES {{ '{:,}'.format(plan.price) }}</span>
@@ -56,6 +64,29 @@
         </div>
         <div class="customer-form-actions">
           <button class="customer-save-button" type="submit"><i class="bi bi-phone-vibrate" aria-hidden="true"></i> Pay with M-Pesa</button>
+        </div>
+        {% elif use_paybill %}
+        {% set chosen = plans|selectattr('code', 'equalto', form.plan.data)|first or plans[0] %}
+        <div class="billing-note">
+          <i class="bi bi-phone" aria-hidden="true"></i>
+          <ol class="billing-steps">
+            <li>On M-Pesa, open <strong>Lipa na M-Pesa</strong>, then <strong>Pay Bill</strong>.</li>
+            <li>Business number: <strong>{{ paybill.number }}</strong>{% if paybill.name %} ({{ paybill.name }}){% endif %}</li>
+            <li>Account number: <strong>{{ paybill.account }}</strong></li>
+            <li>Amount: <strong>KES <span data-plan-amount>{{ '{:,}'.format(chosen.price) }}</span></strong>, then your PIN.</li>
+            <li>Type the code from the M-Pesa message below, for example <strong>SKL4ABC123</strong>.</li>
+          </ol>
+        </div>
+        <div class="customer-form-field">
+          {{ claim_form.mpesa_code.label(class="form-label") }}
+          <div class="customer-input-wrap">
+            <i class="bi bi-receipt" aria-hidden="true"></i>
+            {{ claim_form.mpesa_code(class="form-control", autocapitalize="characters", autocomplete="off", placeholder="SKL4ABC123", maxlength="20") }}
+          </div>
+          <small class="customer-field-help">We check the code against the bank statement, then your plan starts.{% if support_phone %} Help: <a href="tel:{{ support_phone }}">{{ support_phone }}</a>{% endif %}</small>
+        </div>
+        <div class="customer-form-actions">
+          <button class="customer-save-button" type="submit"><i class="bi bi-send" aria-hidden="true"></i> Send code</button>
         </div>
         {% else %}
         <div class="billing-note">
@@ -93,4 +124,21 @@
     {% endif %}
   </div>
 </section>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  // Keep the Pay Bill amount in step with the chosen plan.
+  const form = document.querySelector("[data-billing-form]");
+  const amount = document.querySelector("[data-plan-amount]");
+  if (!form || !amount) {
+    return;
+  }
+  form.addEventListener("change", (event) => {
+    if (event.target.name === "plan") {
+      amount.textContent = event.target.dataset.price;
+    }
+  });
+})();
+</script>
 {% endblock %}

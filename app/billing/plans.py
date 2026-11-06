@@ -39,10 +39,10 @@ class Plan:
 PLANS = {
     plan.code: plan
     for plan in (
-        Plan("weekly", "Weekly", 99, 7, "Pay small, week by week, like a daily float."),
-        Plan("monthly", "Monthly", 299, 30, "The usual choice for a busy duka."),
-        Plan("quarterly", "3 months", 799, 91, "One payment for the whole season."),
-        Plan("yearly", "Yearly", 2999, 365, "Best value: pay once and forget it for a year."),
+        Plan("weekly", "Weekly", 300, 7, "Pay small, week by week, like a daily float."),
+        Plan("monthly", "Monthly", 1000, 30, "The usual choice for a busy duka."),
+        Plan("quarterly", "3 months", 2700, 91, "One payment for the whole season."),
+        Plan("yearly", "Yearly", 10000, 365, "Best value: pay once and forget it for a year."),
     )
 }
 DEFAULT_PLAN = "monthly"

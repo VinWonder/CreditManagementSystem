@@ -37,6 +37,12 @@ class ManualBillingConfig(BillingConfig):
     BILLING_MPESA_SHORTCODE = ""
 
 
+class PaybillBillingConfig(ManualBillingConfig):
+    BILLING_PAYBILL_NUMBER = "542542"
+    BILLING_PAYBILL_ACCOUNT = "01234567890123"
+    BILLING_PAYBILL_NAME = "I&M Bank"
+
+
 def fake_response(status, body):
     response = MagicMock(status_code=status)
     response.json.return_value = body
@@ -283,7 +289,10 @@ class ManualPaymentTests(BillingTestCase):
         self.assertEqual(result.exit_code, 0, result.output)
         db.session.refresh(self.retailer)
         payment = SubscriptionPayment.query.one()
-        self.assertEqual((payment.method, payment.amount, payment.mpesa_receipt), ("manual", 799, "QX12"))
+        self.assertEqual(
+            (payment.method, payment.amount, payment.mpesa_receipt),
+            ("manual", PLANS["quarterly"].price, "QX12"),
+        )
         self.assertEqual(self.retailer.subscription_status, "active")
 
         result = runner.invoke(billing_cli, ["free", "Mama Njeri Shop"])
@@ -293,6 +302,57 @@ class ManualPaymentTests(BillingTestCase):
 
         result = runner.invoke(billing_cli, ["list"])
         self.assertIn("Mama Njeri Shop", result.output)
+
+
+class PaybillClaimTests(BillingTestCase):
+    config = PaybillBillingConfig
+
+    def _claim(self, code="skl4 abc123", plan="monthly"):
+        return self.client.post("/billing/claim", data={"plan": plan, "mpesa_code": code})
+
+    def test_page_shows_the_bank_paybill_steps_with_the_plan_amount(self):
+        page = self.client.get("/billing/?plan=yearly").data.decode()
+        self.assertIn("542542", page)
+        self.assertIn("01234567890123", page)
+        self.assertIn("I&amp;M Bank", page)
+        self.assertIn(f"KES <span data-plan-amount>{PLANS['yearly'].price:,}</span>", page)
+        self.assertIn("Send code", page)
+
+    def test_code_waits_for_confirmation_before_the_plan_starts(self):
+        self.expire()
+        self._claim()
+        payment = SubscriptionPayment.query.one()
+        self.assertEqual((payment.method, payment.status, payment.mpesa_receipt), ("paybill", "pending", "SKL4ABC123"))
+        self.assertEqual(payment.amount, PLANS["monthly"].price)
+        self.assertIn(b"Checking M-Pesa code", self.client.get("/billing/").data)
+        self.assertEqual(self.client.get("/dashboard").status_code, 302)
+
+        result = self.app.test_cli_runner().invoke(billing_cli, ["confirm", "skl4abc123"])
+        self.assertEqual(result.exit_code, 0, result.output)
+        db.session.refresh(self.retailer)
+        self.assertEqual(self.retailer.subscription_status, "active")
+        self.assertEqual(self.client.get("/dashboard").status_code, 200)
+
+    def test_rejected_code_is_shown_and_adds_no_time(self):
+        self._claim()
+        runner = self.app.test_cli_runner()
+        self.assertIn("SKL4ABC123", runner.invoke(billing_cli, ["pending"]).output)
+        runner.invoke(billing_cli, ["reject", "SKL4ABC123"])
+        db.session.refresh(self.retailer)
+        self.assertIsNone(self.retailer.paid_until)
+        self.assertIn(b"was not found on our statement", self.client.get("/billing/").data)
+
+    def test_bad_or_repeated_codes_are_refused(self):
+        self.assertEqual(self._claim(code="12345").status_code, 400)
+        self._claim()
+        self._claim(code="SKL4ABC123")
+        self.assertEqual(SubscriptionPayment.query.count(), 1)
+
+    def test_paybill_claim_never_appears_as_a_prompt(self):
+        self._claim()
+        payment = SubscriptionPayment.query.one()
+        response = self.client.get(f"/billing/payments/{payment.subscription_payment_id}/status")
+        self.assertEqual(response.status_code, 404)
 
 
 if __name__ == "__main__":

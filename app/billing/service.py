@@ -83,6 +83,22 @@ def grant_plan(retailer, payment, now=None):
     payment.period_start, payment.period_end = start, end
 
 
+def paybill_details():
+    """The bank Paybill shops pay into by hand, or None when there is none."""
+    config = current_app.config
+    number, account = config.get("BILLING_PAYBILL_NUMBER"), config.get("BILLING_PAYBILL_ACCOUNT")
+    if not (number and account):
+        return None
+    return {"number": number, "account": account, "name": config.get("BILLING_PAYBILL_NAME", "")}
+
+
+def confirm_paybill_claim(payment):
+    """The money for a submitted M-Pesa code arrived: start the shop's plan."""
+    payment.status = "paid"
+    payment.completed_at = datetime.utcnow()
+    grant_plan(payment.retailer, payment)
+
+
 def finish_subscription_payment(payment, result_code, result_desc, receipt=None):
     """Record how a subscription prompt ended; a paid prompt extends the shop's access.
 

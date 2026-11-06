@@ -4,6 +4,9 @@
     flask --app run billing free <shop> [--remove]
     flask --app run billing activate <shop> <plan> [--receipt CODE]
     flask --app run billing extend-trial <shop> --days 7
+    flask --app run billing pending
+    flask --app run billing confirm <mpesa code>
+    flask --app run billing reject <mpesa code>
 
 <shop> is the shop name, retailer id, phone number or email.
 """
@@ -14,7 +17,7 @@ import click
 from flask.cli import AppGroup
 
 from app.billing.plans import PLANS
-from app.billing.service import days_left, grant_plan
+from app.billing.service import confirm_paybill_claim, days_left, grant_plan
 from app.extensions import db
 from app.models import Retailer, SubscriptionPayment
 from app.mpesa.cli import find_retailer
@@ -99,3 +102,52 @@ def extend_trial(shop, days):
     retailer.trial_ends_at = start + timedelta(days=days)
     db.session.commit()
     click.echo(f"{retailer.business_name}: {describe(retailer)}")
+
+
+def find_claim(code):
+    payment = SubscriptionPayment.query.filter_by(
+        mpesa_receipt=code.strip().upper(), method="paybill", status="pending"
+    ).first()
+    if payment is None:
+        raise click.ClickException(f"No M-Pesa code '{code}' is waiting. See 'flask billing pending'.")
+    return payment
+
+
+@billing_cli.command("pending")
+def pending_claims():
+    """M-Pesa codes shops sent after paying the Paybill, waiting to be checked."""
+    claims = (
+        SubscriptionPayment.query.filter_by(method="paybill", status="pending")
+        .order_by(SubscriptionPayment.created_at)
+        .all()
+    )
+    if not claims:
+        click.echo("No codes waiting.")
+        return
+    for claim in claims:
+        click.echo(
+            f"{claim.mpesa_receipt:<12}  KES {claim.amount:>7,}  {PLANS[claim.plan].name:<9}  "
+            f"{claim.retailer.business_name:<28.28}  sent {claim.created_at:%d %b %H:%M} UTC"
+        )
+
+
+@billing_cli.command("confirm")
+@click.argument("code")
+def confirm_claim(code):
+    """The code is on your bank statement for the right amount: start the shop's plan."""
+    payment = find_claim(code)
+    confirm_paybill_claim(payment)
+    db.session.commit()
+    click.echo(f"Confirmed {payment.mpesa_receipt} for {payment.retailer.business_name}: {describe(payment.retailer)}")
+
+
+@billing_cli.command("reject")
+@click.argument("code")
+def reject_claim(code):
+    """The code is not on your statement (or the amount is wrong): drop it."""
+    payment = find_claim(code)
+    payment.status = "failed"
+    payment.result_desc = "Not found on the bank statement."
+    payment.completed_at = datetime.utcnow()
+    db.session.commit()
+    click.echo(f"Rejected {payment.mpesa_receipt} from {payment.retailer.business_name}.")

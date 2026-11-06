@@ -102,7 +102,13 @@ class Config:
     BILLING_MPESA_CONSUMER_KEY = os.environ.get("BILLING_MPESA_CONSUMER_KEY", "").strip()
     BILLING_MPESA_CONSUMER_SECRET = os.environ.get("BILLING_MPESA_CONSUMER_SECRET", "").strip()
     BILLING_MPESA_PASSKEY = os.environ.get("BILLING_MPESA_PASSKEY", "").strip()
-    # Shown on the plans page when prompts are off, e.g. "Pay to Till 123456".
+    # A bank Paybill shops pay into by hand, e.g. I&M Bank: 542542 and your
+    # 14-digit account number. Shops then submit their M-Pesa code and you
+    # confirm it with `flask billing confirm <code>`.
+    BILLING_PAYBILL_NUMBER = os.environ.get("BILLING_PAYBILL_NUMBER", "").strip()
+    BILLING_PAYBILL_ACCOUNT = os.environ.get("BILLING_PAYBILL_ACCOUNT", "").strip()
+    BILLING_PAYBILL_NAME = os.environ.get("BILLING_PAYBILL_NAME", "").strip()
+    # Shown on the plans page when there is no prompt or Paybill, e.g. "Pay to Till 123456".
     BILLING_PAY_INSTRUCTIONS = os.environ.get("BILLING_PAY_INSTRUCTIONS", "").strip()
     BILLING_SUPPORT_PHONE = os.environ.get("BILLING_SUPPORT_PHONE", "").strip()
 
