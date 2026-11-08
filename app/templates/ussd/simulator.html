@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}USSD mini-statements{% endblock %}
+{% block content %}
+<section class="us-page" aria-labelledby="ussd-title">
+  <header class="rp-header">
+    <div>
+      <p class="dc-overline">Any phone, no internet</p>
+      <h1 id="ussd-title">USSD mini-statements</h1>
+      <p class="rp-lede">Customers dial <strong>{{ service_code }}</strong> to see what they owe and their last entries, like an M-Pesa mini-statement. You dial it from {{ current_user.phone_number }} and enter your PIN to see today's sales, collections, overdue balances and top debtors.</p>
+    </div>
+  </header>
+
+  <div class="us-layout">
+    <div class="us-info">
+      <div class="dc-card us-status">
+        <div class="us-status-row">
+          <span class="us-status-icon {{ 'is-on' if live else 'is-off' }}"><i class="bi {{ 'bi-broadcast' if live else 'bi-plug' }}" aria-hidden="true"></i></span>
+          <span><strong>{{ 'USSD is connected' if live else 'USSD is not connected yet' }}</strong>
+          <small>{{ 'Calls to ' ~ service_code ~ ' reach your shop.' if live else 'Your developer connects the USSD code; you can try the menu below meanwhile.' }}</small></span>
+        </div>
+        <div class="us-status-row">
+          <span class="us-status-icon {{ 'is-on' if current_user.ussd_pin_hash else 'is-off' }}"><i class="bi bi-shield-lock" aria-hidden="true"></i></span>
+          <span><strong>{{ 'Your PIN is set' if current_user.ussd_pin_hash else 'Set your PIN' }}</strong>
+          <small>{{ 'Needed for your shop menu.' if current_user.ussd_pin_hash else 'Your shop menu stays locked until you set one.' }}</small></span>
+          <a class="dc-pill dc-pill-soft" href="{{ url_for('ussd.set_pin') }}">{{ 'Change' if current_user.ussd_pin_hash else 'Set PIN' }}</a>
+        </div>
+      </div>
+      <div class="dc-card us-menus">
+        <h2>What callers see</h2>
+        <div class="us-menu-cols">
+          <div><h3><i class="bi bi-person" aria-hidden="true"></i> Customers</h3><ol><li>My balance</li><li>Mini-statement (last 5 entries)</li><li>How to pay</li></ol></div>
+          <div><h3><i class="bi bi-shop" aria-hidden="true"></i> You (with PIN)</h3><ol><li>Today</li><li>This month</li><li>Owed &amp; overdue</li><li>Top debtors</li><li>Mini-statement</li><li>Check a customer</li></ol></div>
+        </div>
+        <p class="us-hint">Reply <b>0</b> to go back, <b>00</b> for the main menu.</p>
+      </div>
+    </div>
+
+    <div class="us-phone-wrap">
+      <div class="us-controls">
+        <label for="us-as" class="form-label">Try it as</label>
+        <select id="us-as" class="form-select" data-no-enhance>
+          <option value="owner">You (shop owner)</option>
+          {% for c in customers %}<option value="{{ c.customer_id }}">{{ c.full_name }} · {{ c.phone_number }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="us-phone" aria-live="polite">
+        <div class="us-phone-notch" aria-hidden="true"></div>
+        <div class="us-screen">
+          <pre id="us-reply" class="us-reply">Press Dial to start.</pre>
+          <form id="us-form" class="us-input" autocomplete="off">
+            <label for="us-answer" class="visually-hidden">Your reply</label>
+            <input id="us-answer" class="form-control" inputmode="numeric" maxlength="20" placeholder="Reply" disabled>
+            <button type="submit" class="dc-pill dc-pill-dark" id="us-send" disabled>Send</button>
+          </form>
+        </div>
+        <div class="us-phone-actions">
+          <button type="button" class="dc-pill dc-pill-lime" id="us-dial"><i class="bi bi-telephone" aria-hidden="true"></i> Dial {{ service_code }}</button>
+          <button type="button" class="dc-pill dc-pill-soft" id="us-cancel">Cancel</button>
+        </div>
+      </div>
+      <p class="us-hint">The simulator only shows your own shop. Wrong PINs here count too.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  const reply = document.getElementById('us-reply');
+  const answer = document.getElementById('us-answer');
+  const send = document.getElementById('us-send');
+  const who = document.getElementById('us-as');
+  let steps = [];
+  let open = false;
+
+  function setOpen(state) {
+    open = state;
+    answer.disabled = !state;
+    send.disabled = !state;
+    if (state) answer.focus();
+  }
+
+  async function ask() {
+    const body = { text: steps.join('*'), as: who.value === 'owner' ? 'owner' : 'customer', customer_id: Number(who.value) || null };
+    reply.textContent = 'Loading…';
+    try {
+      const response = await fetch('{{ url_for("ussd.simulate") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json();
+      const text = data.reply || data.error || 'Something went wrong.';
+      const ended = !text.startsWith('CON ');
+      reply.textContent = text.replace(/^(CON|END) /, '');
+      reply.classList.toggle('is-ended', ended);
+      setOpen(!ended);
+    } catch (error) {
+      reply.textContent = 'Could not reach the server.';
+      setOpen(false);
+    }
+  }
+
+  document.getElementById('us-dial').addEventListener('click', () => { steps = []; ask(); });
+  document.getElementById('us-cancel').addEventListener('click', () => { steps = []; reply.textContent = 'Session ended.'; setOpen(false); });
+  who.addEventListener('change', () => { steps = []; reply.textContent = 'Press Dial to start.'; setOpen(false); });
+  document.getElementById('us-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!open || !answer.value.trim()) return;
+    steps.push(answer.value.trim());
+    answer.value = '';
+    ask();
+  });
+})();
+</script>
+{% endblock %}

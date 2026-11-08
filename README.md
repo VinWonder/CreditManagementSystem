@@ -26,6 +26,8 @@ credit_system/
 │   ├── payments/             # Log payments
 │   ├── ledger/                # Receivables / ageing report
 │   ├── reminders/            # Reminder rules, ageing engine, SMS/WhatsApp dispatch
+│   ├── reports/              # Printable reports, CSV and analytics
+│   ├── ussd/                 # USSD balance and mini-statement menu
 │   ├── templates/            # Bootstrap 5 Jinja templates
 │   └── static/
 │       ├── css/style.css
@@ -247,6 +249,56 @@ once a minute. Shops manage their name, logo, phone, email and password from Pro
 account menu. Phone verification and SMS sign-in codes are currently disabled.
 
 ---
+
+### Reports and analytics
+
+**Reports** (top menu, or the chart tab on phones) opens every report for a
+period: today, 7/30/90 days, this or last month, this year, or chosen dates.
+Each report has a **Print** button (A4, just the report, with the shop name and
+who generated it) and **CSV** for Excel.
+
+| Report | Shopkeeper | Admin |
+|---|---|---|
+| Business summary: credit given vs collected, collection rate, ageing, payment methods, top debtors, best payers | yes | yes, plus payments waiting for approval |
+| Credit sales (with top items), Collections (confirmed payments), Balances & ageing, Customer accounts, Customer statement (running balance) | yes | yes |
+| Payment approvals, Shopkeeper activity, Balance corrections, Reminder messages | no | yes |
+
+Reports only count confirmed payments as money collected; a shopkeeper's payment
+counts once approved. Credit sales are not recorded per person, so Shopkeeper
+activity covers payments and M-Pesa prompts.
+
+### USSD mini-statements
+
+Customers dial the shop's USSD code from the number on their account and see,
+on any phone without internet:
+
+1. **My balance**: what they owe and how long the oldest sale has been unpaid.
+2. **Mini-statement**: their last 5 entries (sales, confirmed payments,
+   corrections) and the balance, like an M-Pesa mini-statement.
+3. **How to pay**: the shop's M-Pesa Paybill/Till (if connected) and phone.
+
+A customer on the books of several shops chooses the shop first. Shops whose
+subscription has ended are not shown.
+
+Shop owners dial from their account phone number and enter a **4-digit USSD
+PIN** (set it in Profile > USSD PIN; it needs the account password). They get
+Today, This month, Owed & overdue, Top debtors, a shop mini-statement and
+Check a customer (by phone number). Five wrong PINs lock USSD for 30 minutes.
+Shopkeepers have no USSD menu. Reply `0` to go back, `00` for the main menu.
+
+**Try it** in the app: account menu > *USSD mini-statements* runs the real
+menu as you or as one of your customers (only your own shop's data).
+
+**Go live with Africa's Talking:**
+
+1. In Africa's Talking: *USSD > Create channel* and pick a shared service code
+   (for example `*384*1234#`), or apply for a dedicated one.
+2. Make a token: `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
+3. Set `USSD_CALLBACK_TOKEN` (the token) and `USSD_SERVICE_CODE` (the code) on
+   Render, and set the channel's callback URL to
+   `https://<your-app>.onrender.com/ussd/callback/<the token>`.
+4. Dial the code from a customer's phone. Without the token set, the callback
+   address does not exist.
 
 ### Deploy on Render
 

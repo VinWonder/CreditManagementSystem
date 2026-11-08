@@ -112,6 +112,12 @@ class Config:
     BILLING_PAYBILL_ACCOUNT = os.environ.get("BILLING_PAYBILL_ACCOUNT", "").strip()
     BILLING_PAYBILL_NAME = os.environ.get("BILLING_PAYBILL_NAME", "").strip()
     # Shown on the plans page when there is no prompt or Paybill, e.g. "Pay to Till 123456".
+    # USSD (*code#) mini-statements through Africa's Talking. USSD_CALLBACK_TOKEN
+    # is a secret path segment: set the callback URL to
+    # PUBLIC_BASE_URL/ussd/callback/<token>. Leave it empty to turn USSD off.
+    USSD_CALLBACK_TOKEN = os.environ.get("USSD_CALLBACK_TOKEN", "").strip()
+    # The code customers dial, shown in the app, e.g. *384*1234#.
+    USSD_SERVICE_CODE = os.environ.get("USSD_SERVICE_CODE", "").strip()
     BILLING_PAY_INSTRUCTIONS = os.environ.get("BILLING_PAY_INSTRUCTIONS", "").strip()
     BILLING_SUPPORT_PHONE = os.environ.get("BILLING_SUPPORT_PHONE", "").strip()
 

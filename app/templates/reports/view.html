@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% from "reports/_widgets.html" import value, metric_tiles, trend_chart, breakdown, period_picker %}
+{% block title %}{{ report.title }}{% endblock %}
+{% block body_class %}rp-print-page{% endblock %}
+{% block content %}
+{% set extra = {'customer_id': customer.customer_id if customer else None} %}
+{% set query = request.args.to_dict() %}
+<section class="rp-page" aria-labelledby="report-title">
+  <a class="rp-back" href="{{ url_for('reports.index', period=period.key) }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> All reports</a>
+
+  <header class="rp-header">
+    <div class="rp-print-brand">
+      {% if current_user.logo_filename %}
+      <img src="{{ url_for('static', filename='uploads/logos/' ~ current_user.logo_filename) }}" alt="">
+      {% endif %}
+      <div>
+        <p class="dc-overline">{{ current_user.business_name }}</p>
+        <h1 id="report-title">{{ report.title }}</h1>
+        <p class="rp-lede">{{ report.subtitle }}</p>
+      </div>
+    </div>
+    <div class="rp-header-actions">
+      <button type="button" class="dc-pill dc-pill-dark" onclick="window.print()"><i class="bi bi-printer" aria-hidden="true"></i> Print</button>
+      <a class="dc-pill dc-pill-soft" href="{{ url_for('reports.view', key=report.key, **dict(query, format='csv')) }}"><i class="bi bi-download" aria-hidden="true"></i> CSV</a>
+    </div>
+  </header>
+
+  <div class="rp-controls">
+    {% if report_type.needs_customer %}
+    <form class="rp-customer" method="GET">
+      <input type="hidden" name="period" value="{{ period.key }}">
+      {% if period.key == 'custom' %}<input type="hidden" name="from" value="{{ period.start.isoformat() }}"><input type="hidden" name="to" value="{{ period.end.isoformat() }}">{% endif %}
+      <label for="rp-customer-select" class="form-label">Customer</label>
+      <div class="rp-customer-row">
+        <select id="rp-customer-select" name="customer_id" class="form-select" onchange="this.form.submit()">
+          <option value="">Choose a customer…</option>
+          {% for c in customers %}<option value="{{ c.customer_id }}"{% if customer and customer.customer_id == c.customer_id %} selected{% endif %}>{{ c.full_name }} · {{ c.phone_number }}</option>{% endfor %}
+        </select>
+        <noscript><button type="submit" class="dc-chip">Show</button></noscript>
+      </div>
+    </form>
+    {% endif %}
+    {% if report.uses_period %}{{ period_picker(period, period_choices, extra) }}{% endif %}
+  </div>
+
+  {% for note in report.notes %}<p class="rp-note"><i class="bi bi-info-circle" aria-hidden="true"></i> {{ note }}</p>{% endfor %}
+
+  {% if report.metrics %}{{ metric_tiles(report.metrics) }}{% endif %}
+
+  {% if report.trend %}{{ trend_chart(report.trend, report.trend.series | map(attribute='name') | join(' vs ')) }}{% endif %}
+
+  {% if report.breakdowns %}
+  <div class="rp-breakdowns">
+    {% for b in report.breakdowns %}{{ breakdown(b) }}{% endfor %}
+  </div>
+  {% endif %}
+
+  {% for table in report.tables %}
+  <section class="dc-card rp-table-card">
+    <div class="dc-card-head">
+      <h2>{{ table.title }}</h2>
+      <span class="dc-badge">{{ table.rows | length }} {{ 'row' if table.rows | length == 1 else 'rows' }}</span>
+    </div>
+    {% if table.rows %}
+    <div class="table-responsive">
+      <table class="table rp-table align-middle mb-0">
+        <thead>
+          <tr>{% for col in table.columns %}<th scope="col" class="{{ 'text-end' if col.kind in ('money', 'int', 'pct') }}">{{ col.label }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for row in table.rows %}
+          <tr>
+            {% for cell in row %}{% set col = table.columns[loop.index0] %}
+            <td class="{{ 'text-end rp-num' if col.kind in ('money', 'int', 'pct') }}{{ ' is-negative' if col.kind == 'money' and cell is not none and cell < 0 }}" data-label="{{ col.label }}">{% if cell is none or cell == '' %}<span class="rp-blank">–</span>{% else %}{{ value(cell, col.kind) }}{% endif %}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+        {% if table.totals %}
+        <tfoot>
+          <tr>
+            {% for cell in table.totals %}{% set col = table.columns[loop.index0] %}
+            <td class="{{ 'text-end rp-num' if col.kind in ('money', 'int', 'pct') }}">{% if cell is string %}{{ cell }}{% elif cell is not none %}{{ value(cell, col.kind) }}{% endif %}</td>
+            {% endfor %}
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+    {% else %}
+    <p class="rp-chart-empty">{{ table.empty }}</p>
+    {% endif %}
+  </section>
+  {% endfor %}
+
+  <p class="rp-generated">Generated {{ generated_at | nairobi('%d %b %Y %H:%M') }} EAT by {{ current_user.owner_name }} ({{ 'Shop admin' if current_user.is_admin else 'Shopkeeper' }}) · Duka Credit</p>
+</section>
+{% endblock %}

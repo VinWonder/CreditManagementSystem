@@ -91,6 +91,8 @@ def create_app(config_class=Config):
     from app.mpesa.routes import mpesa_bp
     from app.account.routes import account_bp
     from app.billing.routes import billing_bp
+    from app.reports.routes import reports_bp
+    from app.ussd.routes import ussd_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -102,6 +104,8 @@ def create_app(config_class=Config):
     app.register_blueprint(mpesa_bp)
     app.register_blueprint(account_bp)
     app.register_blueprint(billing_bp)
+    app.register_blueprint(reports_bp)
+    app.register_blueprint(ussd_bp)
 
     from app.auth.email import send_test_email_command
 
@@ -208,6 +212,9 @@ def _upgrade_local_auth_schema():
         "trial_ends_at": "DATETIME",
         "paid_until": "DATETIME",
         "billing_exempt": "BOOLEAN NOT NULL DEFAULT 0",
+        "ussd_pin_hash": "VARCHAR(255)",
+        "ussd_pin_attempts": "INTEGER NOT NULL DEFAULT 0",
+        "ussd_pin_locked_until": "DATETIME",
     }
     with db.engine.begin() as connection:
         for name, definition in additions.items():

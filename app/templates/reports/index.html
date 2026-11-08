@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "reports/_widgets.html" import metric_tiles, trend_chart, period_picker %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<section class="rp-page" aria-labelledby="reports-title">
+  <header class="rp-header">
+    <div>
+      <p class="dc-overline">{{ 'All reports' if current_user.is_admin else 'Your reports' }}</p>
+      <h1 id="reports-title">Reports &amp; analytics</h1>
+      <p class="rp-lede">{{ period.name }} · {{ period.label }}. Open a report to print it or download it for Excel.</p>
+    </div>
+  </header>
+
+  {{ period_picker(period, period_choices) }}
+
+  {{ metric_tiles(overview.metrics[:4]) }}
+
+  {{ trend_chart(overview.trend, "Credit given vs collected") }}
+
+  <div class="rp-catalogue">
+    {% for r in reports %}
+    <a class="rp-report-card" href="{{ url_for('reports.view', key=r.key, period=period.key, **({'from': period.start.isoformat(), 'to': period.end.isoformat()} if period.key == 'custom' else {})) }}">
+      <span class="rp-report-icon"><i class="bi {{ r.icon }}" aria-hidden="true"></i></span>
+      <span class="rp-report-copy">
+        <strong>{{ r.title }}{% if r.admin_only %} <span class="dc-tag">Admin</span>{% endif %}</strong>
+        <span>{{ r.description }}</span>
+      </span>
+      <i class="bi bi-chevron-right rp-report-go" aria-hidden="true"></i>
+    </a>
+    {% endfor %}
+  </div>
+  {% if not current_user.is_admin %}
+  <p class="rp-footnote"><i class="bi bi-info-circle" aria-hidden="true"></i> Approvals, staff, corrections and reminder reports are for the shop admin.</p>
+  {% endif %}
+</section>
+{% endblock %}

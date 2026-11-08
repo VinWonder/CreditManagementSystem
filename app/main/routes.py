@@ -2,6 +2,7 @@ from flask import Blueprint, current_app, jsonify, make_response, render_templat
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
+from app import listing
 from app.extensions import db
 from app.models import Customer, CreditTransaction, Payment, Ledger
 from app.payments.forms import PaymentDecisionForm
@@ -130,8 +131,56 @@ def dashboard():
         else:
             buckets["61+"] += amt
 
+    # Widgets: this week's credit given vs collected, this month's totals and
+    # the customers who owe the most.
+    shop_sales = CreditTransaction.query.filter_by(retailer_id=retailer_id)
+    shop_collections = Payment.query.filter_by(retailer_id=retailer_id, approval_status="approved")
+    week_given = listing.pulse(shop_sales, CreditTransaction.transaction_date, CreditTransaction.amount, days=7)
+    week_collected = listing.pulse(shop_collections, Payment.payment_date, Payment.amount_paid, days=7)
+    week_peak = max([bar["total"] for bar in week_given + week_collected] + [0])
+    week = [
+        {
+            "weekday": given["weekday"],
+            "date": given["date"],
+            "given": given["total"],
+            "collected": collected["total"],
+            "given_height": int(given["total"] * 100 / week_peak) if week_peak else 0,
+            "collected_height": int(collected["total"] * 100 / week_peak) if week_peak else 0,
+        }
+        for given, collected in zip(week_given, week_collected)
+    ]
+    month_start = listing.day_start_utc(listing.nairobi_today().replace(day=1))
+    month_given = (
+        db.session.query(func.coalesce(func.sum(CreditTransaction.amount), 0))
+        .filter(CreditTransaction.retailer_id == retailer_id, CreditTransaction.transaction_date >= month_start)
+        .scalar()
+    )
+    month_collected = (
+        db.session.query(func.coalesce(func.sum(Payment.amount_paid), 0))
+        .filter(
+            Payment.retailer_id == retailer_id,
+            Payment.approval_status == "approved",
+            Payment.payment_date >= month_start,
+        )
+        .scalar()
+    )
+    owing_count = len(ledgers)
+    top_debtors = sorted(ledgers, key=lambda ledger: ledger.outstanding_balance, reverse=True)[:8]
+    bucket_total = sum(buckets.values())
+    bucket_shares = {
+        band: (amount * 100 / bucket_total if bucket_total else 0) for band, amount in buckets.items()
+    }
+
     return render_template(
         "main/dashboard.html",
+        week=week,
+        week_given_total=sum((bar["given"] for bar in week), 0),
+        week_collected_total=sum((bar["collected"] for bar in week), 0),
+        month_given=month_given,
+        month_collected=month_collected,
+        owing_count=owing_count,
+        top_debtors=top_debtors,
+        bucket_shares=bucket_shares,
         total_customers=total_customers,
         total_outstanding=total_outstanding,
         overdue_customers=overdue_customers,
