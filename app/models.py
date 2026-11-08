@@ -38,6 +38,11 @@ class Retailer(UserMixin, db.Model):
     billing_exempt = db.Column(
         db.Boolean, nullable=False, default=False, server_default=db.false()
     )
+    # A 4-digit PIN for the owner's USSD menu (*code#). Phone keypads cannot type
+    # the account password's symbols, so the USSD menu has its own PIN.
+    ussd_pin_hash = db.Column(db.String(255), nullable=True)
+    ussd_pin_attempts = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    ussd_pin_locked_until = db.Column(db.DateTime, nullable=True)
 
     customers = db.relationship(
         "Customer", backref="retailer", lazy="dynamic", cascade="all, delete-orphan"
@@ -123,6 +128,14 @@ class Retailer(UserMixin, db.Model):
 
     def check_password(self, raw_password):
         return check_password_hash(self.password_hash, raw_password)
+
+    def set_ussd_pin(self, raw_pin):
+        self.ussd_pin_hash = generate_password_hash(raw_pin)
+        self.ussd_pin_attempts = 0
+        self.ussd_pin_locked_until = None
+
+    def check_ussd_pin(self, raw_pin):
+        return bool(self.ussd_pin_hash) and check_password_hash(self.ussd_pin_hash, raw_pin)
 
     def __repr__(self):
         return f"<Retailer {self.business_name}>"

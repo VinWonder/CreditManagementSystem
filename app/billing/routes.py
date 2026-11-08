@@ -43,6 +43,7 @@ OPEN_ENDPOINTS = {
     "main.service_worker",
     "main.offline",
     "mpesa.callback",
+    "ussd.callback",
 }
 
 

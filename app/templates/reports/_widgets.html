@@ -1,0 +1,102 @@
+{# Building blocks for the reports pages: figures, the trend chart, breakdowns and the period picker. #}
+
+{% macro value(raw, kind) -%}
+{%- if raw is none -%}–
+{%- elif kind == 'money' -%}{{ raw | kes }}
+{%- elif kind == 'pct' -%}{{ '%.0f' % raw }}%
+{%- elif kind == 'days' -%}{{ raw }} {{ 'day' if raw == 1 else 'days' }}
+{%- elif kind == 'int' -%}{{ '{:,}'.format(raw) }}
+{%- elif kind == 'datetime' -%}{{ raw | nairobi('%d %b %Y %H:%M') }}
+{%- elif kind == 'date' -%}{{ raw | nairobi('%d %b %Y') }}
+{%- else -%}{{ raw }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro metric_tiles(metrics) %}
+<div class="rp-metrics">
+  {% for m in metrics %}
+  <div class="rp-metric{% if m.tone %} tone-{{ m.tone }}{% endif %}">
+    <span class="rp-metric-label">{{ m.label }}</span>
+    <strong class="rp-metric-value">{{ value(m.value, m.kind) }}</strong>
+    {% if m.note %}<span class="rp-metric-note">{{ m.note }}</span>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro trend_chart(trend, title="Trend") %}
+{% set count = trend.labels | length %}
+{% set every = ((count + 7) // 8) if count > 8 else 1 %}
+<section class="dc-card rp-trend" aria-labelledby="rp-trend-title">
+  <div class="dc-card-head">
+    <div>
+      <p class="dc-overline">{{ 'Per day' if trend.step == 'day' else 'Per week' if trend.step == 'week' else 'Per month' }}</p>
+      <h2 id="rp-trend-title">{{ title }}</h2>
+    </div>
+    {% if trend.series | length > 1 %}
+    <ul class="dc-legend">
+      {% for s in trend.series %}<li><span class="dc-legend-swatch tone-{{ s.tone }}" aria-hidden="true"></span>{{ s.name }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% if trend.peak %}
+  <div class="rp-chart">
+    <span class="rp-chart-peak">{{ trend.peak | kes }}</span>
+    <ol class="dc-bars rp-bars" aria-label="{{ title }}">
+      {% for label in trend.labels %}
+      {% set i = loop.index0 %}
+      <li class="dc-bars-day" tabindex="0"
+          aria-label="{{ label }}:{% for s in trend.series %} {{ s.name }} {{ s.points[i] | kes }}{{ ',' if not loop.last }}{% endfor %}">
+        <span class="dc-bars-pair" aria-hidden="true">
+          {% for s in trend.series %}
+          {% set h = (s.points[i] * 100 / trend.peak) | float %}
+          <span class="dc-bar tone-{{ s.tone }}" style="height: {{ '%.1f' % ([h, 2 if s.points[i] else 0] | max) }}%"></span>
+          {% endfor %}
+        </span>
+        <span class="dc-bars-label" aria-hidden="true">{{ label if i % every == 0 else '' }}</span>
+        <span class="dc-tip" aria-hidden="true"><b>{{ label }}</b>{% for s in trend.series %}<span><i class="tone-{{ s.tone }}"></i>{{ s.name }} {{ s.points[i] | kes }}</span>{% endfor %}</span>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+  {% else %}
+  <p class="rp-chart-empty"><i class="bi bi-bar-chart" aria-hidden="true"></i> No activity in this period.</p>
+  {% endif %}
+</section>
+{% endmacro %}
+
+{% macro breakdown(b) %}
+<section class="dc-card rp-breakdown">
+  <div class="dc-card-head"><h2>{{ b.title }}</h2></div>
+  {% if b.rows %}
+  <ul class="rp-breakdown-list">
+    {% for row in b.rows %}
+    <li>
+      <span class="rp-breakdown-label">{{ row.label }}</span>
+      <span class="rp-breakdown-figure">{% if b.count_only %}{{ row.count }}{% else %}{{ row.value | kes }}{% endif %}</span>
+      <span class="rp-breakdown-track" aria-hidden="true"><span style="width: {{ '%.1f' % row.share }}%"></span></span>
+      <span class="rp-breakdown-meta">{{ '%.0f' % row.share }}%{% if not b.count_only %} · {{ row.count }} {{ (b.count_label[:-1] if row.count == 1 and b.count_label.endswith('s') else b.count_label) if b.count_label else '' }}{% endif %}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="rp-chart-empty">Nothing to show for this period.</p>
+  {% endif %}
+</section>
+{% endmacro %}
+
+{% macro period_picker(period, choices, extra={}) %}
+<form class="rp-period" method="GET" aria-label="Report period">
+  {% for name, val in extra.items() if val %}<input type="hidden" name="{{ name }}" value="{{ val }}">{% endfor %}
+  <div class="rp-period-chips" role="group" aria-label="Choose a period">
+    {% for key, label in choices.items() if key != 'custom' %}
+    <button type="submit" name="period" value="{{ key }}" class="dc-chip{{ ' is-active' if period.key == key }}"{% if period.key == key %} aria-pressed="true"{% endif %}>{{ label }}</button>
+    {% endfor %}
+  </div>
+  <div class="rp-period-custom">
+    <label><span>From</span><input type="date" name="from" value="{{ period.start.isoformat() }}" class="form-control form-control-sm"></label>
+    <label><span>To</span><input type="date" name="to" value="{{ period.end.isoformat() }}" class="form-control form-control-sm"></label>
+    <button type="submit" name="period" value="custom" class="dc-chip{{ ' is-active' if period.key == 'custom' }}">Apply dates</button>
+  </div>
+</form>
+{% endmacro %}

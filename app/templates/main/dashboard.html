@@ -2,408 +2,296 @@
 {% from "payments/_method.html" import payment_method_badge %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
-<section class="dashboard-welcome" aria-label="Welcome and business highlights">
-  <div id="dashboardWelcomeCarousel" class="welcome-carousel" role="region"
-    aria-roledescription="carousel" aria-label="Shop welcome and highlights" aria-live="off">
-    <div class="welcome-carousel-track">
-      <article class="welcome-slide welcome-slide-morning is-active"
-        role="group" aria-roledescription="slide" aria-label="1 of 3: Welcome" aria-hidden="false">
-        <div class="welcome-slide-content">
-          <div class="welcome-slide-copy">
-            <div class="dashboard-brandline">
-              {% if current_user.logo_filename %}
-              <img class="dashboard-shop-logo" src="{{ url_for('static', filename='uploads/logos/' ~ current_user.logo_filename) }}" alt="{{ current_user.business_name }} logo">
-              {% else %}
-              <span class="dashboard-shop-logo dashboard-shop-placeholder"><i class="bi bi-shop" aria-hidden="true"></i></span>
-              {% endif %}
-              <p class="eyebrow mb-0"><i class="bi bi-sunrise" aria-hidden="true"></i> A fresh look at your business</p>
-            </div>
-            <h1 id="welcomeGreeting" data-owner-name="{{ current_user.owner_name.split(' ')[0] }}">Welcome back, {{ current_user.owner_name.split(' ')[0] }}.</h1>
-            <p class="hero-copy mb-0">Your credit book, collections, and customers—ready when you are.</p>
-            <div class="hero-actions">
-              <a class="btn welcome-slide-primary" href="{{ url_for('transactions.new_transaction') }}"><i class="bi bi-plus-lg" aria-hidden="true"></i> New credit sale</a>
-              <a class="btn welcome-slide-secondary" href="{{ url_for('payments.new_payment') }}"><i class="bi bi-wallet2" aria-hidden="true"></i> Record payment</a>
-            </div>
-          </div>
-          <div class="welcome-slide-art welcome-art-ledger" aria-hidden="true">
-            <span class="welcome-art-orbit"></span>
-            <span class="welcome-art-stamp"><i class="bi bi-shop-window"></i></span>
-            <span class="welcome-art-card"><i class="bi bi-journal-check"></i><b>Every shilling, accounted for.</b></span>
-          </div>
-        </div>
-      </article>
-      <article class="welcome-slide welcome-slide-growth"
-        role="group" aria-roledescription="slide" aria-label="2 of 3: Business growth" aria-hidden="true">
-        <div class="welcome-slide-content">
-          <div class="welcome-slide-copy">
-            <div class="dashboard-brandline">
-              {% if current_user.logo_filename %}
-              <img class="dashboard-shop-logo" src="{{ url_for('static', filename='uploads/logos/' ~ current_user.logo_filename) }}" alt="{{ current_user.business_name }} logo">
-              {% else %}
-              <span class="dashboard-shop-logo dashboard-shop-placeholder"><i class="bi bi-shop" aria-hidden="true"></i></span>
-              {% endif %}
-              <p class="eyebrow mb-0"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Built for the way you grow</p>
-            </div>
-            <h2>Small steps.<br>Stronger business.</h2>
-            <p class="hero-copy mb-0">Record each sale, track each payment, and let your progress add up.</p>
-            <div class="hero-actions">
-              <a class="btn welcome-slide-primary" href="{{ url_for('customers.list_customers') }}"><i class="bi bi-people" aria-hidden="true"></i> Meet your customers</a>
-              <a class="btn welcome-slide-secondary" href="{{ url_for('transactions.list_transactions') }}"><i class="bi bi-journal-text" aria-hidden="true"></i> See your credit book</a>
-            </div>
-          </div>
-          <div class="welcome-slide-art welcome-art-growth" aria-hidden="true">
-            <span class="welcome-art-orbit"></span>
-            <span class="welcome-art-sun"><i class="bi bi-sun-fill"></i></span>
-            <span class="welcome-art-card"><i class="bi bi-arrow-up-right"></i><b>Today is another chance to grow.</b></span>
-          </div>
-        </div>
-      </article>
-      <article class="welcome-slide welcome-slide-focus"
-        role="group" aria-roledescription="slide" aria-label="3 of 3: Business focus" aria-hidden="true">
-        <div class="welcome-slide-content">
-          <div class="welcome-slide-copy">
-            <div class="dashboard-brandline">
-              {% if current_user.logo_filename %}
-              <img class="dashboard-shop-logo" src="{{ url_for('static', filename='uploads/logos/' ~ current_user.logo_filename) }}" alt="{{ current_user.business_name }} logo">
-              {% else %}
-              <span class="dashboard-shop-logo dashboard-shop-placeholder"><i class="bi bi-shop" aria-hidden="true"></i></span>
-              {% endif %}
-              <p class="eyebrow mb-0"><i class="bi bi-compass" aria-hidden="true"></i> Clarity for your next move</p>
-            </div>
-            <h2>Know your numbers.<br>Choose your next move.</h2>
-            <p class="hero-copy mb-0">See what is owed, follow up with confidence, and keep your shop moving.</p>
-            <div class="hero-actions">
-              <a class="btn welcome-slide-primary" href="{{ url_for('ledger.receivables_report') }}"><i class="bi bi-bar-chart-line" aria-hidden="true"></i> View receivables</a>
-              {% if current_user.is_admin %}
-              <a class="btn welcome-slide-secondary" href="{{ url_for('reminders.list_rules') }}"><i class="bi bi-bell" aria-hidden="true"></i> Review reminders</a>
-              {% endif %}
-            </div>
-          </div>
-          <div class="welcome-slide-art welcome-art-focus" aria-hidden="true">
-            <span class="welcome-art-orbit"></span>
-            <span class="welcome-art-focus-icon"><i class="bi bi-bullseye"></i></span>
-            <span class="welcome-art-card"><i class="bi bi-check2-circle"></i><b>Your next move, made clearer.</b></span>
-          </div>
-        </div>
-      </article>
-    </div>
+{% set first_name = current_user.owner_name.split(' ')[0] %}
 
-    <div class="welcome-carousel-controls">
-      <div class="welcome-carousel-indicators" aria-label="Choose a welcome slide">
-        <button type="button" data-welcome-slide="0" class="active" aria-current="true" aria-label="Welcome"></button>
-        <button type="button" data-welcome-slide="1" aria-label="Business growth"></button>
-        <button type="button" data-welcome-slide="2" aria-label="Business focus"></button>
-      </div>
+<header class="dw-greeting">
+  <div class="dw-greeting-who">
+    {% if current_user.logo_filename %}
+    <img class="dw-greeting-logo" src="{{ url_for('static', filename='uploads/logos/' ~ current_user.logo_filename) }}" alt="{{ current_user.business_name }} logo">
+    {% else %}
+    <span class="dw-greeting-logo dw-greeting-logo-empty"><i class="bi bi-shop" aria-hidden="true"></i></span>
+    {% endif %}
+    <div>
+      <p class="dw-greeting-hello" id="welcomeGreeting" data-owner-name="{{ first_name }}">Welcome back, {{ first_name }}.</p>
+      <h1 class="dw-greeting-shop">{{ current_user.business_name }}</h1>
+    </div>
+  </div>
+  <div class="dw-greeting-actions">
+    <a class="dc-icon-button" href="{{ url_for('reports.index') }}" aria-label="Reports" title="Reports"><i class="bi bi-file-earmark-bar-graph" aria-hidden="true"></i></a>
+    {% if current_user.is_admin %}
+    <a class="dc-icon-button" href="{{ url_for('payments.list_payments') }}" aria-label="Payments to approve: {{ pending_approval_count }}" title="Payments to approve">
+      <i class="bi bi-bell" aria-hidden="true"></i>{% if pending_approval_count %}<span class="dc-icon-dot"></span>{% endif %}
+    </a>
+    {% endif %}
+  </div>
+</header>
+
+<section class="dw-hero" aria-label="Money owed to your shop">
+  <div class="dw-hero-card">
+    <div class="dw-hero-top">
+      <span class="dw-hero-label"><i class="bi bi-wallet2" aria-hidden="true"></i> Owed to you</span>
+      <a class="dw-hero-chip" href="{{ url_for('ledger.receivables_report', sort='balance') }}">{{ owing_count }} {{ 'customer' if owing_count == 1 else 'customers' }} <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+    </div>
+    <p class="dw-hero-amount">{{ total_outstanding | kes }}</p>
+    <p class="dw-hero-note">
+      {% if overdue_customers %}<i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ overdue_customers }} overdue {{ 'account needs' if overdue_customers == 1 else 'accounts need' }} a follow-up{% else %}<i class="bi bi-check-circle" aria-hidden="true"></i> Nothing overdue. Your book is on track{% endif %}
+    </p>
+    <div class="dw-hero-actions">
+      <a class="dc-pill dc-pill-lime" href="{{ url_for('transactions.new_transaction') }}"><i class="bi bi-plus-lg" aria-hidden="true"></i> New credit sale</a>
+      <a class="dc-pill dc-pill-glass" href="{{ url_for('payments.new_payment') }}"><i class="bi bi-arrow-down-left" aria-hidden="true"></i> Record payment</a>
+    </div>
+  </div>
+  <div class="dw-hero-side">
+    <div class="dw-mini dw-mini-collected">
+      <span class="dw-mini-icon"><i class="bi bi-arrow-down-left" aria-hidden="true"></i></span>
+      <span class="dw-mini-label">Collected this month</span>
+      <strong>{{ month_collected | kes }}</strong>
+    </div>
+    <div class="dw-mini dw-mini-given">
+      <span class="dw-mini-icon"><i class="bi bi-arrow-up-right" aria-hidden="true"></i></span>
+      <span class="dw-mini-label">Credit given this month</span>
+      <strong>{{ month_given | kes }}</strong>
     </div>
   </div>
 </section>
 
-<div class="row g-3 dashboard-kpis">
-  <div class="col-sm-6 col-xl-3"><a class="dashboard-kpi-link" href="{{ url_for('customers.list_customers') }}" aria-label="View customers"><div class="kpi-card kpi-blue"><div class="kpi-top"><span>Customer base</span><i class="bi bi-people-fill" aria-hidden="true"></i></div><div class="kpi-value">{{ total_customers }}</div><div class="kpi-note">Registered customers</div></div></a></div>
-  <div class="col-sm-6 col-xl-3"><a class="dashboard-kpi-link" href="{{ url_for('ledger.receivables_report', sort='balance') }}" aria-label="View outstanding receivables"><div class="kpi-card kpi-ink"><div class="kpi-top"><span>Outstanding book</span><i class="bi bi-cash-stack" aria-hidden="true"></i></div><div class="kpi-value">{{ total_outstanding | kes }}</div><div class="kpi-note">Total receivables</div></div></a></div>
-  <div class="col-sm-6 col-xl-3"><a class="dashboard-kpi-link" href="{{ url_for('ledger.receivables_report', overdue='1') }}" aria-label="Review overdue accounts"><div class="kpi-card kpi-coral {% if overdue_customers %}kpi-alert{% else %}kpi-clear{% endif %}"><div class="kpi-top"><span>Needs attention</span><i class="bi {% if overdue_customers %}bi-exclamation-triangle-fill{% else %}bi-check-circle-fill{% endif %}" aria-hidden="true"></i></div><div class="kpi-value">{{ overdue_customers }}</div><div class="kpi-note">{% if overdue_customers %}Accounts need follow-up{% else %}No overdue accounts{% endif %}</div></div></a></div>
-  <div class="col-sm-6 col-xl-3"><a class="dashboard-kpi-link" href="{{ url_for('ledger.receivables_report', sort='days_overdue') }}" aria-label="View portfolio receivables"><div class="kpi-card kpi-mint {% if overdue_customers %}kpi-status-watch{% else %}kpi-status-healthy{% endif %}"><div class="kpi-top"><span>Portfolio status</span><i class="bi {% if overdue_customers %}bi-shield-exclamation{% else %}bi-shield-check{% endif %}" aria-hidden="true"></i></div><div class="kpi-value">{% if overdue_customers %}Monitor{% else %}Healthy{% endif %}</div><div class="kpi-note">{% if overdue_customers %}Review overdue accounts{% else %}Portfolio on track{% endif %}</div></div></a></div>
+<section class="dw-section" aria-labelledby="dw-actions-title">
+  <div class="dw-section-head"><h2 id="dw-actions-title">Quick actions</h2></div>
+  <div class="dw-tiles">
+    <a class="dw-tile" href="{{ url_for('transactions.new_transaction') }}"><span class="dw-tile-icon"><i class="bi bi-cart-plus" aria-hidden="true"></i></span><span>New sale</span></a>
+    <a class="dw-tile" href="{{ url_for('payments.new_payment') }}"><span class="dw-tile-icon"><i class="bi bi-cash-coin" aria-hidden="true"></i></span><span>Log payment</span></a>
+    <a class="dw-tile" href="{{ url_for('customers.new_customer') }}"><span class="dw-tile-icon"><i class="bi bi-person-plus" aria-hidden="true"></i></span><span>Add customer</span></a>
+    <a class="dw-tile" href="{{ url_for('ledger.receivables_report') }}"><span class="dw-tile-icon"><i class="bi bi-hourglass-split" aria-hidden="true"></i></span><span>Balances</span></a>
+    <a class="dw-tile" href="{{ url_for('transactions.list_transactions') }}"><span class="dw-tile-icon"><i class="bi bi-journal-text" aria-hidden="true"></i></span><span>Credit book</span></a>
+    <a class="dw-tile" href="{{ url_for('reports.index') }}"><span class="dw-tile-icon"><i class="bi bi-printer" aria-hidden="true"></i></span><span>Print reports</span></a>
+    {% if current_user.is_admin %}
+    <a class="dw-tile" href="{{ url_for('reminders.list_rules') }}"><span class="dw-tile-icon"><i class="bi bi-bell" aria-hidden="true"></i></span><span>Reminders</span></a>
+    <a class="dw-tile" href="{{ url_for('ussd.simulator') }}"><span class="dw-tile-icon"><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i></span><span>USSD</span></a>
+    {% else %}
+    <a class="dw-tile" href="{{ url_for('customers.list_customers') }}"><span class="dw-tile-icon"><i class="bi bi-people" aria-hidden="true"></i></span><span>Customers</span></a>
+    <a class="dw-tile" href="{{ url_for('payments.list_payments') }}"><span class="dw-tile-icon"><i class="bi bi-receipt" aria-hidden="true"></i></span><span>Payment history</span></a>
+    {% endif %}
+  </div>
+</section>
+
+<div class="dw-kpis">
+  <a class="dw-kpi" href="{{ url_for('customers.list_customers') }}" aria-label="View customers">
+    <span class="dw-kpi-icon tone-green"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+    <span class="dw-kpi-label">Customer base</span>
+    <strong class="dw-kpi-value">{{ total_customers }}</strong>
+    <span class="dw-kpi-note">Registered customers</span>
+  </a>
+  <a class="dw-kpi" href="{{ url_for('ledger.receivables_report', sort='balance') }}" aria-label="View outstanding receivables">
+    <span class="dw-kpi-icon tone-blue"><i class="bi bi-cash-stack" aria-hidden="true"></i></span>
+    <span class="dw-kpi-label">Outstanding book</span>
+    <strong class="dw-kpi-value dw-kpi-money">{{ total_outstanding | kes }}</strong>
+    <span class="dw-kpi-note">Total receivables</span>
+  </a>
+  <a class="dw-kpi{% if overdue_customers %} is-alert{% endif %}" href="{{ url_for('ledger.receivables_report', overdue='1') }}" aria-label="Review overdue accounts">
+    <span class="dw-kpi-icon {{ 'tone-red' if overdue_customers else 'tone-green' }}"><i class="bi {% if overdue_customers %}bi-exclamation-triangle-fill{% else %}bi-check-circle-fill{% endif %}" aria-hidden="true"></i></span>
+    <span class="dw-kpi-label">Needs attention</span>
+    <strong class="dw-kpi-value">{{ overdue_customers }}</strong>
+    <span class="dw-kpi-note">{% if overdue_customers %}Accounts need follow-up{% else %}No overdue accounts{% endif %}</span>
+  </a>
+  <a class="dw-kpi" href="{{ url_for('ledger.receivables_report', sort='days_overdue') }}" aria-label="View portfolio receivables">
+    <span class="dw-kpi-icon {{ 'tone-amber' if overdue_customers else 'tone-green' }}"><i class="bi {% if overdue_customers %}bi-shield-exclamation{% else %}bi-shield-check{% endif %}" aria-hidden="true"></i></span>
+    <span class="dw-kpi-label">Portfolio status</span>
+    <strong class="dw-kpi-value">{% if overdue_customers %}Monitor{% else %}Healthy{% endif %}</strong>
+    <span class="dw-kpi-note">{% if overdue_customers %}Review overdue accounts{% else %}Portfolio on track{% endif %}</span>
+  </a>
 </div>
 
-<div class="row g-3 dashboard-grid">
-  <div class="col-xl-7">
-    <div class="dashboard-panel chart-panel h-100">
-      <div class="panel-heading">
-        <div><p class="eyebrow mb-1">Receivables analysis</p><h2>Where your money is tied up</h2></div>
-        <span class="panel-badge"><i class="bi bi-bar-chart-line" aria-hidden="true"></i> Ageing</span>
+<div class="dw-grid">
+  <section class="dc-card dw-week" aria-labelledby="dw-week-title">
+    <div class="dc-card-head">
+      <div>
+        <p class="dc-overline">Last 7 days</p>
+        <h2 id="dw-week-title">Credit given vs collected</h2>
       </div>
-      <div class="ageing-summary">
-        <div class="ageing-total">
-          <span>Total outstanding</span>
-          <strong>{{ total_outstanding | kes }}</strong>
-        </div>
-        <div class="ageing-overdue">
-          <span class="ageing-overdue-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
-          <span><strong>{{ overdue_customers }}</strong><small>overdue accounts</small></span>
-        </div>
-      </div>
-      <div class="ageing-breakdown" aria-label="Outstanding balance by age">
-        {% for age_band, amount in buckets.items() %}
-        <div class="ageing-row" data-age-band="{{ age_band }}" data-ageing-value="{{ amount }}">
-          <div class="ageing-row-heading">
-            <span><i class="ageing-dot ageing-tone-{{ loop.index }}" aria-hidden="true"></i>{{ age_band }} days</span>
-            <span class="ageing-row-amount">{{ amount | kes }}</span>
-          </div>
-          <div class="ageing-track" role="progressbar" aria-label="{{ age_band }} days share of outstanding balance"
-            aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-            <span class="ageing-fill ageing-tone-{{ loop.index }}"></span>
-          </div>
-          <span class="ageing-share">0%</span>
-        </div>
-        {% endfor %}
-      </div>
-      <p class="ageing-insight" id="ageingInsight" role="status">
-        {% if total_outstanding %}Balances are grouped by how long they have been outstanding.{% else %}No outstanding balances to analyse right now.{% endif %}
-      </p>
+      <a class="dc-link" href="{{ url_for('reports.view', key='summary', period='7d') }}">Full report <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
     </div>
-  </div>
-  <div class="col-xl-5">
-    <div class="dashboard-panel insight-panel h-100">
-      <div class="panel-heading">
-        <div><p class="eyebrow mb-1">Daily focus</p><h2>Collection pulse</h2></div>
-        <span class="pulse-status-tag {% if overdue_customers %}pulse-tag-watch{% else %}pulse-tag-good{% endif %}">
-          <i class="bi {% if overdue_customers %}bi-exclamation-circle-fill{% else %}bi-check-circle-fill{% endif %}" aria-hidden="true"></i>
-          {% if overdue_customers %}Follow up{% else %}On track{% endif %}
+    <div class="dw-week-totals">
+      <div><span class="dc-legend-swatch tone-given" aria-hidden="true"></span><span>Credit given</span><strong>{{ week_given_total | kes }}</strong></div>
+      <div><span class="dc-legend-swatch tone-collected" aria-hidden="true"></span><span>Collected</span><strong>{{ week_collected_total | kes }}</strong></div>
+    </div>
+    <ol class="dc-bars" aria-label="Credit given and collected per day">
+      {% for day in week %}
+      <li class="dc-bars-day{% if loop.last %} is-today{% endif %}" tabindex="0"
+          aria-label="{{ day.weekday }} {{ day.date }}: credit given {{ day.given | kes }}, collected {{ day.collected | kes }}">
+        <span class="dc-bars-pair" aria-hidden="true">
+          <span class="dc-bar tone-given" style="height: {{ [day.given_height, 3 if day.given else 0] | max }}%"></span>
+          <span class="dc-bar tone-collected" style="height: {{ [day.collected_height, 3 if day.collected else 0] | max }}%"></span>
         </span>
+        <span class="dc-bars-label" aria-hidden="true">{{ 'Today' if day.weekday == 'Today' else day.weekday[:3] }}</span>
+        <span class="dc-tip" aria-hidden="true"><b>{{ day.weekday }} {{ day.date }}</b><span><i class="tone-given"></i>Given {{ day.given | kes }}</span><span><i class="tone-collected"></i>Collected {{ day.collected | kes }}</span></span>
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="dc-card dw-ageing" aria-labelledby="dw-ageing-title">
+    <div class="dc-card-head">
+      <div>
+        <p class="dc-overline">Receivables analysis</p>
+        <h2 id="dw-ageing-title">Where your money is tied up</h2>
       </div>
-      <div class="pulse-score {% if overdue_customers %}pulse-watch{% else %}pulse-good{% endif %}">
-        <span class="pulse-ring"><i class="bi {% if overdue_customers %}bi-arrow-up-right{% else %}bi-check-lg{% endif %}" aria-hidden="true"></i></span>
-        <div><strong>{% if overdue_customers %}{{ overdue_customers }} account{{ 's' if overdue_customers != 1 else '' }} to review{% else %}No overdue accounts{% endif %}</strong><span>{% if overdue_customers %}Prioritise follow-ups today{% else %}Your receivables are on track{% endif %}</span></div>
-      </div>
-      <div class="insight-list">
-        <a href="{{ url_for('ledger.receivables_report') }}">
-          <span class="insight-action-icon"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></span>
-          <span class="insight-action-copy"><strong>Receivables report</strong><small>Review balances and ageing</small></span>
-          <i class="bi bi-arrow-up-right insight-action-arrow" aria-hidden="true"></i>
-        </a>
-        <a href="{{ url_for('customers.list_customers') }}">
-          <span class="insight-action-icon"><i class="bi bi-person-lines-fill" aria-hidden="true"></i></span>
-          <span class="insight-action-copy"><strong>Customer accounts</strong><small>View your customer list</small></span>
-          <i class="bi bi-arrow-up-right insight-action-arrow" aria-hidden="true"></i>
-        </a>
-        {% if current_user.is_admin %}
-        <a href="{{ url_for('reminders.list_rules') }}">
-          <span class="insight-action-icon"><i class="bi bi-bell" aria-hidden="true"></i></span>
-          <span class="insight-action-copy"><strong>Reminder rules</strong><small>Manage collection reminders</small></span>
-          <i class="bi bi-arrow-up-right insight-action-arrow" aria-hidden="true"></i>
-        </a>
-        {% endif %}
-      </div>
+      <span class="dc-badge"><i class="bi bi-bar-chart-line" aria-hidden="true"></i> Ageing</span>
     </div>
-  </div>
+    {% if total_outstanding %}
+    <div class="dw-ageing-stack" role="img" aria-label="Outstanding balance by age">
+      {% for band, share in bucket_shares.items() if share > 0 %}
+      <span class="ageing-tone-{{ loop.index }} band-{{ band }}" style="flex-grow: {{ '%.2f' % ([share, 2] | max) }}" title="{{ band }} days: {{ buckets[band] | kes }}"></span>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <ul class="dw-ageing-list">
+      {% for band, amount in buckets.items() %}
+      <li>
+        <span class="dw-ageing-dot ageing-tone-{{ loop.index }}" aria-hidden="true"></span>
+        <span class="dw-ageing-band">{{ band }} days</span>
+        <span class="dw-ageing-share">{{ bucket_shares[band] | round | int }}%</span>
+        <strong>{{ amount | kes }}</strong>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="dw-ageing-insight" role="status">
+      {% if total_outstanding %}
+      {% set largest = buckets | dictsort(by='value') | last %}
+      {{ largest[0] }} days is the largest balance band at {{ bucket_shares[largest[0]] | round | int }}% of outstanding receivables.
+      {% else %}No outstanding balances to analyse right now.{% endif %}
+    </p>
+  </section>
 </div>
 
-{% if current_user.is_admin and pending_payments %}
-<section class="dashboard-approvals" aria-labelledby="dashboard-approvals-title">
-  <header class="dashboard-approvals-header">
+{% if top_debtors %}
+<section class="dc-card dw-debtors" aria-labelledby="dw-debtors-title">
+  <div class="dc-card-head">
     <div>
-      <p class="eyebrow mb-1">Action needed</p>
-      <h2 id="dashboard-approvals-title">Payments awaiting your approval</h2>
-      <span>Logged by shopkeepers. A balance only changes once you approve.</span>
+      <p class="dc-overline">Follow up</p>
+      <h2 id="dw-debtors-title">Who owes the most</h2>
     </div>
-    <a class="panel-link" href="{{ url_for('payments.list_payments') }}">All payments <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
-  </header>
-  <div class="table-responsive">
-    <table class="table table-stack dashboard-approvals-table align-middle mb-0">
-      <thead><tr><th scope="col">Logged</th><th scope="col">Customer</th><th scope="col">Method</th><th scope="col" class="text-end">Amount</th><th scope="col" class="text-end">Decision</th></tr></thead>
-      <tbody>
-        {% for p in pending_payments %}
-        {% set decision_form = payment_decision_forms[p.payment_id] %}
-        <tr>
-          <td><span class="activity-date"><strong>{{ p.payment_date|nairobi('%d') }}</strong><span>{{ p.payment_date|nairobi('%b %Y') }}</span></span></td>
-          <td class="stack-primary">
-            <span class="dashboard-payments-customer"><i class="bi bi-person-circle" aria-hidden="true"></i>{{ p.customer.full_name }}</span>
-            {% if p.submitted_by_shopkeeper %}<small class="d-block text-muted">by {{ p.submitted_by_shopkeeper.full_name }}</small>{% endif %}
-          </td>
-          <td>{{ payment_method_badge(p) }}</td>
-          <td class="text-end"><span class="dashboard-payments-amount">{{ p.amount_paid | kes }}</span></td>
-          <td class="text-end stack-actions">
-            <div class="dashboard-approval-buttons">
-              <form method="POST" action="{{ url_for('payments.approve_payment', payment_id=p.payment_id) }}">
-                {{ decision_form.hidden_tag() }}
-                <button type="submit" class="dashboard-approve-button"><i class="bi bi-check2-circle" aria-hidden="true"></i> Approve</button>
-              </form>
-              <form method="POST" action="{{ url_for('payments.reject_payment', payment_id=p.payment_id) }}">
-                {{ decision_form.hidden_tag() }}
-                <input type="hidden" name="review_note" value="Rejected by retailer from dashboard">
-                <button type="submit" class="dashboard-reject-button"><i class="bi bi-x-circle" aria-hidden="true"></i> Reject</button>
-              </form>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <a class="dc-link" href="{{ url_for('ledger.receivables_report', sort='balance') }}">See all <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
   </div>
+  <ul class="dw-debtor-strip">
+    {% for ledger in top_debtors %}
+    <li>
+      <a href="{{ url_for('customers.view_customer', customer_id=ledger.customer_id) }}">
+        <span class="dc-avatar tone-{{ loop.index0 % 5 }}{% if ledger.days_overdue > 30 %} is-late{% endif %}">{{ ledger.customer.full_name | initials }}</span>
+        <span class="dw-debtor-name">{{ ledger.customer.full_name.split(' ')[0] }}</span>
+        <span class="dw-debtor-amount">{{ ledger.outstanding_balance | kes }}</span>
+        <span class="dw-debtor-age{% if ledger.days_overdue > 30 %} is-late{% elif ledger.days_overdue > 0 %} is-due{% endif %}">{% if ledger.days_overdue %}{{ ledger.days_overdue }}d overdue{% else %}Current{% endif %}</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
 </section>
 {% endif %}
 
-<div class="row g-3 dashboard-grid">
-  <div class="col-xl-7">
-    <div class="dashboard-panel table-panel">
-      <div class="panel-heading activity-panel-heading">
-        <div>
-          <p class="eyebrow mb-1">Latest activity</p>
-          <h2>Recent credit sales</h2>
-          <span class="activity-panel-caption">Your latest customer purchases</span>
-        </div>
-        <a class="panel-link" href="{{ url_for('transactions.list_transactions') }}">View all <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
-      </div>
-      {% if recent_transactions %}
-      <div class="activity-count"><i class="bi bi-receipt" aria-hidden="true"></i> Latest {{ recent_transactions|length }} sales</div>
-      <div class="table-responsive">
-        <table class="table table-stack activity-table activity-payment-table align-middle mb-0">
-          <thead><tr><th scope="col">Date</th><th scope="col">Sale and customer</th><th scope="col" class="text-end">Amount</th></tr></thead>
-          <tbody>
-            {% for t in recent_transactions %}
-            <tr>
-              <td><span class="activity-date"><strong>{{ t.transaction_date|nairobi('%d') }}</strong><span>{{ t.transaction_date|nairobi('%b %Y') }}</span></span></td>
-              <td class="stack-primary"><span class="activity-description">{{ t.item_description }}</span><span class="activity-customer"><i class="bi bi-person" aria-hidden="true"></i>{{ t.customer.full_name }}</span></td>
-              <td class="text-end amount-cell">{{ t.amount | kes }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-      <div class="activity-empty">
-        <span class="activity-empty-icon"><i class="bi bi-bag-plus" aria-hidden="true"></i></span>
-        <strong>No credit sales yet</strong>
-        <span>New customer purchases will appear here.</span>
-        <a href="{{ url_for('transactions.new_transaction') }}">Record your first sale <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
-      </div>
-      {% endif %}
+{% if current_user.is_admin and pending_payments %}
+<section class="dashboard-approvals dc-card dw-approvals" aria-labelledby="dashboard-approvals-title">
+  <header class="dc-card-head">
+    <div>
+      <p class="dc-overline">Action needed</p>
+      <h2 id="dashboard-approvals-title">Payments awaiting your approval</h2>
+      <span class="dc-card-caption">Logged by shopkeepers. A balance only changes once you approve.</span>
     </div>
-  </div>
-  <div class="col-xl-5">
-    <div class="dashboard-panel table-panel h-100">
-      <div class="panel-heading activity-panel-heading">
-        <div>
-          <p class="eyebrow mb-1">Cash collected</p>
-          <h2>Recent payments</h2>
-          <span class="activity-panel-caption">Money received from customers</span>
-        </div>
-        <a class="panel-link" href="{{ url_for('payments.list_payments') }}">View all <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    <a class="dc-link" href="{{ url_for('payments.list_payments') }}">All payments <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+  </header>
+  <ul class="dw-approval-list">
+    {% for p in pending_payments %}
+    {% set decision_form = payment_decision_forms[p.payment_id] %}
+    <li class="dw-approval">
+      <span class="activity-date"><strong>{{ p.payment_date|nairobi('%d') }}</strong><span>{{ p.payment_date|nairobi('%b %Y') }}</span></span>
+      <span class="dw-approval-main">
+        <strong>{{ p.customer.full_name }}</strong>
+        <span>{{ payment_method_badge(p) }}{% if p.submitted_by_shopkeeper %} · by {{ p.submitted_by_shopkeeper.full_name }}{% endif %}</span>
+      </span>
+      <strong class="dw-approval-amount">{{ p.amount_paid | kes }}</strong>
+      <span class="dashboard-approval-buttons">
+        <form method="POST" action="{{ url_for('payments.approve_payment', payment_id=p.payment_id) }}">
+          {{ decision_form.hidden_tag() }}
+          <button type="submit" class="dashboard-approve-button"><i class="bi bi-check2-circle" aria-hidden="true"></i> Approve</button>
+        </form>
+        <form method="POST" action="{{ url_for('payments.reject_payment', payment_id=p.payment_id) }}">
+          {{ decision_form.hidden_tag() }}
+          <input type="hidden" name="review_note" value="Rejected by retailer from dashboard">
+          <button type="submit" class="dashboard-reject-button"><i class="bi bi-x-circle" aria-hidden="true"></i> Reject</button>
+        </form>
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<div class="dw-grid dw-activity">
+  <section class="dc-card" aria-labelledby="dw-sales-title">
+    <div class="dc-card-head">
+      <div>
+        <p class="dc-overline">Latest activity</p>
+        <h2 id="dw-sales-title">Recent credit sales</h2>
       </div>
-      {% if recent_payments %}
-      <div class="table-responsive dashboard-payments-scroll">
-        <table class="table table-stack activity-table dashboard-payments-table align-middle mb-0">
-          <thead><tr><th scope="col">Date</th><th scope="col">Customer</th><th scope="col" class="text-end">Received</th></tr></thead>
-          <tbody>
-            {% for p in recent_payments %}
-            <tr>
-              <td><span class="activity-date"><strong>{{ p.payment_date|nairobi('%d') }}</strong><span>{{ p.payment_date|nairobi('%b %Y') }}</span></span></td>
-              <td class="stack-primary"><span class="activity-customer-name dashboard-payments-customer"><i class="bi bi-person-circle" aria-hidden="true"></i>{{ p.customer.full_name }}</span></td>
-              <td class="text-end">
-                <span class="dashboard-payments-amount">{{ p.amount_paid | kes }}</span>
-                <span class="dashboard-payments-status{{ ' is-approved' if p.approval_status == 'approved' else ' is-pending' }}">{{ p.approval_status|capitalize }}</span>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-      <div class="activity-empty activity-empty-payments">
-        <span class="activity-empty-icon"><i class="bi bi-wallet2" aria-hidden="true"></i></span>
-        <strong>No payments recorded yet</strong>
-        <span>Customer payments will show here once received.</span>
-        <a href="{{ url_for('payments.new_payment') }}">Log your first payment <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
-      </div>
-      {% endif %}
+      <a class="dc-link" href="{{ url_for('transactions.list_transactions') }}">View all <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
     </div>
-  </div>
+    {% if recent_transactions %}
+    <ul class="dc-feed">
+      {% for t in recent_transactions %}
+      <li class="dc-feed-row">
+        <span class="activity-date"><strong>{{ t.transaction_date|nairobi('%d') }}</strong><span>{{ t.transaction_date|nairobi('%b %Y') }}</span></span>
+        <span class="dc-feed-main"><strong>{{ t.item_description }}</strong><span><i class="bi bi-person" aria-hidden="true"></i> {{ t.customer.full_name }}</span></span>
+        <strong class="dc-feed-amount is-given">{{ t.amount | kes }}</strong>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="dc-empty">
+      <span class="dc-empty-icon"><i class="bi bi-bag-plus" aria-hidden="true"></i></span>
+      <strong>No credit sales yet</strong>
+      <span>New customer purchases will appear here.</span>
+      <a href="{{ url_for('transactions.new_transaction') }}">Record your first sale <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="dc-card" aria-labelledby="dw-payments-title">
+    <div class="dc-card-head">
+      <div>
+        <p class="dc-overline">Cash collected</p>
+        <h2 id="dw-payments-title">Recent payments</h2>
+      </div>
+      <a class="dc-link" href="{{ url_for('payments.list_payments') }}">View all <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </div>
+    {% if recent_payments %}
+    <ul class="dc-feed">
+      {% for p in recent_payments %}
+      <li class="dc-feed-row">
+        <span class="activity-date"><strong>{{ p.payment_date|nairobi('%d') }}</strong><span>{{ p.payment_date|nairobi('%b %Y') }}</span></span>
+        <span class="dc-feed-main"><strong>{{ p.customer.full_name }}</strong><span>{{ p.payment_method_label }}</span></span>
+        <strong class="dc-feed-amount is-collected">{{ p.amount_paid | kes }}</strong>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="dc-empty">
+      <span class="dc-empty-icon"><i class="bi bi-wallet2" aria-hidden="true"></i></span>
+      <strong>No payments recorded yet</strong>
+      <span>Customer payments will show here once received.</span>
+      <a href="{{ url_for('payments.new_payment') }}">Log your first payment <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </div>
+    {% endif %}
+  </section>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
   (function () {
-  const greetingElement = document.getElementById('welcomeGreeting');
-  if (greetingElement) {
-    const hour = new Date().getHours();
-    const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-    greetingElement.textContent = `${greeting}, ${greetingElement.dataset.ownerName}.`;
-  }
-  const welcomeCarouselElement = document.getElementById('dashboardWelcomeCarousel');
-  if (welcomeCarouselElement) {
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const slides = Array.from(welcomeCarouselElement.querySelectorAll('.welcome-slide'));
-    const indicators = Array.from(welcomeCarouselElement.querySelectorAll('[data-welcome-slide]'));
-    let isHovered = false;
-    let hasFocus = false;
-    let activeIndex = 0;
-    let intervalId;
-    welcomeCarouselElement.setAttribute('aria-live', reducedMotion ? 'polite' : 'off');
-
-    function showSlide(index) {
-      activeIndex = (index + slides.length) % slides.length;
-      slides.forEach((slide, slideIndex) => {
-        const isActive = slideIndex === activeIndex;
-        slide.classList.toggle('is-active', isActive);
-        slide.setAttribute('aria-hidden', String(!isActive));
-        indicators[slideIndex].classList.toggle('active', isActive);
-        if (isActive) {
-          indicators[slideIndex].setAttribute('aria-current', 'true');
-        } else {
-          indicators[slideIndex].removeAttribute('aria-current');
-        }
-      });
+    const greetingElement = document.getElementById('welcomeGreeting');
+    if (greetingElement) {
+      const hour = new Date().getHours();
+      const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+      greetingElement.textContent = `${greeting}, ${greetingElement.dataset.ownerName}`;
     }
-
-    function stopCarousel() {
-      window.clearInterval(intervalId);
-      intervalId = undefined;
-    }
-
-    function startCarousel() {
-      stopCarousel();
-      if (!reducedMotion && !isHovered && !hasFocus && !document.hidden && slides.length > 1) {
-        intervalId = window.setInterval(() => showSlide(activeIndex + 1), 7000);
-      }
-    }
-
-    indicators.forEach((indicator, index) => {
-      indicator.addEventListener('click', () => {
-        showSlide(index);
-        startCarousel();
-      });
-    });
-
-    welcomeCarouselElement.addEventListener('mouseenter', () => {
-      isHovered = true;
-      stopCarousel();
-    });
-    welcomeCarouselElement.addEventListener('mouseleave', () => {
-      isHovered = false;
-      startCarousel();
-    });
-    welcomeCarouselElement.addEventListener('focusin', () => {
-      hasFocus = true;
-      stopCarousel();
-    });
-    welcomeCarouselElement.addEventListener('focusout', (event) => {
-      hasFocus = welcomeCarouselElement.contains(event.relatedTarget);
-      if (!hasFocus) {
-        startCarousel();
-      }
-    });
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        stopCarousel();
-      } else {
-        startCarousel();
-      }
-    });
-    showSlide(0);
-    startCarousel();
-  }
-
-  const ageingRows = Array.from(document.querySelectorAll('.ageing-row'));
-  const ageingValues = ageingRows.map((row) => Number(row.dataset.ageingValue));
-  const ageingTotal = ageingValues.reduce((total, value) => total + value, 0);
-  const largestAgeingRow = ageingRows.reduce(
-    (largest, row) => Number(row.dataset.ageingValue) > Number(largest.dataset.ageingValue) ? row : largest,
-    ageingRows[0]
-  );
-  ageingRows.forEach((row) => {
-    const value = Number(row.dataset.ageingValue);
-    const share = ageingTotal > 0 ? value / ageingTotal * 100 : 0;
-    row.querySelector('.ageing-fill').style.width = `${share}%`;
-    row.querySelector('.ageing-track').setAttribute('aria-valuenow', String(Math.round(share)));
-    row.querySelector('.ageing-share').textContent = `${Math.round(share)}%`;
-  });
-  if (ageingTotal > 0 && largestAgeingRow) {
-    const largestBand = largestAgeingRow.dataset.ageBand;
-    const largestShare = Math.round(Number(largestAgeingRow.dataset.ageingValue) / ageingTotal * 100);
-    document.getElementById('ageingInsight').textContent =
-      `${largestBand} days is the largest balance band at ${largestShare}% of outstanding receivables.`;
-  }
   })();
 </script>
 {% endblock %}

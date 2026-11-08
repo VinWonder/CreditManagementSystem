@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "account/_field.html" import field %}
+{% block title %}USSD PIN{% endblock %}
+{% block content %}
+<section class="customer-form-layout account-page" aria-labelledby="ussd-pin-title">
+  <a class="customer-form-back" href="{{ url_for('ussd.simulator') }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> USSD mini-statements</a>
+  <div class="customer-form-card">
+    <div class="customer-form-intro">
+      <span class="customer-form-mark"><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i></span>
+      <p class="eyebrow mb-1">Security</p>
+      <h1 id="ussd-pin-title">{{ 'Change' if current_user.ussd_pin_hash else 'Set' }} your USSD PIN</h1>
+      <p>Dial {{ service_code or 'the Duka Credit USSD code' }} from {{ current_user.phone_number }} and enter this 4-digit PIN to see your shop's figures on any phone. Five wrong PINs lock USSD for 30 minutes.</p>
+    </div>
+    <form class="customer-form" method="POST" novalidate>
+      {{ form.hidden_tag() }}
+      {{ field(form.current_password, "bi-lock", "Your Duka Credit sign-in password.", {"autocomplete": "current-password"}) }}
+      {{ field(form.pin, "bi-grid-3x3-gap", "4 digits. Avoid 1234, 0000 and your birth year.", {"inputmode": "numeric", "maxlength": "4", "autocomplete": "off", "pattern": "[0-9]{4}"}) }}
+      {{ field(form.confirm_pin, "bi-shield-check", "", {"inputmode": "numeric", "maxlength": "4", "autocomplete": "off", "pattern": "[0-9]{4}"}) }}
+      <div class="customer-form-actions">
+        <button class="customer-save-button" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i>{{ form.submit.label.text }}</button>
+        <a class="customer-cancel-link" href="{{ url_for('ussd.simulator') }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
